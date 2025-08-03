@@ -28,30 +28,53 @@ class _NavbarState extends State<Navbar> {
           currentIndex: widget.currentIndex,
           onTap: widget.onTap,
           backgroundColor: const Color.fromARGB(255, 255, 254, 254),
-          selectedItemColor: Warna.backgroundIjo,
           unselectedItemColor: Colors.grey,
           showUnselectedLabels: false,
           showSelectedLabels: true,
-          items: const [
+          items: [
             BottomNavigationBarItem(
-              icon: Icon(Icons.history),
+              icon: _buildIcon(Icons.history, 0),
               label: 'History',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.article),
+              icon: _buildIcon(Icons.article, 1),
               label: 'Laporan',
             ),
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
             BottomNavigationBarItem(
-              icon: Icon(Icons.notifications),
+              icon: _buildIcon(Icons.home, 2),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: _buildIcon(Icons.notifications, 3),
               label: 'Notification',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.account_circle),
+              icon: _buildIcon(Icons.account_circle, 4),
               label: 'Account',
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildIcon(IconData icon, int index) {
+    return ShaderMask(
+      shaderCallback:
+          (bounds) => LinearGradient(
+            colors: [
+              Warna.backgroundIjo,
+              Color.lerp(Warna.backgroundIjo, Colors.black, 0.3)!,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(bounds),
+      child: Icon(
+        icon,
+        color:
+            widget.currentIndex == index
+                ? Colors.white
+                : null, 
       ),
     );
   }

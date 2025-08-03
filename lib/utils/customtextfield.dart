@@ -4,6 +4,7 @@ class CustomTextField extends StatefulWidget {
   final String label;
   final String hintText;
   final bool obscureText;
+  final TextInputType? keyboardType;
   final IconData icon;
   final TextEditingController? controller;
 
@@ -12,6 +13,7 @@ class CustomTextField extends StatefulWidget {
     required this.label,
     required this.hintText,
     this.obscureText = false,
+    required this.keyboardType,
     required this.icon,
     this.controller,
   }) : super(key: key);
@@ -35,6 +37,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       controller: widget.controller,
       cursorColor: Colors.black,
       obscureText: _isObscure,
+      keyboardType: widget.keyboardType ?? TextInputType.text,
       decoration: InputDecoration(
         labelStyle: TextStyle(
           color: Colors.black,

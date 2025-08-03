@@ -1,10 +1,10 @@
-import 'package:SENTRA/utils/color.dart';
-// import 'package:SENTRA/utils/navbar.dart';
-import 'package:SENTRA/fitur/dashboard/screen/views/dashboard.dart';
-import 'package:SENTRA/fitur/notifikasi/screen/views/history.dart';
-import 'package:SENTRA/fitur/laporan/screen/views/laporan.dart';
-import 'package:SENTRA/fitur/notifikasi/screen/views/notification.dart';
-import 'package:SENTRA/fitur/authentikasi/screen/views/profile.dart';
+import 'package:sentra/utils/color.dart';
+// import 'package:sentra/utils/navbar.dart';
+import 'package:sentra/fitur/dashboard/screen/views/dashboard.dart';
+import 'package:sentra/fitur/laporan/screen/views/history.dart';
+import 'package:sentra/fitur/laporan/screen/views/laporan.dart';
+import 'package:sentra/fitur/notifikasi/screen/views/notification.dart';
+import 'package:sentra/fitur/authentikasi/screen/views/profile.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex; // Ambil index dari parameter
+    
   }
 
   final List<Widget> _pages = [

@@ -1,15 +1,80 @@
-import 'package:SENTRA/fitur/authentikasi/data/controllers/logincontroller.dart';
-import 'package:SENTRA/fitur/dashboard/screen/views/homescreen.dart';
-import 'package:SENTRA/fitur/splashscreen/splashscreen.dart';
-import 'package:SENTRA/fitur/welcomescreen/welcomescreen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sentra/firebase_options.dart';
+import 'package:sentra/fitur/authentikasi/data/controllers/logincontroller.dart';
+import 'package:sentra/fitur/authentikasi/data/controllers/lupapasswordcontroller.dart';
+import 'package:sentra/fitur/authentikasi/data/controllers/registercontroller.dart';
+import 'package:sentra/fitur/authentikasi/data/localdirectory/akunprefs.dart';
+import 'package:sentra/fitur/authentikasi/data/models/usermodel.dart';
+import 'package:sentra/fitur/authentikasi/data/provider/userprovider.dart';
+import 'package:sentra/fitur/chat/data/controllers/chatcontroller.dart';
+import 'package:sentra/fitur/dashboard/screen/views/homescreen.dart';
+import 'package:sentra/fitur/notifikasi/data/controllers/notifcontroller.dart';
+import 'package:sentra/fitur/notifikasi/service/notifservice.dart';
+import 'package:sentra/fitur/splashscreen/splashscreen.dart';
+import 'package:sentra/fitur/welcomescreen/welcomescreen.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
+final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
+    GlobalKey<ScaffoldMessengerState>();
+
+// Handler untuk notifikasi background
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService.initialize();
+  if (message.notification != null) {
+    NotificationService().showNotification(
+      message.notification!.title ?? "Notifikasi Baru",
+      message.notification!.body ?? "Pesan baru diterima",
+    );
+  }
+}
+
+void main() async {
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await NotificationService.initialize();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  // await GoogleSignIn().init();
+  await SharedPreferences.getInstance();
+  //tangani notifikasi foreground
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    if (message.notification != null) {
+      NotificationService().showNotification(
+        message.notification!.title ?? "Notifikasi Baru",
+        message.notification!.body ?? "Pesan baru diterima",
+      );
+    }
+  });
+
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => LoginController())],
-      child: MyApp(),
+      providers: [
+        ChangeNotifierProvider(create: (_) => LoginController()),
+        ChangeNotifierProvider(create: (_) => RegisterController()),
+        ChangeNotifierProvider(create: (_) => LupaPasswordController()),
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => ChatController()),
+      ],
+      child: const MyApp(),
     ),
   );
 }
@@ -17,117 +82,49 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
       debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      scaffoldMessengerKey: scaffoldMessengerKey,
+      home: FutureBuilder<Map<String, String?>>(
+        future: AkunPrefs.getAkun(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return SplashScreen(); // Tampilkan SplashScreen saat memeriksa AkunPrefs
+          } else if (snapshot.hasError) {
+            // Tangani error dengan mengarahkan ke WelcomeWithSplashScreen
+            return WelcomeWithSplashScreen();
+          } else {
+            final userData = snapshot.data;
+            // Periksa apakah data akun valid (id_akun tidak null atau kosong)
+            if (userData != null &&
+                userData['id_akun'] != null &&
+                userData['id_akun']!.isNotEmpty) {
+              // Konversi Map<String, String?> ke UserModel
+              final userModel = UserModel(
+                id: int.tryParse(userData['id_akun'] ?? '') ?? 0,
+                nama: userData['nama'],
+                notelp: userData['notelp'],
+                email: userData['email'] ?? '',
+                role: userData['role'] ?? '',
+                alamat: userData['alamat'] ?? '',
+                jeniskelamin: userData['jenis_kelamin'] ?? '',
+              );
+              // Set data pengguna ke UserProvider
+              final userProvider = Provider.of<UserProvider>(
+                context,
+                listen: false,
+              );
+              userProvider.setUser(userModel);
+              return SplashScreen(); // Langsung ke HomeScreen jika akun valid
+            } else {
+              // Ke WelcomeWithSplashScreen jika tidak ada data akun atau tidak valid
+              return WelcomeWithSplashScreen();
+            }
+          }
+        },
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

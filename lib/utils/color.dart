@@ -4,6 +4,7 @@ class Warna {
   static const Color backgroundIjo = Color(0xFF52AE77);
   static const Color backgroundBiru = Color(0xFF5270AD);
   static const Color backgroundijotuek = Color(0xFF377E62); 
+  static const Color backgroundIjoDark = Color(0xFF3D8F5F);
 
   static const Color btngetstart = Color.fromRGBO(245, 250, 247, 100);
   static const Color btnquickaccess = Color.fromRGBO(254, 249, 238, 100);
@@ -14,4 +15,11 @@ class Warna {
   static const Color oren = Color(0xFFDD823B);
 
   static const Color font = Color(0xFF565E6C);
+  
+  Color darken(Color color, [double amount = .1]) {
+    assert(amount >= 0 && amount <= 1);
+    final hsl = HSLColor.fromColor(color);
+    final hslDark = hsl.withLightness((hsl.lightness - amount).clamp(0.0, 1.0));
+    return hslDark.toColor();
+  }
 }

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
 class MiniStepperTracking extends StatefulWidget {
+  final String status;
+
+  MiniStepperTracking({Key? key, required this.status}) : super(key: key);
+
   @override
   _MiniStepperState createState() => _MiniStepperState();
 }
@@ -16,6 +20,32 @@ class _MiniStepperState extends State<MiniStepperTracking> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _currentStep = _steps.indexWhere(
+      (step) => step.toLowerCase() == widget.status.toLowerCase(),
+    );
+    if (_currentStep == -1) {
+      _currentStep = 0; 
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant MiniStepperTracking oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.status != widget.status) {
+      setState(() {
+        _currentStep = _steps.indexWhere(
+          (step) => step.toLowerCase() == widget.status.toLowerCase(),
+        );
+        if (_currentStep == -1) {
+          _currentStep = 0;
+        }
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
@@ -25,9 +55,9 @@ class _MiniStepperState extends State<MiniStepperTracking> {
             bool isActive = index <= _currentStep;
             return GestureDetector(
               onTap: () {
-                setState(() {
-                  _currentStep = index;
-                });
+                // setState(() {
+                //   _currentStep = index;
+                // });
               },
               child: Column(
                 children: [
@@ -36,11 +66,11 @@ class _MiniStepperState extends State<MiniStepperTracking> {
                     backgroundColor: _circleColors[index],
                     child:
                         isActive
-                            ? Icon(
-                              Icons.flag_circle_rounded,
-                              size: 16,
-                              color: const Color.fromARGB(255, 255, 255, 255),
-                            )
+                            ? Stack(children:[Icon(
+                                Icons.circle,
+                                size: 16,
+                                color: _circleColors[index],
+                              ),Icon(Icons.location_on,size: 16,color: Colors.white,)])
                             : Icon(Icons.circle, size: 14, color: Colors.white),
                   ),
                   SizedBox(height: 4),
@@ -53,7 +83,6 @@ class _MiniStepperState extends State<MiniStepperTracking> {
             );
           }),
         ),
-        // SizedBox(height: 8),
       ],
     );
   }

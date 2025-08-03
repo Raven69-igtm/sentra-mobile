@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:SENTRA/utils/color.dart';
-import '../welcomescreen/welcomescreen.dart';
+import 'package:sentra/fitur/dashboard/screen/views/homescreen.dart';
+import 'package:sentra/utils/color.dart';
 
 void main() {
   runApp(MyApp());
@@ -59,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen>
       _controller.forward().whenComplete(() {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => HomePage()),
+          MaterialPageRoute(builder: (context) => HomeScreen()),
         );
       });
     });

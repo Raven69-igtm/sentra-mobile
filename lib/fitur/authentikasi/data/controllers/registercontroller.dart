@@ -1,4 +1,4 @@
-import 'package:SENTRA/core/network/responsemodel.dart';
+import 'package:sentra/core/network/responsemodel.dart';
 import 'package:flutter/material.dart';
 import '../repositories/registerrepository.dart';
 import '../models/usermodel.dart';
@@ -19,22 +19,25 @@ class RegisterController with ChangeNotifier {
     String password,
     String question,
     String answer,
+    String gender,
+    String alamat
   ) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      // Pass the arguments correctly to the repository
+     
       _user = await _registerRepository.register(
         notelp: notelp,
         nama: nama,
         password: password,
         emergencyQuestion: question,
         answer: answer,
+        gender: gender,
+        alamat: alamat
       );
 
-      // Memeriksa status kode untuk menentukan apakah pendaftaran berhasil atau gagal
       if (_user != null) {
         return ResponseModel(success: true, message: 'Pendaftaran berhasil');
       } else {

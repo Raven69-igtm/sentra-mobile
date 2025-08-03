@@ -1,34 +1,61 @@
-import 'package:SENTRA/core/network/api_client.dart';
+import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/endpoints.dart';
 
-class AuthForgotRepository {
-  Future<void> forgotPassword(String notelp) async {
+
+
+class LupaPasswordRepository {
+  // 1. Request untuk mengganti nomor telepon
+  Future<Map<String, dynamic>> gantiNomor(
+    String notelpLama,
+    String notelpBaru,
+    String answ
+  ) async {
     try {
-      await ApiClient.postRequest('/forgot-password', {'notelp': notelp});
+      final response = await ApiClient.postRequest(Endpoints.updatenomor, {
+        'notelp_lama': notelpLama,
+        'notelp_baru': notelpBaru,
+        'answquest' : answ,
+      });
+
+      return response.data;
     } catch (e) {
-      throw Exception("Lupa password gagal: ${e.toString()}");
+      return {'error': true, 'message': 'Terjadi kesalahan: $e'};
     }
   }
 
-  Future<void> resetPassword(String notelp, String otp, String password) async {
+  // 2. Verifikasi OTP
+  Future<Map<String, dynamic>> verifikasiOtp(
+    String notelpBaru,
+    String otp,
+  ) async {
     try {
-      await ApiClient.postRequest('/reset-password', {
-        'notelp': notelp,
+      final response = await ApiClient.postRequest(Endpoints.verifikasiOTP, {
+        'notelp': notelpBaru,
         'otp': otp,
-        'password': password,
       });
+
+      return response.data;
     } catch (e) {
-      throw Exception("Reset password gagal: ${e.toString()}");
+      return {'error': true, 'message': 'Terjadi kesalahan: $e'};
     }
   }
 
-  Future<void> emergencyCheck(String notelp, String answer) async {
+  // 3. Update password
+  Future<Map<String, dynamic>> updatePassword(
+    String notelpBaru,
+    String password,
+    String password2
+  ) async {
     try {
-      await ApiClient.postRequest('/emergency-check', {
-        'notelp': notelp,
-        'answer': answer,
+      final response = await ApiClient.postRequest(Endpoints.ubahpassword, {
+        'notelp': notelpBaru,
+        'password': password,
+        'password2': password2,
       });
+
+      return response.data;
     } catch (e) {
-      throw Exception("Verifikasi darurat gagal: ${e.toString()}");
+      return {'error': true, 'message': 'Terjadi kesalahan: $e'};
     }
   }
 }

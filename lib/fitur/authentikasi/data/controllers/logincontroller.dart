@@ -12,6 +12,7 @@ class LoginController with ChangeNotifier {
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  
 
   Future<void> login(String notelp, String password) async {
     _isLoading = true;
@@ -27,4 +28,33 @@ class LoginController with ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+  Future<void> Biometric(String notelp) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _user = await _loginRepository.Biometic(notelp);
+    } catch (e) {
+      _errorMessage = e.toString();
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+  Future<void> LoginEmail(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      _user = await _loginRepository.LoginEmail(email);
+    } catch (e) {
+      _errorMessage = e.toString();
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+  
 }

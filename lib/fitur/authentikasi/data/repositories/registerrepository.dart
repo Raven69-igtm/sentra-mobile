@@ -11,6 +11,8 @@ class RegisterRepository {
     required String password,
     required String emergencyQuestion,
     required String answer,
+    required String gender,
+    required String alamat
   }) async {
     try {
       Response response = await ApiClient.postRequest(Endpoints.register, {
@@ -20,6 +22,8 @@ class RegisterRepository {
         'role': "user",
         'emerquest': emergencyQuestion,
         'answquest': answer,
+        'gender': gender,
+        'alamat':alamat
       });
 
       if (response.statusCode == 200) {

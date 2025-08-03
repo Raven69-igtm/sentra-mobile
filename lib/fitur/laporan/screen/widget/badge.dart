@@ -1,4 +1,4 @@
-import 'package:SENTRA/utils/color.dart';
+import 'package:sentra/utils/color.dart';
 import 'package:flutter/material.dart';
 
 class TrackingBadge extends StatelessWidget {
@@ -20,17 +20,20 @@ class TrackingBadge extends StatelessWidget {
     IconData icon;
 
     switch (status) {
-      case 'Dikirim':
+      case 'dikirim':
         icon = Icons.send;
         break;
-      case 'Diterima':
-        icon = Icons.check_box;
+      case 'diterima':
+        icon = Icons.fact_check_outlined;
         break;
-      case 'Diproses':
+      case 'diproses':
         icon = Icons.autorenew;
         break;
-      case 'Selesai':
-        icon = Icons.check_circle;
+      case 'selesai':
+        icon = Icons.check_rounded;
+        break;
+      case 'dirujuk':
+        icon = Icons.forward_to_inbox_rounded;
         break;
       default:
         icon = Icons.help_outline; 
@@ -49,7 +52,7 @@ class TrackingBadge extends StatelessWidget {
           ),
         ),
         alignment: Alignment.center,
-        child: Icon(icon, color: Colors.white, size: 30),
+        child: Icon(icon, color: Colors.white, size: 45),
       ),
     );
   }

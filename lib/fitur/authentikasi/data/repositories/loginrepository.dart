@@ -26,4 +26,46 @@ class LoginRepository {
       throw Exception("Login gagal: $e");
     }
   }
+  Future<UserModel?> Biometic(String notelp) async {
+    try {
+      Response response = await ApiClient.postRequest(Endpoints.biometric, {
+        'notelp': notelp,
+      });
+
+      if (response.statusCode == 200) {
+        if (response.data['user'] != null) {
+          print(response.data['user']);
+          return UserModel.fromJson(response.data['user']);
+        } else {
+          throw Exception('User data not found');
+        }
+      } else {
+        throw Exception(response.data['message']);
+      }
+    } catch (e) {
+      print(e);
+      throw Exception("Login gagal: $e");
+    }
+  }
+  Future<UserModel?> LoginEmail(String email) async {
+    try {
+      Response response = await ApiClient.postRequest(Endpoints.email, {
+        'email': email,
+      });
+
+      if (response.statusCode == 200) {
+        if (response.data['user'] != null) {
+          print(response.data['user']);
+          return UserModel.fromJson(response.data['user']);
+        } else {
+          throw Exception('User data not found');
+        }
+      } else {
+        throw Exception(response.data['message']);
+      }
+    } catch (e) {
+      print(e);
+      throw Exception("Login gagal: $e");
+    }
+  }
 }

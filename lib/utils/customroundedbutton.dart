@@ -1,3 +1,4 @@
+import 'package:sentra/utils/color.dart';
 import 'package:flutter/material.dart';
 
 class CustomRoundedButton extends StatelessWidget {
@@ -6,7 +7,7 @@ class CustomRoundedButton extends StatelessWidget {
   final Color backgroundColor;
   final Color textColor;
   final VoidCallback onPressed;
-  final double horizontalMargin; 
+  final double horizontalMargin;
   final bool isFullWidth;
   final double iconSize;
 
@@ -30,9 +31,16 @@ class CustomRoundedButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onPressed,
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
-            color: backgroundColor,
+            gradient: LinearGradient(
+              colors: [
+                backgroundColor, // Base color
+                Warna().darken(backgroundColor,0.20)
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(20),
               bottomLeft: Radius.circular(0),
@@ -41,9 +49,10 @@ class CustomRoundedButton extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 5,
-                offset: Offset(0, 3),
+                color: Colors.black.withOpacity(0.25),
+                spreadRadius: 2,
+                blurRadius: 10,
+                offset: Offset(0, 4),
               ),
             ],
           ),
@@ -60,7 +69,8 @@ class CustomRoundedButton extends StatelessWidget {
                 style: TextStyle(
                   fontFamily: "Mulish",
                   fontSize: 16,
-                  fontWeight: FontWeight.normal,
+                  fontWeight:
+                      FontWeight.w600, // Slightly bolder for better visuals
                   color: textColor,
                 ),
               ),
