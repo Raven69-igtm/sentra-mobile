@@ -1,0 +1,88 @@
+import 'package:dio/dio.dart';
+import 'package:sentra/features/auth/models/user_model.dart';
+import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/endpoints.dart';
+
+class LoginRepository {
+  Future<UserModel?> login(String notelp, String password) async {
+    try {
+      Response response = await ApiClient.postRequest(Endpoints.login, {
+        'notelp': notelp,
+        'password': password,
+      });
+
+      if (response.statusCode == 200) {
+        if (response.data['user'] != null) {
+          print(response.data['user']);
+          return UserModel.fromJson(response.data['user']);
+        } else {
+          throw Exception('User data not found');
+        }
+      } else {
+        throw Exception(response.data['message']);
+      }
+    } catch (e) {
+      print(e);
+      throw Exception("Login gagal: $e");
+    }
+  }
+
+  Future<Map<String, dynamic>> checkPhone(String notelp) async {
+    try {
+      final response = await ApiClient.getRequest(
+        '/auth/checkphone',
+        params: {'notelp': notelp},
+      );
+
+      return response.data; 
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['message'] ?? 'Gagal mengecek nomor telepon',
+      );
+    }
+  }
+
+  Future<UserModel?> Biometic(String notelp) async {
+    try {
+      Response response = await ApiClient.postRequest(Endpoints.biometric, {
+        'notelp': notelp,
+      });
+
+      if (response.statusCode == 200) {
+        if (response.data['user'] != null) {
+          print(response.data['user']);
+          return UserModel.fromJson(response.data['user']);
+        } else {
+          throw Exception('User data not found');
+        }
+      } else {
+        throw Exception(response.data['message']);
+      }
+    } catch (e) {
+      print(e);
+      throw Exception("Login gagal: $e");
+    }
+  }
+
+  Future<UserModel?> LoginEmail(String email) async {
+    try {
+      Response response = await ApiClient.postRequest(Endpoints.email, {
+        'email': email,
+      });
+
+      if (response.statusCode == 200) {
+        if (response.data['user'] != null) {
+          print(response.data['user']);
+          return UserModel.fromJson(response.data['user']);
+        } else {
+          throw Exception('User data not found');
+        }
+      } else {
+        throw Exception(response.data['message']);
+      }
+    } catch (e) {
+      print(e);
+      throw Exception("Login gagal: $e");
+    }
+  }
+}
