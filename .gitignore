@@ -43,3 +43,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase config (contains API keys)
+lib/firebase_options.dart
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Environment variables
+.env*
+
+# Android signing
+*.jks
+*.keystore
+key.properties

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 Future<void> kirimOtpFonnte({
   required String nomorTujuan, 
@@ -6,7 +7,7 @@ Future<void> kirimOtpFonnte({
 }) async {
   final dio = Dio();
 
-  const apiKey = 'FONNTE_API_KEY_REMOVED'; 
+  final apiKey = dotenv.env['FONNTE_API_KEY'] ?? ''; 
 
   final data = {
     'target': nomorTujuan,

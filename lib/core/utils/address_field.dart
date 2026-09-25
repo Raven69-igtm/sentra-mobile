@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 
 class Address {
@@ -79,7 +80,7 @@ class _AddressAutocompleteCustomState extends State<AddressAutocompleteCustom> {
         '$baseUrl/$encodedQuery.json',
         queryParameters: {
           'access_token':
-              'MAPBOX_TOKEN_REMOVED',
+              dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '',
           'country': 'id',
           'types': 'address,place,locality,neighborhood',
           'autocomplete': true,
@@ -338,7 +339,7 @@ class _AddressAutocompleteEnhancedState
         '$baseUrl/$encodedQuery.json',
         queryParameters: {
           'access_token':
-              'MAPBOX_TOKEN_REMOVED',
+              dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '',
           'country': 'id',
           'types': 'address,place,locality,neighborhood',
           'autocomplete': true,
@@ -657,7 +658,7 @@ class _AddressAutocompleteCompactState extends State<AddressAutocompleteCompact>
       final response = await _dio.get(
         '$baseUrl/$encodedQuery.json',
         queryParameters: {
-          'access_token': 'MAPBOX_TOKEN_REMOVED',
+          'access_token': dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '',
           'country': 'id',
           'types': 'address,place,locality,neighborhood',
           'autocomplete': true,
@@ -1014,7 +1015,7 @@ class _AddressAutocompleteStandardState extends State<AddressAutocompleteStandar
       final response = await _dio.get(
         '$baseUrl/$encodedQuery.json',
         queryParameters: {
-          'access_token': 'MAPBOX_TOKEN_REMOVED',
+          'access_token': dotenv.env['MAPBOX_ACCESS_TOKEN'] ?? '',
           'country': 'id',
           'types': 'address,place,locality,neighborhood',
           'autocomplete': true,
