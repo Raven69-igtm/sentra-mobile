@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:sentra/core/constants/app_constants.dart';
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/features/chat/models/chat_model.dart';
 import 'package:sentra/features/chat/repositories/chat_repository.dart';
@@ -53,10 +54,8 @@ class ChatController extends ChangeNotifier {
 
   void connectToChat(int userId) {
     try {
-      print(
-        'Attempting to connect to WebSocket: ws://${ApiClient.baseUrl}:3001 for userId: $userId',
-      );
-      _channel = WebSocketChannel.connect(Uri.parse('ws://18.136.209.83:3021'));
+      print('Attempting to connect to WebSocket: ${ApiClient.wsUrl} for userId: $userId');
+      _channel = WebSocketChannel.connect(Uri.parse(ApiClient.wsUrl));
       print('WebSocket connected for userId: $userId');
       _channel!.sink.add(
         jsonEncode({
@@ -227,17 +226,33 @@ class ChatController extends ChangeNotifier {
       };
       print('Sending message to WebSocket: $chat');
       if (_channel == null) {
-        print('Error: WebSocket channel is null');
+        print('Warning: WebSocket channel is null, falling back to HTTP POST');
+        _fallbackSendMessageHttp(senderId, receiverId, message);
         return;
       }
       try {
         _channel!.sink.add(jsonEncode(chat));
         print('Message sent successfully to WebSocket');
       } catch (e) {
-        print('Error sending message to WebSocket: $e');
+        print('Error sending message to WebSocket: $e, falling back to HTTP POST');
+        _fallbackSendMessageHttp(senderId, receiverId, message);
       }
     } else {
       print('Message is empty, not sending');
+    }
+  }
+
+  Future<void> _fallbackSendMessageHttp(int senderId, int receiverId, String message) async {
+    try {
+      final dio = ApiClient.dio;
+      await dio.post('/chats', data: {
+        'sender_id': senderId,
+        'receiver_id': receiverId,
+        'message': message,
+      });
+      print('Fallback HTTP POST chat berhasil');
+    } catch (e) {
+      print('Fallback HTTP POST chat gagal: $e');
     }
   }
 

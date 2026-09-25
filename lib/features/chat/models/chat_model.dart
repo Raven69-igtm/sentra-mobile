@@ -26,14 +26,24 @@ class Chat {
 
   factory Chat.fromJson(Map<String, dynamic> json) {
     return Chat(
-      idChat: json['id_chat'],
-      senderId: json['sender_id'],
-      receiverId: json['receiver_id'],
-      message: json['message'],
-      repliedToId: json['replied_to_id'],
-      sentAt: json['sent_at'],
-      isRead: json['is_read'] == 1,
-      isNotified: json['is_notified'] == 1,
+      idChat: json['id_chat'] is int
+          ? json['id_chat']
+          : int.tryParse((json['id_chat'] ?? json['id'] ?? json['chat_id'])?.toString() ?? '') ?? 0,
+      senderId: json['sender_id'] is int
+          ? json['sender_id']
+          : int.tryParse((json['sender_id'] ?? json['senderId'])?.toString() ?? '') ?? 0,
+      receiverId: json['receiver_id'] is int
+          ? json['receiver_id']
+          : int.tryParse((json['receiver_id'] ?? json['receiverId'])?.toString() ?? '') ?? 0,
+      message: (json['message'] ?? json['pesan'])?.toString() ?? '',
+      repliedToId: (json['replied_to_id'] ?? json['repliedToId']) != null
+          ? ((json['replied_to_id'] ?? json['repliedToId']) is int
+              ? (json['replied_to_id'] ?? json['repliedToId'])
+              : int.tryParse((json['replied_to_id'] ?? json['repliedToId'])?.toString() ?? ''))
+          : null,
+      sentAt: (json['sent_at'] ?? json['created_at'] ?? json['time'])?.toString() ?? '',
+      isRead: json['is_read'] == 1 || json['is_read'] == true || json['is_read'] == '1',
+      isNotified: json['is_notified'] == 1 || json['is_notified'] == true || json['is_notified'] == '1',
       isTemporary: false,
     );
   }

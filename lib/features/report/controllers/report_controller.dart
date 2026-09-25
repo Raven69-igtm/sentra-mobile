@@ -18,7 +18,7 @@ class LaporanController extends GetxController {
 
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://${ApiClient.baseUrl}',
+      baseUrl: '${ApiClient.protocol}://${ApiClient.baseUrl}',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},

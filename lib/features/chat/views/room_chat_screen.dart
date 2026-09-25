@@ -65,7 +65,7 @@ class _RoomChatState extends State<RoomChat> {
     try {
       final userId = Provider.of<UserProvider>(context, listen: false).idAkun;
       final response = await _repository.dio.get(
-        'https://${ApiClient.baseUrl}/api/conversations/$userId',
+        '${ApiClient.protocol}://${ApiClient.baseUrl}/api/conversations/$userId',
       );
       final data = response.data is List ? response.data : [];
       setState(() {

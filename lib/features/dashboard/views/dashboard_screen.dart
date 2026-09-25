@@ -5,6 +5,7 @@ import 'package:sentra/features/dashboard/models/info_model.dart';
 import 'package:sentra/features/dashboard/services/info_service.dart';
 import 'package:sentra/features/report/views/widgets/graph_widget.dart';
 import 'package:sentra/core/utils/app_colors.dart';
+import 'package:sentra/core/constants/app_constants.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -128,8 +129,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             MaterialPageRoute(
                               builder:
                                   (context) => ChatKonsultasiScreen(
-                                    receiverId: 2,
-                                    receiverName: 'Admin Konsultasi',
+                                    receiverId: AppConstants.ADMIN_ID,
+                                    receiverName: AppConstants.ADMIN_NAME,
                                   ),
                             ),
                           );

@@ -1,11 +1,14 @@
 import 'package:dio/dio.dart';
 
 class ApiClient {
-  // static const String baseUrl = '10.0.2.2';
-  static const String baseUrl = 'sentra.pbltifnganjuk.com/public';
+  static const bool isLocal = true;
+  static const String protocol = isLocal ? 'http' : 'https';
+  static const String baseUrl = isLocal ? '127.0.0.1:8000' : 'sentra.pbltifnganjuk.com/public';
+  static const String wsUrl = isLocal ? 'ws://127.0.0.1:3021' : 'ws://18.136.209.83:3021';
+
   static final Dio dio = Dio(
     BaseOptions(
-      baseUrl: "https://$baseUrl/api",
+      baseUrl: "$protocol://$baseUrl/api",
       connectTimeout: Duration(seconds: 10),
       receiveTimeout: Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},

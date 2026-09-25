@@ -5,7 +5,7 @@ import 'package:sentra/core/network/api_client.dart';
 class NotificationRepository {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://${ApiClient.baseUrl}/api',
+      baseUrl: '${ApiClient.protocol}://${ApiClient.baseUrl}/api',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},

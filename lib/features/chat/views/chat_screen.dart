@@ -139,27 +139,33 @@ class _ChatKonsultasiScreenState extends State<ChatKonsultasiScreen> {
     _idUser = Provider.of<UserProvider>(context, listen: false).idAkun;
 
     final chatController = Provider.of<ChatController>(context, listen: false);
-    chatController.connectToChat(_idUser!);
-    chatController.fetchChats(_idUser!);
+    if (_idUser != null) {
+      chatController.connectToChat(_idUser!);
+      chatController.fetchChats(_idUser!);
+    }
 
     _controller.addListener(() {
       final text = _controller.text;
       _typingTimer?.cancel();
       _typingTimer = Timer(const Duration(milliseconds: 500), () {
-        chatController.emitTypingStatus(
-          senderId: _idUser!,
-          receiverId: widget.receiverId,
-          isTyping: text.isNotEmpty,
-        );
+        if (_idUser != null) {
+          chatController.emitTypingStatus(
+            senderId: _idUser!,
+            receiverId: widget.receiverId,
+            isTyping: text.isNotEmpty,
+          );
+        }
       });
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      chatController.chats
-          .where((chat) => chat.receiverId == _idUser && !chat.isRead)
-          .forEach((chat) {
-            chatController.markAsRead(chat.idChat);
-          });
+      if (_idUser != null) {
+        chatController.chats
+            .where((chat) => chat.receiverId == _idUser && !chat.isRead)
+            .forEach((chat) {
+              chatController.markAsRead(chat.idChat);
+            });
+      }
     });
   }
 
@@ -179,7 +185,7 @@ class _ChatKonsultasiScreenState extends State<ChatKonsultasiScreen> {
     return Chat(
       idChat: -1,
       senderId: widget.receiverId,
-      receiverId: _idUser!,
+      receiverId: _idUser ?? 0,
       message:
           "Selamat datang di layanan konsultasi kami! 👋\n\nKami dari tim konsultan profesional siap membantu dan menemani Anda dalam proses konsultasi. Silakan ceritakan keluhan atau pertanyaan yang ingin Anda konsultasikan.\n\nKami akan memberikan pelayanan terbaik untuk Anda.",
       sentAt: "Pesan Otomatis",
@@ -201,7 +207,7 @@ class _ChatKonsultasiScreenState extends State<ChatKonsultasiScreen> {
 
   void _sendMessage() {
     final message = _controller.text.trim();
-    if (message.isNotEmpty) {
+    if (message.isNotEmpty && _idUser != null) {
       final chatController = Provider.of<ChatController>(
         context,
         listen: false,

@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 
 class InformasiService {
   static const String baseUrl =
-      'https://${ApiClient.baseUrl}/api'; // Ganti dengan URL server kamu
+      '${ApiClient.protocol}://${ApiClient.baseUrl}/api';
   final Dio _dio = Dio();
 
   Future<List<Informasi>> fetchInformasi() async {

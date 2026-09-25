@@ -50,7 +50,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     try {
       print(formattedPhone);
       final response = await dio.post(
-        'http://18.136.209.83:3123/send-otp',
+        'https://${ApiClient.baseUrl.replaceAll('/public', '')}:3123/send-otp',
         data: {'phoneNumber': formattedPhone, 'otpCode': otpCode},
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
@@ -339,7 +339,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
       try {
         final response = await Dio().post(
-          'https://${ApiClient.baseUrl}/api/auth/get-emergency-question',
+          '${ApiClient.protocol}://${ApiClient.baseUrl}/api/auth/get-emergency-question',
           data: {'notelp': formattedPhone},
           options: Options(
             headers: {'Content-Type': 'application/json'},
@@ -419,7 +419,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     Future<bool> verifySecurityAnswer(String phoneNumber, String answer) async {
       try {
         final response = await Dio().post(
-          'https://${ApiClient.baseUrl}/api/auth/emergency-check',
+          '${ApiClient.protocol}://${ApiClient.baseUrl}/api/auth/emergency-check',
           data: {'notelp': phoneNumber, 'answer': answer},
           options: Options(
             headers: {'Content-Type': 'application/json'},
@@ -1584,7 +1584,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     try {
       print(formattedPhone);
       final response = await dio.post(
-        'http://18.136.209.83:3123/send-otp',
+        'https://${ApiClient.baseUrl.replaceAll('/public', '')}:3123/send-otp',
         data: {'phoneNumber': formattedPhone, 'otpCode': otpCode},
         options: Options(headers: {'Content-Type': 'application/json'}),
       );

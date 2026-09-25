@@ -944,7 +944,7 @@ class _LoginPageState extends State<LoginPage> {
               Future<bool> sendOtp(String phoneNumber, String code) async {
                 try {
                   final response = await dio.post(
-                    'http://18.136.209.83:3123/send-otp',
+                    'https://${ApiClient.baseUrl.replaceAll('/public', '')}:3123/send-otp',
                     data: {'phoneNumber': phoneNumber, 'otpCode': code},
                     options: Options(
                       headers: {'Content-Type': 'application/json'},

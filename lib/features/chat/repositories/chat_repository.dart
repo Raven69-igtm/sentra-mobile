@@ -4,7 +4,7 @@ import 'package:dio/dio.dart';
 
 class ChatRepository {
   final Dio dio = Dio();
-  final String baseUrl = 'https://${ApiClient.baseUrl}/api';
+  final String baseUrl = '${ApiClient.protocol}://${ApiClient.baseUrl}/api';
 
   ChatRepository() {
     dio.options.headers['Accept'] = 'application/json';

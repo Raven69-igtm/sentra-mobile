@@ -9,6 +9,7 @@ import 'package:sentra/features/chat/controllers/chat_controller.dart';
 import 'package:sentra/features/notification/services/notif_service.dart';
 import 'package:sentra/features/splash/splash_screen.dart';
 import 'package:sentra/features/welcome/welcome_screen.dart';
+import 'package:device_preview/device_preview.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -70,15 +71,19 @@ void main() async {
   await SharedPreferences.getInstance();
 
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => LoginController()),
-        ChangeNotifierProvider(create: (_) => RegisterController()),
-        ChangeNotifierProvider(create: (_) => LupaPasswordController()),
-        ChangeNotifierProvider(create: (_) => UserProvider()),
-        ChangeNotifierProvider(create: (_) => ChatController()),
-      ],
-      child: const MyApp(),
+    DevicePreview(
+      enabled: !kReleaseMode,
+      backgroundColor: const Color(0xFF1E1E1E),
+      builder: (context) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => LoginController()),
+          ChangeNotifierProvider(create: (_) => RegisterController()),
+          ChangeNotifierProvider(create: (_) => LupaPasswordController()),
+          ChangeNotifierProvider(create: (_) => UserProvider()),
+          ChangeNotifierProvider(create: (_) => ChatController()),
+        ],
+        child: const MyApp(),
+      ),
     ),
   );
 }
@@ -90,6 +95,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      locale: DevicePreview.locale(context),
+      builder: DevicePreview.appBuilder,
       scaffoldMessengerKey: scaffoldMessengerKey,
       home: FutureBuilder<Map<String, String?>>(
         future: AkunPrefs.getAkun(),
