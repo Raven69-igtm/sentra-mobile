@@ -11,6 +11,7 @@ import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/notification/controllers/notif_controller.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/dashboard/views/dashboard_screen.dart';
+import 'package:sentra/features/dashboard/views/beranda_screen.dart';
 import 'package:sentra/features/report/views/history_screen.dart';
 import 'package:sentra/features/report/views/report_screen.dart';
 import 'package:sentra/features/notification/views/notification_screen.dart';
@@ -52,8 +53,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       activeColor: Warna.backgroundIjo,
     ),
     PageConfig(
-      page: DashboardScreen(),
-      icon: Icons.dashboard_rounded,
+      page: BerandaScreen(),
+      icon: Icons.grid_view_rounded,
       label: 'Beranda',
       activeColor: Warna.backgroundIjo,
     ),
