@@ -13,7 +13,7 @@ class ApiClient {
       receiveTimeout: Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
     ),
-  );
+  ); 
 
   static Future<Response> getRequest(
     String url, {
