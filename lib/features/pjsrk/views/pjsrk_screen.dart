@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/views/profile_screen.dart';
 import 'package:sentra/features/notification/views/notification_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_report_event_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
@@ -193,7 +194,14 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.warning_amber_rounded,
                           iconColor: const Color(0xFFE54D5E),
                           iconBgColor: const Color(0xFFFCE8EB),
-                          onTap: () => _showFeatureNotice('Pengaduan Bencana'),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PjsrkReportEventScreen(),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 12),
 
