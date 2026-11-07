@@ -7,7 +7,6 @@ import 'package:sentra/features/notification/views/notification_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
-import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
 import 'package:sentra/features/report/views/history_screen.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
@@ -144,7 +143,8 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
             // 2. KONTEN UTAMA (SCROLLABLE & RESPONSIVE)
             // =================================================================
             Expanded(
-              child: Center(
+              child: Align(
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 600),
                   child: SingleChildScrollView(
@@ -206,12 +206,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           iconColor: const Color(0xFF379AE6),
                           iconBgColor: const Color(0xFFE7F2FF),
                           onTap: () => _showFeatureNotice('Permasalahan Sosial'),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Kartu: Lihat Laporan Saya
-                        PjsrkReportCard(
-                          onTap: _onLihatLaporanTap,
                         ),
                       ],
                     ),

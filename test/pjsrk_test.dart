@@ -8,7 +8,7 @@ import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
-import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
+// import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
 
 Widget createTestWidget(Widget child) {
   final userProvider = UserProvider();
@@ -78,10 +78,8 @@ void main() {
         findsOneWidget,
       );
 
-      // 5. Report Card
-      expect(find.byType(PjsrkReportCard), findsOneWidget);
-      expect(find.text('Lihat laporan saya'), findsOneWidget);
-      expect(find.text('Pantau status semua pengaduan Anda'), findsOneWidget);
+      // 5. Report Card (Sudah dihapus dari tampilan PJSRK sesuai permintaan)
+      expect(find.text('Lihat laporan saya'), findsNothing);
 
       // 6. Bottom Navigation
       expect(find.byType(PjsrkBottomNav), findsOneWidget);
