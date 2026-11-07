@@ -8,7 +8,6 @@ import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
-// import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
 
 Widget createTestWidget(Widget child) {
   final userProvider = UserProvider();
