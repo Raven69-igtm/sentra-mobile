@@ -55,19 +55,22 @@ class PjsrkSegmented extends StatelessWidget {
                 children: options.map((o) {
                   final sel = o == selected;
                   return Expanded(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => onChanged(o),
-                      child: Center(
-                        child: AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 180),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: sel ? FontWeight.w700 : FontWeight.w600,
-                            fontFamily: 'Mulish',
-                            color: sel ? PjsrkColors.primaryText : const Color(0xFF7B7F86),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => onChanged(o),
+                        child: Center(
+                          child: AnimatedDefaultTextStyle(
+                            duration: const Duration(milliseconds: 180),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: sel ? FontWeight.w700 : FontWeight.w600,
+                              fontFamily: 'Mulish',
+                              color: sel ? PjsrkColors.primaryText : const Color(0xFF7B7F86),
+                            ),
+                            child: Text(o),
                           ),
-                          child: Text(o),
                         ),
                       ),
                     ),

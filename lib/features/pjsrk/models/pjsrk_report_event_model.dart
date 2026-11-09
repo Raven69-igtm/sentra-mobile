@@ -42,4 +42,16 @@ class PjsrkReportEventModel {
       'kebutuhan_mendesak': kebutuhan,
     };
   }
+
+  // ---- Teks siap tampil untuk halaman "Kirim" ----
+  static const _bulan = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des',
+  ];
+
+  String get tanggalText =>
+      '${tanggal.day} ${_bulan[tanggal.month - 1]} ${tanggal.year}';
+
+  String get jamText =>
+      '${jam.hour.toString().padLeft(2, '0')}.${jam.minute.toString().padLeft(2, '0')} WIB';
 }

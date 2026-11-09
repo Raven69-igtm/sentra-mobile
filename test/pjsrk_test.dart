@@ -6,6 +6,7 @@ import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/dashboard/views/beranda_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_report_event_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
+import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
@@ -100,11 +101,11 @@ void main() {
       await tester.pumpWidget(createTestWidget(const PjsrkScreen()));
       await tester.pumpAndSettle();
 
-      // Tap Rehabilitasi Sosial shows development notice
-      await tester.tap(find.text('Rehabilitasi Sosial'));
+      // Tap Permasalahan Sosial shows development notice
+      await tester.tap(find.text('Permasalahan Sosial'));
       await tester.pumpAndSettle();
       expect(
-        find.text('Layanan Rehabilitasi Sosial sedang dalam pengembangan'),
+        find.text('Layanan Permasalahan Sosial sedang dalam pengembangan'),
         findsOneWidget,
       );
 
@@ -163,6 +164,11 @@ void main() {
 
       expect(find.byType(PjsrkScreen), findsOneWidget);
       expect(find.byType(PjsrkReportEventScreen), findsNothing);
+
+      // Tap Rehabilitasi Sosial navigates to RehabilitasiSosialFormScreen
+      await tester.tap(find.text('Rehabilitasi Sosial'));
+      await tester.pumpAndSettle();
+      expect(find.byType(RehabilitasiSosialFormScreen), findsOneWidget);
     });
 
     testWidgets('Navigation from BerandaScreen to PjsrkScreen works',

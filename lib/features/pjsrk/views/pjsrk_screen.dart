@@ -67,6 +67,16 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     );
   }
 
+  /// Navigasi ke form Pengaduan Bencana
+  void _onPengaduanBencanaTap() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PjsrkReportEventScreen(),
+      ),
+    );
+  }
+
   /// Navigasi ke halaman Lihat Laporan Saya (HistoryPage)
   void _onLihatLaporanTap() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -182,7 +192,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Fitur 2: masih notice (bisa diganti form nanti)
+                        // Fitur 2: Pengaduan Bencana → buka form
                         PjsrkFeatureCard(
                           title: 'Pengaduan Bencana',
                           description:
@@ -190,14 +200,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.warning_amber_rounded,
                           iconColor: const Color(0xFFE54D5E),
                           iconBgColor: const Color(0xFFFCE8EB),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const PjsrkReportEventScreen(),
-                              ),
-                            );
-                          },
+                          onTap: _onPengaduanBencanaTap,
                         ),
                         const SizedBox(height: 12),
 
@@ -260,6 +263,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
+                    mouseCursor: SystemMouseCursors.click,
                     onTap: () => Navigator.of(context).pop(),
                     child: const SizedBox(
                       width: 38,

@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sentra/features/pjsrk/controllers/pjsrk_report_event_controller.dart';
 import 'package:sentra/features/pjsrk/models/pjsrk_report_event_model.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_report_event_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_report_location_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_report_send_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_chip_grid.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_gradient_button.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_box.dart';
@@ -66,7 +68,7 @@ void main() {
     });
   });
 
-  group('PjsrkReportEventScreen UI & Interaction Tests', () {
+  group('PjsrkReportEventScreen UI & Navigation Tests', () {
     testWidgets('Renders all Figma design elements correctly',
         (WidgetTester tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
@@ -146,7 +148,7 @@ void main() {
       expect(find.text('Isi keterangan bencana'), findsOneWidget);
     });
 
-    testWidgets('Interacting with chips and filling keterangan works',
+    testWidgets('Full 3-step flow: Kejadian -> Lokasi -> Kirim works seamlessly',
         (WidgetTester tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -156,30 +158,38 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      // Pilih jenis bencana: Gempa bumi
-      await tester.tap(find.text('Gempa bumi'));
-      await tester.pumpAndSettle();
-
-      // Pilih tingkat dampak: Berat
-      await tester.tap(find.text('Berat'));
-      await tester.pumpAndSettle();
-
-      // Isi keterangan
+      // Step 1: Fill keterangan
       await tester.enterText(
-        find.byType(TextField).at(2), // 0: jiwa, 1: rumah, 2: keterangan
-        'Terjadi gempa dengan getaran kuat merusak fasilitas umum.',
+        find.byType(TextField).at(2), // keterangan TextField
+        'Banjir bandang menggenangi perumahan warga.',
       );
       await tester.pumpAndSettle();
 
-      // Tap Lanjut
+      // Step 1: Tap Lanjut -> navigates to Step 2 (Lokasi)
       await tester.tap(find.text('Lanjut'));
       await tester.pumpAndSettle();
 
-      expect(
-        find.text('Data kejadian pengaduan bencana tersimpan'),
-        findsOneWidget,
-      );
+      // Verify Step 2 is active
+      expect(find.byType(PjsrkReportLocationScreen), findsOneWidget);
+      expect(find.text('Titik lokasi bencana'), findsOneWidget);
+      expect(find.text('Tinjau & Kirim'), findsOneWidget);
+
+      // Step 2: Tap Tinjau & Kirim -> navigates to Step 3 (Review & Kirim)
+      await tester.tap(find.text('Tinjau & Kirim'));
+      await tester.pumpAndSettle();
+
+      // Verify Step 3 is active
+      expect(find.byType(PjsrkReportSendScreen), findsOneWidget);
+      expect(find.text('Periksa kembali laporan'), findsOneWidget);
+      expect(find.text('Kirim laporan'), findsOneWidget);
+
+      // Tap back button returns to Step 2
+      final backBtn = find.byIcon(Icons.chevron_left_rounded).first;
+      await tester.tap(backBtn);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PjsrkReportLocationScreen), findsOneWidget);
+      expect(find.byType(PjsrkReportSendScreen), findsNothing);
     });
   });
 }
-

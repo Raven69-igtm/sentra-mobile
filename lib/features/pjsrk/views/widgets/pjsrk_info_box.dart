@@ -21,6 +21,7 @@ class PjsrkInfoBox extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
+          mouseCursor: SystemMouseCursors.click,
           borderRadius: BorderRadius.circular(14),
           child: Container(
             height: 52,

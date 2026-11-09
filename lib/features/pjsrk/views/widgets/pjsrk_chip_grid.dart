@@ -32,6 +32,7 @@ class PjsrkChipGrid extends StatelessWidget {
                   color: Colors.transparent,
                   child: InkWell(
                     onTap: () => onTap(o),
+                    mouseCursor: SystemMouseCursors.click,
                     borderRadius: BorderRadius.circular(12),
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
