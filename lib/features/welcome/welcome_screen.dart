@@ -9,6 +9,7 @@ import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
 import 'package:sentra/core/utils/custom_button.dart';
 import 'package:sentra/features/report/services/quick_report_service.dart';
+import 'package:sentra/features/report/views/pelaporan_cepat_menu_screen.dart';
 import 'package:flutter/services.dart';
 
 class WelcomeWithSplashScreen extends StatefulWidget {
@@ -298,12 +299,14 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
                               child: child,
                             ),
                         child: CustomRoundedButton(
-                          text: "Buat Laporan",
+                          text: "Laporan Cepat",
                           icon: Icons.flash_on,
                           backgroundColor: const Color(0xFFFDF6E3),
                           textColor: const Color(0xFF8B6220),
                           onPressed: () {
-                            showQuickReportDialog();
+                            Navigator.of(context).push(
+                              _slideUpRoute(const PelaporanCepatMenuScreen()),
+                            );
                           },
                         ),
                       ),
