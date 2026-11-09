@@ -399,7 +399,6 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
     final ticketId = laporan.id.toString().startsWith('SP-')
         ? laporan.id.toString()
         : 'SP-${laporan.id}';
-2
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
