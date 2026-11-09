@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/views/profile_screen.dart';
 import 'package:sentra/features/notification/views/notification_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_report_event_screen.dart';
+import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
@@ -54,6 +56,26 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     );
   }
 
+  /// Navigasi ke form Rehabilitasi Sosial
+  void _onRehabilitasiSosialTap() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const RehabilitasiSosialFormScreen(),
+      ),
+    );
+  }
+
+  /// Navigasi ke form Pengaduan Bencana
+  void _onPengaduanBencanaTap() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PjsrkReportEventScreen(),
+      ),
+    );
+  }
+
   /// Navigasi ke halaman Lihat Laporan Saya (HistoryPage)
   void _onLihatLaporanTap() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
@@ -65,7 +87,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
         MaterialPageRoute(builder: (_) => const HistoryPage()),
       );
     } else {
-      // Jika pengguna belum login atau idAkun belum tersedia
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -98,22 +119,18 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
   void _onBottomNavTapped(int index) {
     switch (index) {
       case 0:
-        // Tab Beranda: Kembali ke layar Beranda
         Navigator.of(context).pop();
         break;
       case 1:
-        // Tab Laporan: Buka halaman riwayat / pantau laporan
         _onLihatLaporanTap();
         break;
       case 2:
-        // Tab Notifikasi
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => NotificationPage()),
         );
         break;
       case 3:
-        // Tab Profil
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => ProfileScreen()),
@@ -134,14 +151,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
         backgroundColor: _backgroundColor,
         body: Column(
           children: [
-            // =================================================================
-            // 1. APPBAR / HEADER ORANGE HANGAT DENGAN TOMBOL BACK
-            // =================================================================
             _buildHeader(context),
-
-            // =================================================================
-            // 2. KONTEN UTAMA (SCROLLABLE & RESPONSIVE)
-            // =================================================================
             Expanded(
               child: Align(
                 alignment: Alignment.topCenter,
@@ -153,15 +163,12 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Kartu Informasi PJSRK
                         const PjsrkInfoCard(
                           title: 'PJSRK',
                           description:
                               'Pilih jenis laporan yang ingin Anda sampaikan. Petugas akan menindaklanjuti dalam 2 hari kerja.',
                         ),
                         const SizedBox(height: 20),
-
-                        // Judul Section: Fitur PJSRK
                         const Text(
                           'Fitur PJSRK',
                           style: TextStyle(
@@ -173,7 +180,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Fitur 1: Rehabilitasi Sosial
+                        // Fitur 1: Rehabilitasi Sosial → buka form
                         PjsrkFeatureCard(
                           title: 'Rehabilitasi Sosial',
                           description:
@@ -181,11 +188,11 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.home_outlined,
                           iconColor: const Color(0xFFD8782E),
                           iconBgColor: const Color(0xFFFFF0E4),
-                          onTap: () => _showFeatureNotice('Rehabilitasi Sosial'),
+                          onTap: _onRehabilitasiSosialTap,
                         ),
                         const SizedBox(height: 12),
 
-                        // Fitur 2: Pengaduan Bencana
+                        // Fitur 2: Pengaduan Bencana → buka form
                         PjsrkFeatureCard(
                           title: 'Pengaduan Bencana',
                           description:
@@ -193,11 +200,11 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.warning_amber_rounded,
                           iconColor: const Color(0xFFE54D5E),
                           iconBgColor: const Color(0xFFFCE8EB),
-                          onTap: () => _showFeatureNotice('Pengaduan Bencana'),
+                          onTap: _onPengaduanBencanaTap,
                         ),
                         const SizedBox(height: 12),
 
-                        // Fitur 3: Permasalahan Sosial
+                        // Fitur 3: masih notice
                         PjsrkFeatureCard(
                           title: 'Permasalahan Sosial',
                           description:
@@ -205,7 +212,14 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.people_outline_rounded,
                           iconColor: const Color(0xFF379AE6),
                           iconBgColor: const Color(0xFFE7F2FF),
-                          onTap: () => _showFeatureNotice('Permasalahan Sosial'),
+                          onTap: () =>
+                              _showFeatureNotice('Permasalahan Sosial'),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        PjsrkReportCard(
+                          onTap: _onLihatLaporanTap,
                         ),
                       ],
                     ),
@@ -215,10 +229,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
             ),
           ],
         ),
-
-        // =====================================================================
-        // 3. BOTTOM NAVIGATION BAR
-        // =====================================================================
         bottomNavigationBar: PjsrkBottomNav(
           selectedIndex: 0,
           onTabSelected: _onBottomNavTapped,
@@ -227,7 +237,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     );
   }
 
-  /// Header bagian atas dengan warna oranye hangat dan tombol back
   Widget _buildHeader(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
@@ -248,14 +257,14 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Tombol Back di sisi kiri
               Align(
                 alignment: Alignment.centerLeft,
                 child: Material(
-                  color: Colors.white.withAlpha(56), // ~22% opacity
+                  color: Colors.white.withAlpha(56),
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
+                    mouseCursor: SystemMouseCursors.click,
                     onTap: () => Navigator.of(context).pop(),
                     child: const SizedBox(
                       width: 38,
@@ -269,8 +278,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                   ),
                 ),
               ),
-
-              // Judul Header tepat di tengah secara horizontal
               const Text(
                 'PJSRK',
                 textAlign: TextAlign.center,
@@ -289,4 +296,3 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     );
   }
 }
-
