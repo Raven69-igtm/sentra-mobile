@@ -77,8 +77,7 @@ dependencies:
   # GPS / lokasi perangkat (tombol "Lokasi saya" di form PJSRK)
   geolocator: ^13.0.2
 
-  # Pilih foto dari kamera, galeri (HP), atau file gambar (laptop)
-  image_picker: ^1.1.2
+  
 
 dev_dependencies:
   flutter_test:

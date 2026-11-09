@@ -628,7 +628,11 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
       return;
     }
 
-    // Catatan: Lampiran foto bukti bersifat opsional (tidak wajib)
+    // 5. Validasi Foto Bukti (Wajib minimal 1 foto terlampir)
+    if (_photoList.isEmpty) {
+      _showWarningSnackBar('Harap lampirkan minimal 1 foto bukti kejadian');
+      return;
+    }
 
     // Pembuatan ID Laporan Otomatis (Format: SP-YYMM-XXXX)
     final DateTime now = DateTime.now();
@@ -1072,7 +1076,7 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
         color: _neutralDark,
       ),
       decoration: InputDecoration(
-        hintText: 'Pengamen anak di lampu merah',
+        hintText: 'Masukkan judul laporan...',
         hintStyle: const TextStyle(
           fontFamily: 'Mulish',
           fontSize: 13.5,

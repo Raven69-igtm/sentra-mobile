@@ -213,7 +213,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.people_outline_rounded,
                           iconColor: const Color(0xFF379AE6),
                           iconBgColor: const Color(0xFFE7F2FF),
-<<<<<<< HEAD
                           onTap: () {
                             Navigator.push(
                               context,
@@ -222,10 +221,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                               ),
                             );
                           },
-=======
-                          onTap: () =>
-                              _showFeatureNotice('Permasalahan Sosial'),
->>>>>>> c7af336964fb29fbc79e07790fe86da5e4bf6476
                         ),
                         const SizedBox(height: 12),
 

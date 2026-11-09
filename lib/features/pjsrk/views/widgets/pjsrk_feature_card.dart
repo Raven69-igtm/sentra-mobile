@@ -9,7 +9,7 @@ class PjsrkFeatureCard extends StatelessWidget {
   final Color iconBgColor;
   final VoidCallback onTap;
 
-  const PjsrkFeatureCard({
+  const PjsrkFeatureCard(required String title, {
     super.key,
     required this.title,
     required this.description,
