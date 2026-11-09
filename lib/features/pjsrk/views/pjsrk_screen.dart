@@ -215,12 +215,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           onTap: () =>
                               _showFeatureNotice('Permasalahan Sosial'),
                         ),
-
-                        const SizedBox(height: 12),
-
-                        PjsrkReportCard(
-                          onTap: _onLihatLaporanTap,
-                        ),
                       ],
                     ),
                   ),
