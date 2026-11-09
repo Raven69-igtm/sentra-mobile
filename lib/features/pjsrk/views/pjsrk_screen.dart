@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sentra/features/auth/views/profile_screen.dart';
 import 'package:sentra/features/notification/views/notification_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_report_event_screen.dart';
 import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
@@ -68,6 +69,16 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => const RehabilitasiSosialFormScreen(),
+      ),
+    );
+  }
+
+  /// Navigasi ke form Pengaduan Bencana
+  void _onPengaduanBencanaTap() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PjsrkReportEventScreen(),
       ),
     );
   }
@@ -161,7 +172,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Fitur 2: masih notice (bisa diganti form nanti)
+                        // Fitur 2: Pengaduan Bencana → buka form
                         PjsrkFeatureCard(
                           title: 'Pengaduan Bencana',
                           description:
@@ -169,7 +180,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.warning_amber_rounded,
                           iconColor: const Color(0xFFE54D5E),
                           iconBgColor: const Color(0xFFFCE8EB),
-                          onTap: () => _showFeatureNotice('Pengaduan Bencana'),
+                          onTap: _onPengaduanBencanaTap,
                         ),
                         const SizedBox(height: 12),
 
@@ -226,6 +237,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                   borderRadius: BorderRadius.circular(12),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
+                    mouseCursor: SystemMouseCursors.click,
                     onTap: () => Navigator.of(context).pop(),
                     child: const SizedBox(
                       width: 38,
