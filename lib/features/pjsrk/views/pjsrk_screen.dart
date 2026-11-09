@@ -8,6 +8,7 @@ import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
+import 'package:sentra/features/pjsrk/views/permasalahan_sosial_screen.dart';
 import 'package:sentra/features/report/views/history_screen.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
@@ -128,7 +129,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
+        statusBarIconBrightness: Brightness.light, 
         statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
@@ -205,7 +206,14 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.people_outline_rounded,
                           iconColor: const Color(0xFF379AE6),
                           iconBgColor: const Color(0xFFE7F2FF),
-                          onTap: () => _showFeatureNotice('Permasalahan Sosial'),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PermasalahanSosialScreen(),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 12),
 

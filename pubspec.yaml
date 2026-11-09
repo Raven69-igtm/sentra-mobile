@@ -41,6 +41,7 @@ dependencies:
   google_maps_flutter: ^2.10.1
   flutter_map: ^8.1.0
   latlong2: ^0.9.1
+  image_picker: ^1.1.2
   curved_navigation_bar: ^1.0.6
   flutter_gradient_colors: ^2.1.1
   timelines: ^0.1.0
