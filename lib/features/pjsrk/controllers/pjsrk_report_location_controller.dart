@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/pjsrk_report_location_model.dart';
 
 /// CONTROLLER langkah 2 (Lokasi).
 class PjsrkReportLocationController extends ChangeNotifier {
   static const maksFoto = 4;
+  final ImagePicker _picker = ImagePicker();
 
-  // Titik peta. TODO: ganti dengan hasil GPS (paket geolocator).
- double latitude = -7.6051;
- double longitude = 111.9046;
+  // Titik peta.
+  double latitude = -7.6051;
+  double longitude = 111.9046;
 
   // Nilai awal diisi sesuai gambar desain. Kosongkan kalau mau form bersih.
   final alamatCtrl =
@@ -17,20 +19,59 @@ class PjsrkReportLocationController extends ChangeNotifier {
   final patokanCtrl = TextEditingController();
   final kontakCtrl = TextEditingController(text: '0812 3456 7890');
 
-  // Daftar foto. Sekarang masih isi tiruan (2 kotak terisi seperti gambar).
-  // TODO: ganti jadi [] dan isi path asli dari paket image_picker.
-  final List<String> foto = ['contoh_1', 'contoh_2'];
+  // Daftar file foto yang dipilih pengguna (dimulai dari kosong)
+  final List<String> foto = [];
 
-  void tambahFoto() {
+  /// Mengambil foto baru langsung dari kamera
+  Future<void> ambilFoto() async {
     if (foto.length >= maksFoto) return;
-    // TODO: buka kamera/galeri pakai image_picker, lalu add path aslinya.
-    foto.add('contoh_${foto.length + 1}');
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+      if (file != null) {
+        foto.add(file.path);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error ambilFoto: $e');
+    }
+  }
+
+  /// Memilih foto dari galeri ponsel
+  Future<void> pilihDariGaleri() async {
+    if (foto.length >= maksFoto) return;
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+      if (file != null) {
+        foto.add(file.path);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error pilihDariGaleri: $e');
+    }
+  }
+
+  /// Menambah foto (kompatibilitas pengujian/testing)
+  void tambahFoto([String? path]) {
+    if (foto.length >= maksFoto) return;
+    foto.add(path ?? 'contoh_${foto.length + 1}');
     notifyListeners();
   }
 
   void hapusFoto(int index) {
-    foto.removeAt(index);
-    notifyListeners();
+    if (index >= 0 && index < foto.length) {
+      foto.removeAt(index);
+      notifyListeners();
+    }
   }
 
   /// Mengembalikan pesan error, atau null jika semua benar.

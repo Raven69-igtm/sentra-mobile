@@ -11,8 +11,9 @@ package='com.example.sentra_mobile' >
 <!-- Izin kamera & galeri (Android 12 ke bawah) -->
 <uses-permission android:name="android.permission.CAMERA"/>
 <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-<!-- Android 13+ baca media gambar -->
+<!-- Android 13+ baca media gambar & video -->
 <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+<uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
 
     <application
         android:usesCleartextTraffic="true"
