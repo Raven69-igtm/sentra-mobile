@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/views/profile_screen.dart';
 import 'package:sentra/features/notification/views/notification_screen.dart';
 import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
@@ -9,7 +7,7 @@ import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
-import 'package:sentra/features/report/views/history_screen.dart';
+import 'package:sentra/features/report/views/report_screen.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
 /// Sesuai dengan desain referensi kedua (pixel-accurate & responsif)
@@ -24,6 +22,14 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
   // Warna tema halaman PJSRK
   static const Color _primaryOrange = Color(0xFFD8782E);
   static const Color _backgroundColor = Color(0xFFF8F9FA);
+
+  // Tab aktif: 0=Beranda, 1=Laporan, 2=Notifikasi, 3=Profil
+  int _selectedTab = 0;
+
+  void _onTabSelected(int index) {
+    if (index == _selectedTab) return;
+    setState(() => _selectedTab = index);
+  }
 
   /// Menampilkan snackbar feedback sementara yang rapi dan konsisten
   void _showFeatureNotice(String featureName) {
@@ -66,66 +72,17 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     );
   }
 
-  /// Navigasi ke halaman Lihat Laporan Saya (HistoryPage)
+  /// Navigasi ke tab Laporan (index 1)
   void _onLihatLaporanTap() {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-    final userId = userProvider.idAkun;
-
-    if (userId != null && userId > 0) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const HistoryPage()),
-      );
-    } else {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.lock_outline_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Silakan login terlebih dahulu untuk melihat riwayat laporan',
-                  style: TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 13,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.orange[800],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        ),
-      );
-    }
+    _onTabSelected(1);
   }
 
   /// Handler pemilihan tab pada bottom navigation bar
   void _onBottomNavTapped(int index) {
-    switch (index) {
-      case 0:
-        Navigator.of(context).pop();
-        break;
-      case 1:
-        _onLihatLaporanTap();
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => NotificationPage()),
-        );
-        break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ProfileScreen()),
-        );
-        break;
+    _onTabSelected(index);
+    // tab 0 (Beranda) — scroll ke atas jika sudah di sana
+    if (index == 0 && _selectedTab == 0) {
+      Navigator.of(context).pop();
     }
   }
 
@@ -139,8 +96,31 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
       ),
       child: Scaffold(
         backgroundColor: _backgroundColor,
-        body: Column(
-          children: [
+        body: _buildBody(),
+        bottomNavigationBar: PjsrkBottomNav(
+          selectedIndex: _selectedTab,
+          onTabSelected: _onBottomNavTapped,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    switch (_selectedTab) {
+      case 1:
+        return const LaporanPage();
+      case 2:
+        return const NotificationPage();
+      case 3:
+        return const ProfileScreen();
+      default:
+        return _buildPjsrkHome();
+    }
+  }
+
+  Widget _buildPjsrkHome() {
+    return Column(
+      children: [
             _buildHeader(context),
             Expanded(
               child: Center(
@@ -216,13 +196,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
               ),
             ),
           ],
-        ),
-        bottomNavigationBar: PjsrkBottomNav(
-          selectedIndex: 0,
-          onTabSelected: _onBottomNavTapped,
-        ),
-      ),
-    );
+        );
   }
 
   Widget _buildHeader(BuildContext context) {

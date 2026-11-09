@@ -1,397 +1,98 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
-
-// ============================================================
-// WARNA YANG DIPAKAI BERULANG DI FORM
-// ============================================================
-const _dark = Color(0xFF2A2A2A);
-const _muted = Color(0xFF7A7F85);
-const _border = Color(0xFFE8EBEE);
-const _orange = Color(0xFFD6762E);
-const _green = Color(0xFF3F8F63);
+import 'package:flutter/services.dart';
+import 'package:sentra/features/pjsrk/views/widgets/rehab_style.dart';
 
 // ------------------------------------------------------------
-// JUMLAH ORANG + JENIS KELAMIN
+// JUMLAH ORANG (stepper - / +)
 // ------------------------------------------------------------
-class RehabJumlahGender extends StatelessWidget {
-  final int jumlah;
-  final String gender;
-  final ValueChanged<int> onJumlah;
-  final ValueChanged<String> onGender;
+class RehabJumlahField extends StatelessWidget {
+  final int value;
+  final ValueChanged<int> onChanged;
+  final int min;
+  final int max;
 
-  const RehabJumlahGender({
+  const RehabJumlahField({
     super.key,
-    required this.jumlah,
-    required this.gender,
-    required this.onJumlah,
-    required this.onGender,
+    required this.value,
+    required this.onChanged,
+    this.min = 1,
+    this.max = 99,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        // ---- Jumlah orang (naik/turun) ----
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Jumlah orang',
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _dark,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _border),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    const Icon(Icons.people_outline_rounded,
-                        size: 20, color: _muted),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '$jumlah orang',
-                        style: const TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: _dark,
-                        ),
-                      ),
-                    ),
-                    // Tombol + / -
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        InkWell(
-                          onTap: () => onJumlah(jumlah + 1),
-                          child: const Icon(Icons.keyboard_arrow_up_rounded,
-                              size: 20, color: _muted),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            if (jumlah > 1) onJumlah(jumlah - 1);
-                          },
-                          child: const Icon(Icons.keyboard_arrow_down_rounded,
-                              size: 20, color: _muted),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 6),
-                  ],
-                ),
-              ),
-            ],
+    return Container(
+      height: 48,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: RehabStyle.inputBox(),
+      child: Row(
+        children: [
+          const Icon(Icons.people_outline_rounded,
+              size: 20, color: RehabStyle.muted),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '$value orang',
+              style: RehabStyle.body.copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        // ---- Dropdown jenis kelamin ----
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Jenis kelamin',
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: _dark,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _border),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: gender,
-                    isExpanded: true,
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                        color: _muted),
-                    style: const TextStyle(
-                      fontFamily: 'Mulish',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: _dark,
-                    ),
-                    items: const [
-                      DropdownMenuItem(
-                          value: 'Laki-laki', child: Text('Laki-laki')),
-                      DropdownMenuItem(
-                          value: 'Perempuan', child: Text('Perempuan')),
-                      DropdownMenuItem(
-                          value: 'Campuran', child: Text('Campuran')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) onGender(v);
-                    },
-                  ),
-                ),
-              ),
-            ],
+          _StepButton(
+            icon: Icons.remove_rounded,
+            enabled: value > min,
+            onTap: () => onChanged(value - 1),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-// ============================================================
-// PETA + LOKASI (GPS + OpenStreetMap via flutter_map)
-// ============================================================
-/// Widget peta interaktif:
-/// - Menampilkan marker di koordinat yang dipilih
-/// - Tombol "Lokasi saya" → minta izin GPS → ambil posisi → pindahkan marker
-/// - Tap di peta → pindahkan marker ke titik yang disentuh
-/// - Field teks alamat di bawah peta (bisa diedit manual)
-class RehabMapField extends StatefulWidget {
-  /// Controller untuk teks alamat / keterangan lokasi
-  final TextEditingController controller;
-
-  /// Dipanggil setiap kali koordinat berubah (lat, lng)
-  final void Function(double lat, double lng)? onLocationChanged;
-
-  /// Koordinat awal (default: Nganjuk)
-  final double initialLat;
-  final double initialLng;
-
-  const RehabMapField({
-    super.key,
-    required this.controller,
-    this.onLocationChanged,
-    this.initialLat = -7.6051,
-    this.initialLng = 111.9046,
-  });
-
-  @override
-  State<RehabMapField> createState() => _RehabMapFieldState();
-}
-
-class _RehabMapFieldState extends State<RehabMapField> {
-  final MapController _mapController = MapController();
-  late LatLng _markerPos;
-  bool _loadingGps = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _markerPos = LatLng(widget.initialLat, widget.initialLng);
-  }
-
-  /// Minta izin + ambil lokasi GPS perangkat
-  Future<void> _getMyLocation() async {
-    setState(() => _loadingGps = true);
-
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _snack('Aktifkan GPS / lokasi di pengaturan perangkat');
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          _snack('Izin lokasi ditolak');
-          return;
-        }
-      }
-      if (permission == LocationPermission.deniedForever) {
-        _snack('Izin lokasi diblokir. Buka pengaturan aplikasi.');
-        await openAppSettings();
-        return;
-      }
-
-      final pos = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-
-      final latLng = LatLng(pos.latitude, pos.longitude);
-
-      setState(() => _markerPos = latLng);
-      _mapController.move(latLng, 16);
-
-      widget.controller.text =
-          'Lat ${pos.latitude.toStringAsFixed(5)}, Lng ${pos.longitude.toStringAsFixed(5)}';
-
-      widget.onLocationChanged?.call(pos.latitude, pos.longitude);
-      _snack('Lokasi berhasil diambil');
-    } catch (e) {
-      _snack('Gagal ambil lokasi: $e');
-    } finally {
-      if (mounted) setState(() => _loadingGps = false);
-    }
-  }
-
-  void _snack(String msg) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: const TextStyle(fontFamily: 'Mulish')),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          const SizedBox(width: 8),
+          _StepButton(
+            icon: Icons.add_rounded,
+            enabled: value < max,
+            onTap: () => onChanged(value + 1),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _StepButton extends StatelessWidget {
+  final IconData icon;
+  final bool enabled;
+  final VoidCallback onTap;
+
+  const _StepButton({
+    required this.icon,
+    required this.enabled,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // ---------- PETA ----------
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: SizedBox(
-            height: 180,
-            width: double.infinity,
-            child: Stack(
-              children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _markerPos,
-                    initialZoom: 15,
-                    onTap: (tapPos, latLng) {
-                      setState(() => _markerPos = latLng);
-                      widget.controller.text =
-                          'Lat ${latLng.latitude.toStringAsFixed(5)}, Lng ${latLng.longitude.toStringAsFixed(5)}';
-                      widget.onLocationChanged
-                          ?.call(latLng.latitude, latLng.longitude);
-                    },
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.example.sentra_mobile',
-                    ),
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _markerPos,
-                          width: 40,
-                          height: 40,
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            color: Color(0xFFE54D5E),
-                            size: 40,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-
-                // Tombol "Lokasi saya"
-                Positioned(
-                  right: 12,
-                  bottom: 10,
-                  child: Material(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    elevation: 3,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(20),
-                      onTap: _loadingGps ? null : _getMyLocation,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_loadingGps)
-                              const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: _green,
-                                ),
-                              )
-                            else
-                              const Icon(Icons.my_location_rounded,
-                                  size: 14, color: _green),
-                            const SizedBox(width: 6),
-                            Text(
-                              _loadingGps ? 'Mengambil…' : 'Lokasi saya',
-                              style: const TextStyle(
-                                fontFamily: 'Mulish',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: _green,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled ? onTap : null,
+      child: Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(
+          color: enabled ? RehabStyle.orangeSoft : const Color(0xFFF0F2F4),
+          borderRadius: BorderRadius.circular(8),
         ),
-
-        const SizedBox(height: 10),
-
-        // ---------- FIELD ALAMAT ----------
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _border),
-          ),
-          child: TextField(
-            controller: widget.controller,
-            style: const TextStyle(
-                fontFamily: 'Mulish', fontSize: 14, color: _dark),
-            decoration: const InputDecoration(
-              prefixIcon:
-                  Icon(Icons.place_outlined, size: 20, color: _muted),
-              hintText: 'Alamat / keterangan lokasi',
-              hintStyle: TextStyle(
-                  fontFamily: 'Mulish', fontSize: 13, color: _muted),
-              border: InputBorder.none,
-              contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            ),
-          ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled ? RehabStyle.orange : RehabStyle.muted,
         ),
-      ],
+      ),
     );
   }
 }
 
 // ------------------------------------------------------------
-// TEXTAREA CIRI-CIRI
+// TEXTAREA (ciri-ciri / keterangan)
 // ------------------------------------------------------------
 class RehabTextArea extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
+
   const RehabTextArea({
     super.key,
     required this.controller,
@@ -401,20 +102,18 @@ class RehabTextArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _border),
-      ),
+      decoration: RehabStyle.inputBox(),
       child: TextField(
         controller: controller,
-        maxLines: 3,
-        style: const TextStyle(
-            fontFamily: 'Mulish', fontSize: 14, color: _dark),
+        minLines: 3,
+        maxLines: 5,
+        keyboardType: TextInputType.multiline,
+        textCapitalization: TextCapitalization.sentences,
+        scrollPadding: const EdgeInsets.only(bottom: 160),
+        style: RehabStyle.body,
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: const TextStyle(
-              fontFamily: 'Mulish', fontSize: 13, color: _muted),
+          hintStyle: RehabStyle.hint,
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(14),
         ),
@@ -433,24 +132,22 @@ class RehabPhoneField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _border),
-      ),
+      decoration: RehabStyle.inputBox(),
       child: TextField(
         controller: controller,
         keyboardType: TextInputType.phone,
-        style: const TextStyle(
-            fontFamily: 'Mulish', fontSize: 14, color: _dark),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9+\s-]')),
+        ],
+        scrollPadding: const EdgeInsets.only(bottom: 160),
+        style: RehabStyle.body,
         decoration: const InputDecoration(
-          prefixIcon: Icon(Icons.phone_outlined, size: 20, color: _muted),
+          prefixIcon:
+              Icon(Icons.phone_outlined, size: 20, color: RehabStyle.muted),
           hintText: '08xxxxxxxxxx',
-          hintStyle:
-              TextStyle(fontFamily: 'Mulish', fontSize: 13, color: _muted),
+          hintStyle: RehabStyle.hint,
           border: InputBorder.none,
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         ),
       ),
     );
@@ -458,11 +155,12 @@ class RehabPhoneField extends StatelessWidget {
 }
 
 // ------------------------------------------------------------
-// TOGGLE RAHASIAKAN IDENTITAS
+// TOGGLE "Rahasiakan identitas pelapor" (tanpa Switch bawaan)
 // ------------------------------------------------------------
 class RehabRahasiaToggle extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
+
   const RehabRahasiaToggle({
     super.key,
     required this.value,
@@ -471,25 +169,133 @@ class RehabRahasiaToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Expanded(
+    return Semantics(
+      toggled: value,
+      label: 'Rahasiakan identitas pelapor',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => onChanged(!value),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Rahasiakan identitas pelapor',
+                style: TextStyle(
+                  fontFamily: RehabStyle.fontFamily,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: RehabStyle.dark,
+                ),
+              ),
+            ),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 160),
+              width: 46,
+              height: 26,
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: value ? RehabStyle.orange : const Color(0xFFD5D9DD),
+                borderRadius: BorderRadius.circular(13),
+              ),
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 160),
+                alignment:
+                    value ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------
+// ALERT KEAMANAN (form Anak Terlantar)
+// ------------------------------------------------------------
+class RehabSafetyAlert extends StatelessWidget {
+  final String message;
+  const RehabSafetyAlert({super.key, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF3CBA8)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.shield_outlined, size: 20, color: RehabStyle.orange),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontFamily: RehabStyle.fontFamily,
+                fontSize: 12.5,
+                height: 1.4,
+                color: RehabStyle.dark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------
+// TOMBOL UTAMA ORANYE (Kirim Laporan)
+// ------------------------------------------------------------
+class RehabPrimaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onPressed;
+
+  const RehabPrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: Container(
+          width: double.infinity,
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: RehabStyle.orange,
+            borderRadius: BorderRadius.circular(14),
+          ),
           child: Text(
-            'Rahasiakan identitas pelapor',
-            style: TextStyle(
-              fontFamily: 'Mulish',
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: _dark,
+            label,
+            style: const TextStyle(
+              fontFamily: RehabStyle.fontFamily,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
             ),
           ),
         ),
-        Switch.adaptive(
-          value: value,
-          activeColor: _orange,
-          onChanged: onChanged,
-        ),
-      ],
+      ),
     );
   }
 }

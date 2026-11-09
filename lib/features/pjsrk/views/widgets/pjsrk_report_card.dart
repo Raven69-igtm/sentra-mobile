@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Kartu khusus "Lihat laporan saya" berwarna hijau mint lembut
+/// Kartu khusus "Lihat laporan saya" untuk PJSRK dengan tema oren
 class PjsrkReportCard extends StatelessWidget {
   final VoidCallback onTap;
 
@@ -12,7 +12,7 @@ class PjsrkReportCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFE5F4EB),
+      color: const Color(0xFFFFF3E0), // Light orange background
       borderRadius: BorderRadius.circular(16),
       elevation: 0,
       child: InkWell(
@@ -20,21 +20,21 @@ class PjsrkReportCard extends StatelessWidget {
         onTap: onTap,
         child: Ink(
           decoration: BoxDecoration(
-            color: const Color(0xFFE5F4EB),
+            color: const Color(0xFFFFF3E0),
             borderRadius: BorderRadius.circular(16),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Icon Dokumen Hijau di kiri
+              // Icon Dokumen Oren di kiri
               const SizedBox(
                 width: 44,
                 height: 44,
                 child: Center(
                   child: Icon(
                     Icons.description_outlined,
-                    color: Color(0xFF27845A),
+                    color: Color(0xFFD8782E), // Orange untuk PJSRK
                     size: 26,
                   ),
                 ),
@@ -53,7 +53,7 @@ class PjsrkReportCard extends StatelessWidget {
                         fontFamily: 'Mulish',
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E6B47),
+                        color: Color(0xFFBF6919), // Dark orange
                       ),
                     ),
                     SizedBox(height: 3),
@@ -73,7 +73,7 @@ class PjsrkReportCard extends StatelessWidget {
               // Chevron Right di kanan
               const Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFF27845A),
+                color: Color(0xFFD8782E), // Orange untuk PJSRK
                 size: 22,
               ),
             ],

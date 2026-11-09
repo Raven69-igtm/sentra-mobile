@@ -708,30 +708,27 @@ class _NotificationPageState extends State<NotificationPage>
       onDismissed: (direction) => _handleNotificationDismiss(notif),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: isUnread ? () => _markAsReadOptimistic(notif) : null,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isUnread ? Colors.blue[50] : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isUnread ? Colors.blue[200]! : Colors.grey[200]!,
-                  width: isUnread ? 2 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+        child: GestureDetector(
+          onTap: isUnread ? () => _markAsReadOptimistic(notif) : null,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isUnread ? Colors.blue[50] : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isUnread ? Colors.blue[200]! : Colors.grey[200]!,
+                width: isUnread ? 2 : 1,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Icon container
@@ -806,7 +803,6 @@ class _NotificationPageState extends State<NotificationPage>
             ),
           ),
         ),
-      ),
     );
   }
 

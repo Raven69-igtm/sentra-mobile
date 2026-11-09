@@ -1,4 +1,3 @@
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sentra/features/auth/controllers/profile_controller.dart';
 import 'package:sentra/features/auth/preferences/account_prefs.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
@@ -203,10 +202,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         listen: false,
                       );
                       userProvider.clearUser();
+                      await AkunPrefs.hapusAkun();
                       await Future.delayed(const Duration(milliseconds: 100));
                       if (mounted) {
-                        GoogleSignIn().signOut();
-                        AkunPrefs.hapusAkun();
                         Navigator.pushAndRemoveUntil(
                           context,
                           MaterialPageRoute(
