@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Bottom Navigation Bar khusus untuk halaman PJSRK
-/// Tab: Beranda, Laporan, Notifikasi, Profil
+/// Bottom Navigation Bar khusus untuk halaman PJSRK.
 class PjsrkBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTabSelected;
@@ -15,22 +14,20 @@ class PjsrkBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
-    const activeColor = Color(0xFFD8782E); // Orange untuk PJSRK
-    const inactiveColor = Color(0xFF8D9299);
-
-    final tabs = [
-      (Icons.home_outlined, Icons.home_rounded, 'Beranda'),
-      (Icons.description_outlined, Icons.description_rounded, 'Laporan'),
-      (Icons.notifications_none_rounded, Icons.notifications_rounded, 'Notifikasi'),
-      (Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
-    ];
 
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(
+        border: const Border(
           top: BorderSide(color: Color(0xFFEEEEEE), width: 1),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10), // ~4% subtle shadow
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
       ),
       padding: EdgeInsets.only(
         top: 8,
@@ -38,40 +35,71 @@ class PjsrkBottomNav extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(tabs.length, (i) {
-          final isActive = selectedIndex == i;
-          final tab = tabs[i];
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => onTabSelected(i),
-              behavior: HitTestBehavior.opaque,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isActive ? tab.$2 : tab.$1,
-                      color: isActive ? activeColor : inactiveColor,
-                      size: 22,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      tab.$3,
-                      style: TextStyle(
-                        fontFamily: 'Mulish',
-                        fontSize: 11,
-                        fontWeight:
-                            isActive ? FontWeight.bold : FontWeight.w500,
-                        color: isActive ? activeColor : inactiveColor,
-                      ),
-                    ),
-                  ],
+        children: [
+          _buildNavItem(
+            index: 0,
+            icon: Icons.history_rounded,
+            activeIcon: Icons.history_rounded,
+            label: 'Riwayat',
+          ),
+          _buildNavItem(
+            index: 1,
+            icon: Icons.home_outlined,
+            activeIcon: Icons.home_rounded,
+            label: 'Beranda',
+          ),
+          _buildNavItem(
+            index: 2,
+            icon: Icons.description_outlined,
+            activeIcon: Icons.description_rounded,
+            label: 'Laporan',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required int index,
+    required IconData icon,
+    required IconData activeIcon,
+    required String label,
+  }) {
+    final isActive = selectedIndex == index;
+    const activeColor = Color(0xFF27845A);
+    const inactiveColor = Color(0xFF8D9299);
+
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => onTabSelected(index),
+          splashColor: activeColor.withAlpha(20),
+          highlightColor: Colors.transparent,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isActive ? activeIcon : icon,
+                  color: isActive ? activeColor : inactiveColor,
+                  size: 22,
                 ),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 11,
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
+                    color: isActive ? activeColor : inactiveColor,
+                  ),
+                ),
+              ],
             ),
-          );
-        }),
+          ),
+        ),
       ),
     );
   }

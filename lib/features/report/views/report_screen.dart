@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/core/utils/address_field.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/report/views/widgets/stepper_widget.dart';
@@ -8,6 +11,8 @@ import 'package:sentra/core/utils/custom_snackbar.dart';
 import 'package:sentra/core/utils/custom_spinner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 class LaporanPage extends StatefulWidget {
@@ -16,7 +21,6 @@ class LaporanPage extends StatefulWidget {
   @override
   _LaporanPageState createState() => _LaporanPageState();
 }
-
 
 class _LaporanPageState extends State<LaporanPage> {
   int _currentStep = 1;
@@ -35,6 +39,9 @@ class _LaporanPageState extends State<LaporanPage> {
   // Form 3 - Tanggal & Lokasi Kejadian
   final TextEditingController _tanggalController = TextEditingController();
   final TextEditingController _tempatkejadianform3 = TextEditingController();
+  DateTime? _waktuKejadian;
+  bool _isFetchingLocation = false;
+  bool _hasRequestedLocation = false;
 
   void _addAutoCapitalizeListener(TextEditingController controller) {
     controller.addListener(() {
@@ -67,16 +74,155 @@ class _LaporanPageState extends State<LaporanPage> {
     }
 
     if (isValid) {
+      final enteringIncidentDetails = _currentStep == 2;
       setState(() {
         if (_currentStep < 3) _currentStep++;
       });
+      if (enteringIncidentDetails) {
+        _initializeIncidentDateAndLocation();
+      }
     }
   }
+
+  Future<void> _initializeIncidentDateAndLocation() async {
+    final now = DateTime.now();
+    _waktuKejadian ??= now;
+    if (_tanggalController.text.isEmpty) {
+      _tanggalController.text = _formatDateForApi(now);
+    }
+
+    if (_hasRequestedLocation || _tempatkejadianform3.text.trim().isNotEmpty) {
+      return;
+    }
+    _hasRequestedLocation = true;
+
+    setState(() => _isFetchingLocation = true);
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) {
+        CustomSnackbar.show(
+          'GPS tidak aktif. Silakan isi lokasi kejadian secara manual.',
+          warna: Colors.orange,
+        );
+        return;
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        CustomSnackbar.show(
+          'Izin lokasi tidak tersedia. Silakan isi lokasi kejadian secara manual.',
+          warna: Colors.orange,
+        );
+        return;
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 15),
+        ),
+      );
+      if (!mounted) return;
+
+      final coordinates =
+          'Lat ${position.latitude.toStringAsFixed(5)}, '
+          'Lng ${position.longitude.toStringAsFixed(5)}';
+      if (_tempatkejadianform3.text.trim().isNotEmpty) return;
+      _tempatkejadianform3.text = coordinates;
+
+      try {
+        final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
+          'lat': '${position.latitude}',
+          'lon': '${position.longitude}',
+          'format': 'jsonv2',
+          'addressdetails': '1',
+          'zoom': '18',
+        });
+        final response = await http
+            .get(
+              uri,
+              headers: const {
+                'User-Agent': 'SENTRA-DPPPA-Nganjuk/1.0',
+                'Accept-Language': 'id',
+              },
+            )
+            .timeout(const Duration(seconds: 10));
+        if (response.statusCode != 200) {
+          throw Exception('Reverse geocoding gagal: ${response.statusCode}');
+        }
+
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final address =
+            (data['address'] as Map?)?.cast<String, dynamic>() ?? {};
+        final addressParts = [
+          address['road'],
+          address['suburb'] ?? address['neighbourhood'] ?? address['village'],
+          address['city_district'] ?? address['county'] ?? address['city'],
+          address['state'],
+        ].where((part) => part != null && '$part'.trim().isNotEmpty);
+        final resolvedAddress =
+            addressParts.isNotEmpty
+                ? addressParts.join(', ')
+                : (data['display_name'] as String?)
+                    ?.split(',')
+                    .take(4)
+                    .join(',');
+
+        if (mounted &&
+            _tempatkejadianform3.text == coordinates &&
+            resolvedAddress != null &&
+            resolvedAddress.isNotEmpty) {
+          _tempatkejadianform3.text = resolvedAddress;
+        }
+      } catch (error) {
+        debugPrint('Gagal mendapatkan alamat dari koordinat GPS: $error');
+        if (mounted) {
+          CustomSnackbar.show(
+            'Koordinat GPS terisi, tetapi alamat tidak dapat ditemukan.',
+            warna: Colors.orange,
+          );
+        }
+      }
+    } catch (error) {
+      debugPrint('Gagal mendapatkan lokasi GPS untuk laporan PPA: $error');
+      if (mounted) {
+        CustomSnackbar.show(
+          'Lokasi GPS gagal didapatkan. Silakan isi lokasi kejadian secara manual.',
+          warna: Colors.orange,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isFetchingLocation = false);
+    }
+  }
+
+  String _formatDateForApi(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}-'
+      '${date.day.toString().padLeft(2, '0')}';
 
   void _prevStep() {
     setState(() {
       if (_currentStep > 1) _currentStep--;
     });
+  }
+
+  void _handleBackNavigation() {
+    if (_currentStep > 1) {
+      _prevStep();
+      return;
+    }
+
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
   }
 
   @override
@@ -87,23 +233,25 @@ class _LaporanPageState extends State<LaporanPage> {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
       if (user != null) {
-        if (user.nama != null && user.nama!.isNotEmpty && _namaform1.text.isEmpty) {
+        if (user.nama != null &&
+            user.nama!.isNotEmpty &&
+            _namaform1.text.isEmpty) {
           _namaform1.text = user.nama!;
         }
-        if (user.notelp != null && user.notelp!.isNotEmpty && _telpform1.text.isEmpty) {
+        if (user.notelp != null &&
+            user.notelp!.isNotEmpty &&
+            _telpform1.text.isEmpty) {
           _telpform1.text = user.notelp!;
         }
-        if (user.alamat != null && user.alamat!.isNotEmpty && _alamatform1.text.isEmpty) {
+        if (user.alamat != null &&
+            user.alamat!.isNotEmpty &&
+            _alamatform1.text.isEmpty) {
           _alamatform1.text = user.alamat!;
         }
       }
     });
 
-    final namaControllers = [
-      _namaform1,
-      _alamatform1,
-      _tempatkejadianform3,
-    ];
+    final namaControllers = [_namaform1, _alamatform1, _tempatkejadianform3];
 
     for (var controller in namaControllers) {
       _addAutoCapitalizeListener(controller);
@@ -151,7 +299,10 @@ class _LaporanPageState extends State<LaporanPage> {
       return false;
     }
     if (_tempatkejadianform3.text.trim().isEmpty) {
-      CustomSnackbar.show("Mohon isi lokasi / tempat kejadian", warna: Colors.red);
+      CustomSnackbar.show(
+        "Mohon isi lokasi / tempat kejadian",
+        warna: Colors.red,
+      );
       return false;
     }
     return true;
@@ -162,7 +313,6 @@ class _LaporanPageState extends State<LaporanPage> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         elevation: 0,
         backgroundColor: Colors.transparent,
         flexibleSpace: Container(
@@ -173,6 +323,11 @@ class _LaporanPageState extends State<LaporanPage> {
               end: Alignment.bottomCenter,
             ),
           ),
+        ),
+        leading: IconButton(
+          tooltip: 'Kembali',
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: _handleBackNavigation,
         ),
         title: Row(
           children: [
@@ -506,6 +661,7 @@ class _LaporanPageState extends State<LaporanPage> {
       },
       'detail_kasus': {
         'tanggal': _tanggalController.text.trim(),
+        'waktu_kejadian': (_waktuKejadian ?? DateTime.now()).toIso8601String(),
         'tempat_kejadian': _tempatkejadianform3.text.trim(),
         'kronologi': _kronologiform4.text.trim(),
       },
@@ -617,9 +773,7 @@ class _LaporanPageState extends State<LaporanPage> {
 
                         _buildEnhancedPreviewSection(
                           "Kronologi Kejadian",
-                          {
-                            'kronologi': _kronologiform4.text.trim(),
-                          },
+                          {'kronologi': _kronologiform4.text.trim()},
                           Icons.history_edu_outlined,
                           Colors.deepOrange,
                         ),
@@ -629,6 +783,9 @@ class _LaporanPageState extends State<LaporanPage> {
                           "Waktu & Lokasi Kejadian",
                           {
                             'tanggal_kejadian': _tanggalController.text.trim(),
+                            'waktu_kejadian':
+                                (_waktuKejadian ?? DateTime.now())
+                                    .toIso8601String(),
                             'lokasi_kejadian': _tempatkejadianform3.text.trim(),
                           },
                           Icons.location_on_outlined,
@@ -943,6 +1100,9 @@ class _LaporanPageState extends State<LaporanPage> {
     _kronologiform4.clear();
     _tanggalController.clear();
     _tempatkejadianform3.clear();
+    _waktuKejadian = null;
+    _hasRequestedLocation = false;
+    _isFetchingLocation = false;
     setState(() {
       _currentStep = 1;
     });
@@ -1173,6 +1333,7 @@ class _LaporanPageState extends State<LaporanPage> {
     List<TextInputFormatter>? inputFormatters,
     TextCapitalization? textCapitalization,
     int maxLines = 1,
+    Widget? suffixIcon,
     required Color themeColor,
   }) {
     return Container(
@@ -1215,6 +1376,7 @@ class _LaporanPageState extends State<LaporanPage> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.grey[50],
+                suffixIcon: suffixIcon,
                 prefixIcon:
                     icon != null
                         ? Container(
@@ -1465,6 +1627,17 @@ class _LaporanPageState extends State<LaporanPage> {
                 themeColor: Colors.teal[600]!,
                 maxLines: 2,
                 inputFormatters: [LengthLimitingTextInputFormatter(100)],
+                suffixIcon:
+                    _isFetchingLocation
+                        ? const Padding(
+                          padding: EdgeInsets.all(14),
+                          child: SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                        : null,
               ),
 
               SizedBox(height: 20),
@@ -1671,12 +1844,17 @@ class _LaporanPageState extends State<LaporanPage> {
                 );
 
                 if (pickedDate != null) {
-                  String formattedDate =
-                      "${pickedDate.year}-"
-                      "${pickedDate.month.toString().padLeft(2, '0')}-"
-                      "${pickedDate.day.toString().padLeft(2, '0')}";
+                  final previousTime = _waktuKejadian ?? DateTime.now();
                   setState(() {
-                    _tanggalController.text = formattedDate;
+                    _tanggalController.text = _formatDateForApi(pickedDate);
+                    _waktuKejadian = DateTime(
+                      pickedDate.year,
+                      pickedDate.month,
+                      pickedDate.day,
+                      previousTime.hour,
+                      previousTime.minute,
+                      previousTime.second,
+                    );
                   });
                 }
               },
@@ -1728,17 +1906,69 @@ class _LaporanPageState extends State<LaporanPage> {
                 color: themeColor.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 6,
                 children: [
                   Icon(Icons.check_circle_outline, color: themeColor, size: 14),
-                  SizedBox(width: 6),
                   Text(
-                    'Tanggal dipilih: ${_formatDateToReadable(_tanggalController.text)}',
+                    'Kejadian: ${_formatDateToReadable(_tanggalController.text)}',
                     style: TextStyle(
                       fontSize: 11,
                       color: themeColor,
                       fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    '${(_waktuKejadian ?? DateTime.now()).hour.toString().padLeft(2, '0')}:'
+                    '${(_waktuKejadian ?? DateTime.now()).minute.toString().padLeft(2, '0')}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: themeColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Ubah waktu kejadian',
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    onPressed: () async {
+                      final currentTime = _waktuKejadian ?? DateTime.now();
+                      final pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(currentTime),
+                        builder:
+                            (context, child) => Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: ColorScheme.light(
+                                  primary: themeColor,
+                                  onPrimary: Colors.white,
+                                  onSurface: Colors.black,
+                                ),
+                              ),
+                              child: child!,
+                            ),
+                      );
+                      if (pickedTime != null && mounted) {
+                        setState(() {
+                          _waktuKejadian = DateTime(
+                            currentTime.year,
+                            currentTime.month,
+                            currentTime.day,
+                            pickedTime.hour,
+                            pickedTime.minute,
+                          );
+                        });
+                      }
+                    },
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      color: themeColor,
+                      size: 16,
                     ),
                   ),
                 ],

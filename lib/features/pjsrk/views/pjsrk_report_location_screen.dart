@@ -38,18 +38,12 @@ class _PjsrkReportLocationScreenState extends State<PjsrkReportLocationScreen> {
   void _snack(String pesan) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(
-          pesan,
-          style: const TextStyle(fontFamily: 'Mulish'),
+      ..showSnackBar(
+        SnackBar(
+          content: Text(pesan, style: const TextStyle(fontFamily: 'Mulish')),
+          behavior: SnackBarBehavior.floating,
         ),
-        behavior: SnackBarBehavior.floating,
-      ));
-  }
-
-  void _lokasiSaya() {
-    // TODO: ambil GPS pakai paket geolocator, lalu isi _c.latitude/_c.longitude.
-    _snack('GPS belum disambungkan');
+      );
   }
 
   void _lanjut() {
@@ -62,10 +56,11 @@ class _PjsrkReportLocationScreenState extends State<PjsrkReportLocationScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PjsrkReportSendScreen(
-          event: widget.event,
-          location: _c.buildModel(),
-        ),
+        builder:
+            (_) => PjsrkReportSendScreen(
+              event: widget.event,
+              location: _c.buildModel(),
+            ),
       ),
     );
   }
@@ -76,100 +71,106 @@ class _PjsrkReportLocationScreenState extends State<PjsrkReportLocationScreen> {
       child: Scaffold(
         backgroundColor: PjsrkColors.bg,
         appBar: const PjsrkReportAppBar(),
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: _c,
-          builder: (context, _) => Column(
-            children: [
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const PjsrkStepper(current: 2),
-                      const SizedBox(height: 14),
+        body: SafeArea(
+          child: ListenableBuilder(
+            listenable: _c,
+            builder:
+                (context, _) => Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const PjsrkStepper(current: 2),
+                            const SizedBox(height: 14),
 
-                     const PjsrkLabel('Titik lokasi bencana'),
-                     PjsrkMapPreview(
-                        addressController: _c.alamatCtrl,
-                        kelurahanController: _c.kelurahanCtrl,   // ← ba                      ru
-                        kecamatanController: _c.kecamatanCtrl,         // ← biar form alamat ikut terisi
-                        onLocationChanged: (lat, lng) {
-                          _c.latitude = lat;
-                          _c.longitude = lng;
-                        },
-                     ),
+                            const PjsrkLabel('Titik lokasi bencana'),
+                            PjsrkMapPreview(
+                              addressController: _c.alamatCtrl,
+                              kelurahanController: _c.kelurahanCtrl,
+                              kecamatanController: _c.kecamatanCtrl,
+                              onLocationChanged: (lat, lng) {
+                                _c.latitude = lat;
+                                _c.longitude = lng;
+                              },
+                            ),
+                            const SizedBox(height: 16),
 
-                      PjsrkTextBox(
-                        controller: _c.alamatCtrl,
-                        icon: Icons.location_on_outlined,
-                        highlight: true,
-                      ),
-                      const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: PjsrkField(
+                                    label: 'Kelurahan',
+                                    child: PjsrkTextBox(
+                                      controller: _c.kelurahanCtrl,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: PjsrkField(
+                                    label: 'Kecamatan',
+                                    child: PjsrkTextBox(
+                                      controller: _c.kecamatanCtrl,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
 
-                      Row(children: [
-                        Expanded(
-                          child: PjsrkField(
-                            label: 'Kelurahan',
-                            child: PjsrkTextBox(controller: _c.kelurahanCtrl),
-                          ),
+                            const PjsrkLabel('Patokan lokasi'),
+                            PjsrkTextBox(
+                              controller: _c.patokanCtrl,
+                              hint: 'Dekat jembatan sungai, sebelah masjid',
+                            ),
+                            const SizedBox(height: 16),
+
+                            const PjsrkLabel('Foto / video kejadian (maks 4)'),
+                            PjsrkPhotoPicker(
+                              items: _c.foto,
+                              max: PjsrkReportLocationController.maksFoto,
+                              onAdd: _c.tambahFoto,
+                              onRemove: _c.hapusFoto,
+                            ),
+                            const SizedBox(height: 16),
+
+                            const PjsrkLabel('Kontak yang bisa dihubungi'),
+                            PjsrkTextBox(
+                              controller: _c.kontakCtrl,
+                              icon: Icons.phone_outlined,
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(
+                                  RegExp(r'[0-9 +\-]'),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+
+                            const PjsrkNoticeBox(
+                              icon: Icons.notifications_none_outlined,
+                              text:
+                                  'Laporan bencana diteruskan ke petugas jaga dan BPBD terkait.',
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: PjsrkField(
-                            label: 'Kecamatan',
-                            child: PjsrkTextBox(controller: _c.kecamatanCtrl),
-                          ),
-                        ),
-                      ]),
-                      const SizedBox(height: 16),
-
-                      const PjsrkLabel('Patokan lokasi'),
-                      PjsrkTextBox(
-                        controller: _c.patokanCtrl,
-                        hint: 'Dekat jembatan sungai, sebelah masjid',
                       ),
-                      const SizedBox(height: 16),
-
-                      const PjsrkLabel('Foto / video kejadian (maks 4)'),
-                      PjsrkPhotoPicker(
-                        items: _c.foto,
-                        max: PjsrkReportLocationController.maksFoto,
-                        onAdd: _c.tambahFoto,
-                        onRemove: _c.hapusFoto,
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
+                      child: PjsrkGradientButton(
+                        text: 'Tinjau & Kirim',
+                        onTap: _lanjut,
                       ),
-                      const SizedBox(height: 16),
-
-                      const PjsrkLabel('Kontak yang bisa dihubungi'),
-                      PjsrkTextBox(
-                        controller: _c.kontakCtrl,
-                        icon: Icons.phone_outlined,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(RegExp(r'[0-9 +\-]')),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      const PjsrkNoticeBox(
-                        icon: Icons.notifications_none_outlined,
-                        text:
-                            'Laporan bencana diteruskan ke petugas jaga dan BPBD terkait.',
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(18, 8, 18, 16),
-                child: PjsrkGradientButton(text: 'Tinjau & Kirim', onTap: _lanjut),
-              ),
-            ],
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

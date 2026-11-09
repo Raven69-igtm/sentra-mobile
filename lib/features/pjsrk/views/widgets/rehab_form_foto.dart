@@ -1,29 +1,30 @@
-import 'dart:typed_data';
-
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'dart:io'; // File dari path lokal (mobile/desktop)
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:sentra/features/pjsrk/views/widgets/rehab_style.dart';
 
-/// Foto yang sudah dipilih. Bytes dibaca sekali agar preview bekerja sama di
-/// Android, iOS, desktop, dan Web (tanpa dart:io).
-class RehabPhoto {
-  final XFile file;
-  final Uint8List bytes;
-  const RehabPhoto({required this.file, required this.bytes});
-}
+const _muted = Color(0xFF7A7F85);
+const _border = Color(0xFFE8EBEE);
+const _greenSoft = Color(0xFFE4F1E9);
+const _green = Color(0xFF3F8F63);
+const _orange = Color(0xFFD6762E);
 
-enum _PhotoAction { camera, gallery, delete }
-
-/// Baris 4 slot foto (maks 4).
-/// - Slot kosong  -> pilih Kamera / Galeri
-/// - Slot terisi  -> ganti (Kamera / Galeri) atau Hapus
+// ============================================================
+// BARIS 4 SLOT FOTO
+// - Ketuk slot kosong → pilih sumber (Kamera / Galeri / File)
+// - Ketuk slot terisi → hapus foto
+// - image_picker bekerja di:
+//     HP  → kamera + galeri
+//     Laptop (Windows/macOS/Linux) → file picker gambar
+//     Web → file picker (terbatas)
+// ============================================================
 class RehabFotoRow extends StatelessWidget {
-  static const int maxPhotos = 4;
+  /// Daftar foto yang sudah dipilih (null = slot kosong)
+  /// Kita pakai XFile dari image_picker (lintas platform)
+  final List<XFile?> photos;
 
-  final List<RehabPhoto?> photos;
-  final void Function(int index, RehabPhoto? photo) onChanged;
+  /// Dipanggil saat foto di satu index berubah (bisa null = dihapus)
+  final void Function(int index, XFile? file) onChanged;
 
   const RehabFotoRow({
     super.key,
@@ -31,136 +32,170 @@ class RehabFotoRow extends StatelessWidget {
     required this.onChanged,
   });
 
-  /// Kamera hanya ditawarkan di HP. Di Web/desktop cukup pilih file.
-  static bool get _canUseCamera =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+  // ----------------------------------------------------------
+  // TAMPILKAN BOTTOM SHEET: Kamera / Galeri / Hapus
+  // ----------------------------------------------------------
+  Future<void> _pick(BuildContext context, int index) async {
+    final sudahAda = photos[index] != null;
 
-  Future<void> _onSlotTap(BuildContext context, int index) async {
-    final action = await showModalBottomSheet<_PhotoAction>(
+    // Jika sudah ada foto → tanya mau hapus atau ganti
+    final choice = await showModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+      builder: (ctx) {
+        return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
+              // Handle strip
               Container(
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD5D9DD),
+                  color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               const Text(
                 'Pilih sumber foto',
                 style: TextStyle(
-                  fontFamily: RehabStyle.fontFamily,
+                  fontFamily: 'Mulish',
                   fontWeight: FontWeight.w700,
                   fontSize: 15,
-                  color: RehabStyle.dark,
                 ),
               ),
-              const SizedBox(height: 6),
-              if (_canUseCamera)
-                _SheetOption(
-                  icon: Icons.camera_alt_outlined,
-                  color: RehabStyle.orange,
-                  label: 'Kamera',
-                  onTap: () => Navigator.pop(ctx, _PhotoAction.camera),
+              const SizedBox(height: 8),
+
+              // Kamera (utama di HP; di desktop bisa tidak tersedia)
+              if (!kIsWeb)
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined, color: _orange),
+                  title: const Text('Kamera',
+                      style: TextStyle(fontFamily: 'Mulish')),
+                  onTap: () => Navigator.pop(ctx, 'camera'),
                 ),
-              _SheetOption(
-                icon: Icons.photo_library_outlined,
-                color: RehabStyle.green,
-                label: _canUseCamera ? 'Galeri' : 'Pilih file gambar',
-                onTap: () => Navigator.pop(ctx, _PhotoAction.gallery),
+
+              // Galeri / File (HP & laptop)
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined, color: _green),
+                title: Text(
+                  kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS
+                      ? 'Pilih file gambar'
+                      : 'Galeri',
+                  style: const TextStyle(fontFamily: 'Mulish'),
+                ),
+                onTap: () => Navigator.pop(ctx, 'gallery'),
               ),
-              if (photos[index] != null)
-                _SheetOption(
-                  icon: Icons.delete_outline_rounded,
-                  color: RehabStyle.red,
-                  label: 'Hapus foto',
-                  onTap: () => Navigator.pop(ctx, _PhotoAction.delete),
+
+              // Hapus jika slot sudah terisi
+              if (sudahAda)
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text('Hapus foto',
+                      style: TextStyle(fontFamily: 'Mulish', color: Colors.red)),
+                  onTap: () => Navigator.pop(ctx, 'delete'),
                 ),
+
+              const SizedBox(height: 8),
             ],
           ),
-        ),
-      ),
+        );
+      },
     );
 
-    if (action == null) return;
-    if (action == _PhotoAction.delete) {
+    if (choice == null) return;
+
+    if (choice == 'delete') {
       onChanged(index, null);
       return;
     }
 
+    // image_picker: ImageSource.camera atau ImageSource.gallery
+    final picker = ImagePicker();
+    final source =
+        choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+
     try {
-      final file = await ImagePicker().pickImage(
-        source: action == _PhotoAction.camera
-            ? ImageSource.camera
-            : ImageSource.gallery,
+      final file = await picker.pickImage(
+        source: source,
+        // Kompres ringan agar upload nanti tidak terlalu besar
         maxWidth: 1600,
         maxHeight: 1600,
         imageQuality: 85,
       );
-      if (file == null) return; // user membatalkan
-      final bytes = await file.readAsBytes();
-      onChanged(index, RehabPhoto(file: file, bytes: bytes));
-    } on Exception {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Gagal memilih foto',
-            style: TextStyle(fontFamily: RehabStyle.fontFamily),
+      if (file != null) {
+        onChanged(index, file);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Gagal memilih foto: $e',
+              style: const TextStyle(fontFamily: 'Mulish'),
+            ),
           ),
-        ),
-      );
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: List.generate(maxPhotos, (i) {
-        final photo = photos[i];
+      children: List.generate(4, (i) {
+        final file = photos[i];
+        final has = file != null;
+
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(right: i < maxPhotos - 1 ? 8 : 0),
+            padding: EdgeInsets.only(right: i < 3 ? 8 : 0),
             child: AspectRatio(
               aspectRatio: 1,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _onSlotTap(context, i),
-                child: Container(
-                  clipBehavior: Clip.antiAlias,
-                  decoration: BoxDecoration(
-                    color: photo != null
-                        ? const Color(0xFFE4F1E9)
-                        : const Color(0xFFF0F2F4),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: photo != null
-                          ? RehabStyle.green.withAlpha(100)
-                          : RehabStyle.border,
+              child: Material(
+                color: has ? _greenSoft : const Color(0xFFF0F2F4),
+                borderRadius: BorderRadius.circular(12),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => _pick(context, i),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: has ? _green.withOpacity(0.4) : _border,
+                      ),
                     ),
+                    // Jika ada foto → tampilkan preview; jika tidak → ikon
+                    child: has
+                        ? _buildPreview(file!)
+                        : Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                i == 0
+                                    ? Icons.camera_alt_outlined
+                                    : Icons.add_rounded,
+                                size: 22,
+                                color: _muted,
+                              ),
+                              if (i > 0) ...[
+                                const SizedBox(height: 2),
+                                const Text(
+                                  'Tambah',
+                                  style: TextStyle(
+                                    fontFamily: 'Mulish',
+                                    fontSize: 10,
+                                    color: _muted,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                   ),
-                  child: photo != null
-                      ? Image.memory(
-                          photo.bytes,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                        )
-                      : _EmptySlot(index: i),
                 ),
               ),
             ),
@@ -169,75 +204,15 @@ class RehabFotoRow extends StatelessWidget {
       }),
     );
   }
-}
 
-class _EmptySlot extends StatelessWidget {
-  final int index;
-  const _EmptySlot({required this.index});
-
-  @override
-  Widget build(BuildContext context) {
-    // Slot 0 = kamera, slot 1 = slot foto, slot 2-3 = tambah.
-    final icon = switch (index) {
-      0 => Icons.camera_alt_outlined,
-      1 => Icons.image_outlined,
-      _ => Icons.add_rounded,
-    };
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 22, color: RehabStyle.muted),
-        if (index >= 2) ...[
-          const SizedBox(height: 2),
-          const Text(
-            'Tambah',
-            style: TextStyle(
-              fontFamily: RehabStyle.fontFamily,
-              fontSize: 10,
-              color: RehabStyle.muted,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _SheetOption extends StatelessWidget {
-  final IconData icon;
-  final Color color;
-  final String label;
-  final VoidCallback onTap;
-
-  const _SheetOption({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 14),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: RehabStyle.fontFamily,
-                fontSize: 14,
-                color: color == RehabStyle.red ? color : RehabStyle.dark,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  /// Preview gambar:
+  /// - Mobile/Desktop: Image.file
+  /// - Web: Image.network (blob URL dari XFile)
+  Widget _buildPreview(XFile file) {
+    if (kIsWeb) {
+      // Di web, XFile.path adalah blob URL
+      return Image.network(file.path, fit: BoxFit.cover);
+    }
+    return Image.file(File(file.path), fit: BoxFit.cover);
   }
 }

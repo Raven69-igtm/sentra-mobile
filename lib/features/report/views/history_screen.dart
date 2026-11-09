@@ -6,6 +6,7 @@ import 'package:sentra/features/report/services/search_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sentra/core/utils/app_colors.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -110,6 +111,20 @@ class _HistoryPageState extends State<HistoryPage> {
             end: Alignment.bottomCenter,
           ),
         ),
+      ),
+      leading: IconButton(
+        tooltip: 'Kembali',
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          final navigator = Navigator.of(context);
+          if (navigator.canPop()) {
+            navigator.pop();
+          } else {
+            navigator.pushReplacement(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
+        },
       ),
       title: Row(
         children: [
@@ -441,8 +456,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 if (data['laporan'] != null &&
                     data['laporan'] is Map<String, dynamic>) {
                   laporanData = data['laporan'] as Map<String, dynamic>;
-                }
-                else if (data.containsKey('id_laporan') ||
+                } else if (data.containsKey('id_laporan') ||
                     data.containsKey('detail_pelapor') ||
                     data.containsKey('kategori') ||
                     data.containsKey('status')) {
@@ -795,6 +809,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
     return sections;
   }
+
   Widget _buildSectionAnakCard({
     required String title,
     required IconData icon,

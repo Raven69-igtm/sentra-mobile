@@ -11,7 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final VoidCallback? onBack;
+
+  const ProfileScreen({super.key, this.onBack});
 
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
@@ -137,6 +139,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Row(
               children: [
+                IconButton(
+                  tooltip: 'Kembali',
+                  onPressed: () {
+                    if (widget.onBack != null) {
+                      widget.onBack!();
+                    } else {
+                      Navigator.maybePop(context);
+                    }
+                  },
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                ),
                 Row(
                   children: [
                     Image.asset("assets/logo/Image.png", width: 36, height: 36),

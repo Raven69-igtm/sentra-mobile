@@ -16,10 +16,17 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late int _currentIndex;
 
-  final List<Widget> _pages = const [
-    BerandaScreen(),
-    ProfileScreen(),
+  late final List<Widget> _pages = [
+    const BerandaScreen(),
+    ProfileScreen(onBack: _showBeranda),
   ];
+
+  void _showBeranda() {
+    if (_currentIndex != 0) {
+      HapticFeedback.lightImpact();
+      setState(() => _currentIndex = 0);
+    }
+  }
 
   @override
   void initState() {
@@ -42,10 +49,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Colors.white,
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 250),
-        transitionBuilder: (child, animation) => FadeTransition(
-          opacity: animation,
-          child: child,
-        ),
+        transitionBuilder:
+            (child, animation) =>
+                FadeTransition(opacity: animation, child: child),
         child: IndexedStack(
           key: ValueKey<int>(_currentIndex),
           index: _currentIndex,
@@ -64,10 +70,7 @@ class _BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  const _BottomNavBar({
-    required this.currentIndex,
-    required this.onTap,
-  });
+  const _BottomNavBar({required this.currentIndex, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +97,7 @@ class _BottomNavBar extends StatelessWidget {
               _NavItem(
                 index: 0,
                 currentIndex: currentIndex,
-                icon: Icons.grid_view_rounded,
+                icon: Icons.home_rounded,
                 label: 'Beranda',
                 onTap: onTap,
               ),
@@ -145,9 +148,10 @@ class _NavItem extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
-                color: isActive
-                    ? Warna.backgroundIjo.withAlpha(26)
-                    : Colors.transparent,
+                color:
+                    isActive
+                        ? Warna.backgroundIjo.withAlpha(26)
+                        : Colors.transparent,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(

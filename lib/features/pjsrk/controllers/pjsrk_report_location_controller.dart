@@ -5,15 +5,12 @@ import '../models/pjsrk_report_location_model.dart';
 class PjsrkReportLocationController extends ChangeNotifier {
   static const maksFoto = 4;
 
-  // Titik peta. TODO: ganti dengan hasil GPS (paket geolocator).
- double latitude = -7.6051;
- double longitude = 111.9046;
+  double latitude = -7.6051;
+  double longitude = 111.9046;
 
-  // Nilai awal diisi sesuai gambar desain. Kosongkan kalau mau form bersih.
-  final alamatCtrl =
-      TextEditingController(text: 'Jl. Mojoroto Gg. 3, RT 02 / RW 04');
-  final kelurahanCtrl = TextEditingController(text: 'Mojoroto');
-  final kecamatanCtrl = TextEditingController(text: 'Mojoroto');
+  final alamatCtrl = TextEditingController();
+  final kelurahanCtrl = TextEditingController();
+  final kecamatanCtrl = TextEditingController();
   final patokanCtrl = TextEditingController();
   final kontakCtrl = TextEditingController(text: '0812 3456 7890');
 
@@ -46,15 +43,15 @@ class PjsrkReportLocationController extends ChangeNotifier {
   }
 
   PjsrkReportLocationModel buildModel() => PjsrkReportLocationModel(
-        alamat: alamatCtrl.text.trim(),
-        kelurahan: kelurahanCtrl.text.trim(),
-        kecamatan: kecamatanCtrl.text.trim(),
-        patokan: patokanCtrl.text.trim(),
-        latitude: latitude,
-        longitude: longitude,
-        foto: List.of(foto),
-        kontak: kontakCtrl.text.trim(),
-      );
+    alamat: alamatCtrl.text.trim(),
+    kelurahan: kelurahanCtrl.text.trim(),
+    kecamatan: kecamatanCtrl.text.trim(),
+    patokan: patokanCtrl.text.trim(),
+    latitude: latitude,
+    longitude: longitude,
+    foto: List.of(foto),
+    kontak: kontakCtrl.text.trim(),
+  );
 
   @override
   void dispose() {

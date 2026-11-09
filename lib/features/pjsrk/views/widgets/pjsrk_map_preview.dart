@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'pjsrk_text_box.dart';
 
 /// PETA langkah 2 (Lokasi) — pakai OpenStreetMap (flutter_map).
 ///
@@ -111,8 +112,10 @@ class _PjsrkMapPreviewState extends State<PjsrkMapPreview> {
       }
 
       if (hasil == null) {
-        _snack('Alamat belum ketemu di peta. Coba tulis lebih lengkap, '
-            'atau ketuk peta langsung.');
+        _snack(
+          'Alamat belum ketemu di peta. Coba tulis lebih lengkap, '
+          'atau ketuk peta langsung.',
+        );
         return;
       }
 
@@ -172,15 +175,17 @@ class _PjsrkMapPreviewState extends State<PjsrkMapPreview> {
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       final a = (data['address'] as Map?)?.cast<String, dynamic>() ?? {};
 
-      final jalan = [a['road'], a['house_number']]
-          .where((e) => e != null && '$e'.isNotEmpty)
-          .join(' ');
+      final jalan = [
+        a['road'],
+        a['house_number'],
+      ].where((e) => e != null && '$e'.isNotEmpty).join(' ');
       final kel = a['village'] ?? a['suburb'] ?? a['neighbourhood'];
       final kec = a['city_district'] ?? a['municipality'] ?? a['county'];
 
-      final alamat = jalan.isNotEmpty
-          ? jalan
-          : (data['display_name'] as String?)?.split(',').take(3).join(',');
+      final alamat =
+          jalan.isNotEmpty
+              ? jalan
+              : (data['display_name'] as String?)?.split(',').take(3).join(',');
 
       if (alamat != null && alamat.isNotEmpty) {
         _setText(widget.addressController, alamat);
@@ -201,10 +206,10 @@ class _PjsrkMapPreviewState extends State<PjsrkMapPreview> {
   }
 
   Map<String, String> get _headers => const {
-        // Aturan Nominatim: wajib ada identitas aplikasi.
-        'User-Agent': 'SENTRA-DPPPA-Nganjuk/1.0',
-        'Accept-Language': 'id',
-      };
+    // Aturan Nominatim: wajib ada identitas aplikasi.
+    'User-Agent': 'SENTRA-DPPPA-Nganjuk/1.0',
+    'Accept-Language': 'id',
+  };
 
   // ------------------------------------------------------------
   // 3) Tap peta
@@ -224,6 +229,7 @@ class _PjsrkMapPreviewState extends State<PjsrkMapPreview> {
   // 4) Tombol "Lokasi saya"
   // ------------------------------------------------------------
   Future<void> _getMyLocation() async {
+    if (_loadingGps) return;
     setState(() => _loadingGps = true);
     try {
       if (!await Geolocator.isLocationServiceEnabled()) {
@@ -282,126 +288,151 @@ class _PjsrkMapPreviewState extends State<PjsrkMapPreview> {
   // ------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: SizedBox(
-        height: 200,
-        width: double.infinity,
-        child: Stack(
-          children: [
-            FlutterMap(
-              mapController: _map,
-              options: MapOptions(
-                initialCenter: _current,
-                initialZoom: 15,
-                minZoom: 4,
-                maxZoom: 19,
-                onTap: (_, latLng) => _onMapTap(latLng),
-              ),
+    return Column(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(
+            height: 200,
+            width: double.infinity,
+            child: Stack(
               children: [
-                TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  userAgentPackageName: 'com.example.sentra_mobile',
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _current,
-                      width: 44,
-                      height: 44,
-                      alignment: Alignment.topCenter, // ujung pin = titik
-                      child: const Icon(
-                        Icons.location_on_rounded,
-                        color: Color(0xFFE54D5E),
-                        size: 44,
-                      ),
+                FlutterMap(
+                  mapController: _map,
+                  options: MapOptions(
+                    initialCenter: _current,
+                    initialZoom: 15,
+                    minZoom: 4,
+                    maxZoom: 19,
+                    onTap: (_, latLng) => _onMapTap(latLng),
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.sentra_mobile',
                     ),
-                  ],
-                ),
-                const RichAttributionWidget(
-                  alignment: AttributionAlignment.bottomLeft,
-                  attributions: [
-                    TextSourceAttribution('© OpenStreetMap contributors'),
-                  ],
-                ),
-              ],
-            ),
-
-            // Penanda "sedang mencari alamat..."
-            if (_searching)
-              Positioned(
-                left: 12,
-                top: 10,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Mencari alamat…',
-                        style: TextStyle(fontFamily: 'Mulish', fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-            // Tombol "Lokasi saya"
-            Positioned(
-              right: 12,
-              bottom: 12,
-              child: Material(
-                color: Colors.white,
-                elevation: 3,
-                borderRadius: BorderRadius.circular(20),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: _loadingGps ? null : _getMyLocation,
-                  child: Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_loadingGps)
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        else
-                          const Icon(Icons.my_location,
-                              size: 18, color: Color(0xFF2E7D32)),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'Lokasi saya',
-                          style: TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF2E7D32),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: _current,
+                          width: 44,
+                          height: 44,
+                          alignment: Alignment.topCenter, // ujung pin = titik
+                          child: const Icon(
+                            Icons.location_on_rounded,
+                            color: Color(0xFFE54D5E),
+                            size: 44,
                           ),
                         ),
                       ],
                     ),
+                    const RichAttributionWidget(
+                      alignment: AttributionAlignment.bottomLeft,
+                      attributions: [
+                        TextSourceAttribution('© OpenStreetMap contributors'),
+                      ],
+                    ),
+                  ],
+                ),
+
+                // Penanda "sedang mencari alamat..."
+                if (_searching)
+                  Positioned(
+                    left: 12,
+                    top: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Mencari alamat…',
+                            style: TextStyle(
+                              fontFamily: 'Mulish',
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // Tombol "Lokasi saya"
+                Positioned(
+                  right: 12,
+                  bottom: 12,
+                  child: Material(
+                    color: Colors.white,
+                    elevation: 3,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: _loadingGps ? null : _getMyLocation,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (_loadingGps)
+                              const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            else
+                              const Icon(
+                                Icons.my_location,
+                                size: 18,
+                                color: Color(0xFF2E7D32),
+                              ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Lokasi saya',
+                              style: TextStyle(
+                                fontFamily: 'Mulish',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF2E7D32),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
+        const SizedBox(height: 12),
+        if (widget.addressController != null)
+          PjsrkTextBox(
+            controller: widget.addressController!,
+            icon: Icons.location_on_outlined,
+            highlight: true,
+            onTap: _loadingGps ? null : () => _getMyLocation(),
+          ),
+      ],
     );
   }
 }

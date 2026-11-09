@@ -18,6 +18,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
 
@@ -48,9 +49,7 @@ void main() async {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   if (!kIsWeb) {
     await NotificationService.initialize();
@@ -75,16 +74,17 @@ void main() async {
     DevicePreview(
       enabled: !kReleaseMode,
       backgroundColor: const Color(0xFF1E1E1E),
-      builder: (context) => MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => LoginController()),
-          ChangeNotifierProvider(create: (_) => RegisterController()),
-          ChangeNotifierProvider(create: (_) => LupaPasswordController()),
-          ChangeNotifierProvider(create: (_) => UserProvider()),
-          ChangeNotifierProvider(create: (_) => ChatController()),
-        ],
-        child: const MyApp(),
-      ),
+      builder:
+          (context) => MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => LoginController()),
+              ChangeNotifierProvider(create: (_) => RegisterController()),
+              ChangeNotifierProvider(create: (_) => LupaPasswordController()),
+              ChangeNotifierProvider(create: (_) => UserProvider()),
+              ChangeNotifierProvider(create: (_) => ChatController()),
+            ],
+            child: const MyApp(),
+          ),
     ),
   );
 }
@@ -96,9 +96,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Mulish',
-      ),
+      theme: ThemeData(fontFamily: 'Mulish'),
       locale: DevicePreview.locale(context),
       builder: DevicePreview.appBuilder,
       scaffoldMessengerKey: scaffoldMessengerKey,

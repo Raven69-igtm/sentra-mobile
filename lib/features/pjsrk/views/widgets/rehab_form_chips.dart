@@ -1,27 +1,38 @@
 import 'package:flutter/material.dart';
-import 'package:sentra/features/pjsrk/views/widgets/rehab_style.dart';
 
-/// Label section di atas field (contoh: "Kelompok usia").
+const _orange = Color(0xFFD6762E);
+const _dark = Color(0xFF2A2A2A);
+const _muted = Color(0xFF7A7F85);
+const _border = Color(0xFFE8EBEE);
+const _chipBg = Color(0xFFFCEFE2);
+
+/// Label section di atas field (contoh: "Kelompok usia")
 class RehabLabel extends StatelessWidget {
   final String text;
   const RehabLabel(this.text, {super.key});
 
   @override
-  Widget build(BuildContext context) => Text(text, style: RehabStyle.label);
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontFamily: 'Mulish',
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: _dark,
+      ),
+    );
+  }
 }
 
-/// Segmented tab Tunawisma / Anak Terlantar.
-/// Hanya GestureDetector: tidak ada hover/ripple/MouseRegion.
+/// Tab Tunawisma / Anak Terlantar
 class RehabJenisTabs extends StatelessWidget {
   final String value;
-  final List<String> options;
   final ValueChanged<String> onChanged;
-
   const RehabJenisTabs({
     super.key,
     required this.value,
     required this.onChanged,
-    this.options = const ['Tunawisma', 'Anak Terlantar'],
   });
 
   @override
@@ -33,13 +44,13 @@ class RehabJenisTabs extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
-        children: options.map((label) {
+        children: ['Tunawisma', 'Anak Terlantar'].map((label) {
           final selected = value == label;
           return Expanded(
             child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
               onTap: () => onChanged(label),
-              child: Container(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
                   color: selected ? Colors.white : Colors.transparent,
@@ -50,7 +61,7 @@ class RehabJenisTabs extends StatelessWidget {
                             color: Color(0x14000000),
                             blurRadius: 6,
                             offset: Offset(0, 2),
-                          ),
+                          )
                         ]
                       : null,
                 ),
@@ -58,10 +69,10 @@ class RehabJenisTabs extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontFamily: RehabStyle.fontFamily,
+                    fontFamily: 'Mulish',
                     fontSize: 13,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? RehabStyle.dark : RehabStyle.muted,
+                    color: selected ? _dark : _muted,
                   ),
                 ),
               ),
@@ -73,12 +84,11 @@ class RehabJenisTabs extends StatelessWidget {
   }
 }
 
-/// Chip pilihan tunggal (Dewasa / Lansia / Sehat / Sakit / dst).
+/// Chip pilihan (Dewasa / Lansia / dll.)
 class RehabChips extends StatelessWidget {
   final List<String> options;
   final String value;
   final ValueChanged<String> onChanged;
-
   const RehabChips({
     super.key,
     required this.options,
@@ -94,25 +104,25 @@ class RehabChips extends StatelessWidget {
       children: options.map((opt) {
         final selected = value == opt;
         return GestureDetector(
-          behavior: HitTestBehavior.opaque,
           onTap: () => onChanged(opt),
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 140),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
             decoration: BoxDecoration(
-              color: selected ? RehabStyle.orangeSoft : Colors.white,
+              color: selected ? _chipBg : Colors.white,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: selected ? RehabStyle.orange : RehabStyle.border,
+                color: selected ? _orange : _border,
                 width: selected ? 1.5 : 1,
               ),
             ),
             child: Text(
               opt,
               style: TextStyle(
-                fontFamily: RehabStyle.fontFamily,
+                fontFamily: 'Mulish',
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                color: selected ? RehabStyle.orange : RehabStyle.muted,
+                color: selected ? _orange : _muted,
               ),
             ),
           ),

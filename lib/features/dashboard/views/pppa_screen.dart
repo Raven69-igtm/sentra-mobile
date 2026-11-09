@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:sentra/features/auth/views/profile_screen.dart';
-import 'package:sentra/features/notification/views/notification_screen.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/report/views/report_screen.dart';
+import 'package:sentra/features/report/views/history_screen.dart';
 import 'package:sentra/features/chat/views/room_chat_screen.dart';
 
 /// Halaman Menu PPPA (Perlindungan Perempuan & Pemberdayaan Anak)
@@ -19,35 +19,22 @@ class _PppaScreenState extends State<PppaScreen> {
   static const Color _lightGreen = Color(0xFFD4F4E4);
   static const Color _backgroundColor = Color(0xFFF5F5F5);
 
-  int _selectedTab = 2; // Center tab (grid) adalah default (Overview)
+  int _selectedTab = 1;
 
   void _onTabSelected(int index) {
     if (index == _selectedTab) return;
-    
-    // Handle navigation
+
     if (index == 0) {
-      // History - stay on current page
-      setState(() => _selectedTab = index);
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HistoryPage()),
+      );
     } else if (index == 1) {
-      // Laporan
+      setState(() => _selectedTab = index);
+    } else if (index == 2) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const LaporanPage()),
-      );
-    } else if (index == 2) {
-      // Overview (center) - current page
-      setState(() => _selectedTab = index);
-    } else if (index == 3) {
-      // Notification
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const NotificationPage()),
-      );
-    } else if (index == 4) {
-      // Profile
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const ProfileScreen()),
       );
     }
   }
@@ -112,14 +99,14 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
             children: [
               // Header dengan icon
               _buildHeader(),
-              
+
               const SizedBox(height: 16),
-              
+
               // Date badge dan judul Overview
               _buildTitleSection(),
-              
+
               const SizedBox(height: 8),
-              
+
               // Subtitle
               const Text(
                 'Tracking Laporan',
@@ -130,14 +117,14 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Card Tracking Laporan PPPA
               _buildTrackingCard(),
-              
+
               const SizedBox(height: 20),
-              
+
               // Section Informasi
               const Text(
                 'Informasi',
@@ -148,17 +135,17 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Card Statistik Laporan PPPA
               _buildStatistikCard(),
-              
+
               const SizedBox(height: 12),
-              
+
               // Card Informasi
               _buildInformasiCard(),
-              
+
               const SizedBox(height: 24),
             ],
           ),
@@ -170,30 +157,38 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
   Widget _buildHeader() {
     return Row(
       children: [
-        // Icon PPPA
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Icon(
-            Icons.shield_outlined,
-            color: widget.primaryGreen,
-            size: 24,
+        GestureDetector(
+          onTap: () {
+            final navigator = Navigator.of(context);
+            if (navigator.canPop()) {
+              navigator.pop();
+            } else {
+              navigator.pushReplacement(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+              );
+            }
+          },
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Icon(Icons.arrow_back, color: widget.primaryGreen, size: 22),
           ),
         ),
-        
+        const SizedBox(width: 8),
         const Spacer(),
-        
+
         // Button Room Chat
         GestureDetector(
           onTap: () {
@@ -242,7 +237,11 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.wb_sunny_outlined, size: 14, color: widget.primaryGreen),
+              Icon(
+                Icons.wb_sunny_outlined,
+                size: 14,
+                color: widget.primaryGreen,
+              ),
               const SizedBox(width: 4),
               Text(
                 _getCurrentDate(),
@@ -256,9 +255,9 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
             ],
           ),
         ),
-        
+
         const SizedBox(width: 12),
-        
+
         // Judul Overview
         const Expanded(
           child: Text(
@@ -271,7 +270,7 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
             ),
           ),
         ),
-        
+
         // Button All data
         GestureDetector(
           onTap: () {
@@ -314,7 +313,20 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
   String _getCurrentDate() {
     final now = DateTime.now();
     final days = ['SUN', 'MON', 'TUES', 'WED', 'THU', 'FRI', 'SAT'];
-    final months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    final months = [
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC',
+    ];
     return '${days[now.weekday % 7]} ${now.day} ${months[now.month - 1]}';
   }
 
@@ -350,7 +362,7 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
                   ),
                 ),
               ),
-              
+
               // Icon send
               Container(
                 width: 56,
@@ -367,9 +379,9 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
               ),
             ],
           ),
-          
+
           const SizedBox(height: 12),
-          
+
           // Search box
           Container(
             height: 44,
@@ -416,9 +428,9 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Status indicators
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -539,7 +551,7 @@ class _PppaOverviewContentState extends State<_PppaOverviewContent> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Bottom Nav PPPA - 5 tabs dengan center button hijau
+// Bottom Nav PPPA - riwayat, beranda, dan laporan
 // ─────────────────────────────────────────────────────────────
 class _PppaBottomNav extends StatelessWidget {
   final int selectedIndex;
@@ -583,29 +595,15 @@ class _PppaBottomNav extends StatelessWidget {
             color: inactiveColor,
             activeColor: primaryGreen,
           ),
-          _buildNavIcon(
-            icon: Icons.description_outlined,
+          _buildCenterButton(
             isActive: selectedIndex == 1,
             onTap: () => onTabSelected(1),
-            color: inactiveColor,
-            activeColor: primaryGreen,
-          ),
-          _buildCenterButton(
-            isActive: selectedIndex == 2,
-            onTap: () => onTabSelected(2),
             color: primaryGreen,
           ),
           _buildNavIcon(
-            icon: Icons.notifications_outlined,
-            isActive: selectedIndex == 3,
-            onTap: () => onTabSelected(3),
-            color: inactiveColor,
-            activeColor: primaryGreen,
-          ),
-          _buildNavIcon(
-            icon: Icons.person_outline_rounded,
-            isActive: selectedIndex == 4,
-            onTap: () => onTabSelected(4),
+            icon: Icons.description_outlined,
+            isActive: selectedIndex == 2,
+            onTap: () => onTabSelected(2),
             color: inactiveColor,
             activeColor: primaryGreen,
           ),
@@ -628,11 +626,7 @@ class _PppaBottomNav extends StatelessWidget {
         width: 48,
         height: 48,
         alignment: Alignment.center,
-        child: Icon(
-          icon,
-          color: isActive ? activeColor : color,
-          size: 26,
-        ),
+        child: Icon(icon, color: isActive ? activeColor : color, size: 26),
       ),
     );
   }
@@ -658,11 +652,7 @@ class _PppaBottomNav extends StatelessWidget {
             ),
           ],
         ),
-        child: const Icon(
-          Icons.apps_rounded,
-          color: Colors.white,
-          size: 28,
-        ),
+        child: const Icon(Icons.apps_rounded, color: Colors.white, size: 28),
       ),
     );
   }

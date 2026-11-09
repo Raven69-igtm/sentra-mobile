@@ -53,13 +53,20 @@ class NotificationRepository {
         'message': message.notification!.body ?? 'Pesan baru diterima',
         'date': DateTime.now().toIso8601String(),
         'id_laporan': message.data['id_laporan']?.toString() ?? '',
+        'source':
+            message.data['source'] ??
+            message.data['module'] ??
+            message.data['sumber'] ??
+            '',
+        'category': message.data['category'] ?? message.data['kategori'] ?? '',
+        'type': message.data['type'] ?? message.data['tipe'] ?? '',
         'status': false,
       };
       _localNotifications.insert(0, notification);
     }
   }
 
-  /// Mengambil notifikasi secara berkala. 
+  /// Mengambil notifikasi secara berkala.
   /// Error koneksi akan di-handle secara graceful — mengembalikan list kosong
   /// agar UI tidak crash, bukan melempar Exception ke stream.
   Stream<List<Map<String, dynamic>>> getNotifications(String userId) async* {
@@ -79,21 +86,36 @@ class NotificationRepository {
         );
 
         if (response.statusCode == 200) {
-          final List<dynamic> data = response.data is List
-              ? response.data
-              : (response.data['data'] ?? []);
+          final List<dynamic> data =
+              response.data is List
+                  ? response.data
+                  : (response.data['data'] ?? []);
 
-          final List<Map<String, dynamic>> apiNotifications = data
-              .map<Map<String, dynamic>>((item) => {
-                    'id': item['id_notif']?.toString() ?? '',
-                    'title': item['judul'] ?? '',
-                    'message': item['pesan'] ?? '',
-                    'type': item['tipe'] ?? '',
-                    'status': item['status'] == 'terkirim' ? false : true,
-                    'date': item['created_at'] ?? '',
-                    'id_akun': item['id_akun']?.toString() ?? '',
-                  })
-              .toList();
+          final List<Map<String, dynamic>> apiNotifications =
+              data
+                  .map<Map<String, dynamic>>(
+                    (item) => {
+                      'id': item['id_notif']?.toString() ?? '',
+                      'title': item['judul'] ?? '',
+                      'message': item['pesan'] ?? '',
+                      'type': item['tipe'] ?? '',
+                      'source':
+                          item['source'] ??
+                          item['sumber'] ??
+                          item['module'] ??
+                          item['modul'] ??
+                          '',
+                      'category':
+                          item['category'] ??
+                          item['kategori'] ??
+                          item['tipe'] ??
+                          '',
+                      'status': item['status'] == 'terkirim' ? false : true,
+                      'date': item['created_at'] ?? '',
+                      'id_akun': item['id_akun']?.toString() ?? '',
+                    },
+                  )
+                  .toList();
 
           // Gabungkan dengan local notifications
           final merged = [..._localNotifications, ...apiNotifications];
