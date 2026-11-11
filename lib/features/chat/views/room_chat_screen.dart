@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/chat/repositories/chat_repository.dart';
 import 'package:sentra/features/chat/views/chat_screen.dart';
-import 'package:sentra/features/dashboard/views/home_screen.dart';
-import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -64,9 +62,15 @@ class _RoomChatState extends State<RoomChat> {
   Future<void> _fetchUsers() async {
     try {
       final userId = Provider.of<UserProvider>(context, listen: false).idAkun;
-      final response = await _repository.dio.get(
-        '${ApiClient.protocol}://${ApiClient.baseUrl}/api/conversations/$userId',
-      );
+      if (userId == null) {
+        setState(() {
+          isLoading = false;
+          errorMessage =
+              'Silakan login terlebih dahulu untuk melihat pesan.';
+        });
+        return;
+      }
+      final response = await _repository.dio.get('/conversations/$userId');
       final data = response.data is List ? response.data : [];
       setState(() {
         users =
@@ -113,15 +117,8 @@ class _RoomChatState extends State<RoomChat> {
           ),
         ),
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Colors.black87,
-          ),
-          onPressed:
-              () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => HomeScreen()),
-              ),
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(

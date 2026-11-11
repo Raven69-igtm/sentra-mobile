@@ -69,14 +69,15 @@ void main() {
   });
 
   group('PjsrkReportEventScreen UI & Navigation Tests', () {
-    testWidgets('Renders all Figma design elements correctly',
-        (WidgetTester tester) async {
+    testWidgets('Renders all Figma design elements correctly', (
+      WidgetTester tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(const MaterialApp(
-        home: PjsrkReportEventScreen(),
-      ));
+      await tester.pumpWidget(
+        const MaterialApp(home: PjsrkReportEventScreen()),
+      );
       await tester.pumpAndSettle();
 
       // 1. Header
@@ -131,14 +132,15 @@ void main() {
       expect(find.text('Lanjut'), findsOneWidget);
     });
 
-    testWidgets('Tapping Lanjut without keterangan shows error snackbar',
-        (WidgetTester tester) async {
+    testWidgets('Tapping Lanjut without keterangan shows error snackbar', (
+      WidgetTester tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(const MaterialApp(
-        home: PjsrkReportEventScreen(),
-      ));
+      await tester.pumpWidget(
+        const MaterialApp(home: PjsrkReportEventScreen()),
+      );
       await tester.pumpAndSettle();
 
       // Tap Lanjut
@@ -148,48 +150,50 @@ void main() {
       expect(find.text('Isi keterangan bencana'), findsOneWidget);
     });
 
-    testWidgets('Full 3-step flow: Kejadian -> Lokasi -> Kirim works seamlessly',
-        (WidgetTester tester) async {
-      await tester.binding.setSurfaceSize(const Size(400, 900));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+    testWidgets(
+      'Full 3-step flow: Kejadian -> Lokasi -> Kirim works seamlessly',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(400, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(const MaterialApp(
-        home: PjsrkReportEventScreen(),
-      ));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          const MaterialApp(home: PjsrkReportEventScreen()),
+        );
+        await tester.pumpAndSettle();
 
-      // Step 1: Fill keterangan
-      await tester.enterText(
-        find.byType(TextField).at(2), // keterangan TextField
-        'Banjir bandang menggenangi perumahan warga.',
-      );
-      await tester.pumpAndSettle();
+        // Step 1: Fill keterangan
+        await tester.enterText(
+          find.byType(TextField).at(2), // keterangan TextField
+          'Banjir bandang menggenangi perumahan warga.',
+        );
+        await tester.pumpAndSettle();
 
-      // Step 1: Tap Lanjut -> navigates to Step 2 (Lokasi)
-      await tester.tap(find.text('Lanjut'));
-      await tester.pumpAndSettle();
+        // Step 1: Tap Lanjut -> navigates to Step 2 (Lokasi)
+        await tester.tap(find.text('Lanjut'));
+        await tester.pumpAndSettle();
 
-      // Verify Step 2 is active
-      expect(find.byType(PjsrkReportLocationScreen), findsOneWidget);
-      expect(find.text('Titik lokasi bencana'), findsOneWidget);
-      expect(find.text('Tinjau & Kirim'), findsOneWidget);
+        // Verify Step 2 is active
+        expect(find.byType(PjsrkReportLocationScreen), findsOneWidget);
+        expect(find.text('Titik lokasi bencana'), findsOneWidget);
+        expect(find.text('Tinjau & Kirim'), findsOneWidget);
 
-      // Step 2: Tap Tinjau & Kirim -> navigates to Step 3 (Review & Kirim)
-      await tester.tap(find.text('Tinjau & Kirim'));
-      await tester.pumpAndSettle();
+        // Step 2: Tap Tinjau & Kirim -> navigates to Step 3 (Review & Kirim)
+        await tester.tap(find.text('Tinjau & Kirim'));
+        await tester.pumpAndSettle();
 
-      // Verify Step 3 is active
-      expect(find.byType(PjsrkReportSendScreen), findsOneWidget);
-      expect(find.text('Periksa kembali laporan'), findsOneWidget);
-      expect(find.text('Kirim laporan'), findsOneWidget);
+        // Verify Step 3 is active
+        expect(find.byType(PjsrkReportSendScreen), findsOneWidget);
+        expect(find.text('Periksa kembali laporan'), findsOneWidget);
+        expect(find.text('Kirim laporan'), findsOneWidget);
 
-      // Tap back button returns to Step 2
-      final backBtn = find.byIcon(Icons.chevron_left_rounded).first;
-      await tester.tap(backBtn);
-      await tester.pumpAndSettle();
+        // Tap back button returns to Step 2
+        final backBtn = find.byIcon(Icons.chevron_left_rounded).first;
+        await tester.tap(backBtn);
+        await tester.pumpAndSettle();
 
-      expect(find.byType(PjsrkReportLocationScreen), findsOneWidget);
-      expect(find.byType(PjsrkReportSendScreen), findsNothing);
-    });
+        expect(find.byType(PjsrkReportLocationScreen), findsOneWidget);
+        expect(find.byType(PjsrkReportSendScreen), findsNothing);
+      },
+    );
   });
 }

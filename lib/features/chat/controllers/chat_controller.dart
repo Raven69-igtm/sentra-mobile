@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:sentra/core/constants/app_constants.dart';
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/features/chat/models/chat_model.dart';
 import 'package:sentra/features/chat/repositories/chat_repository.dart';
@@ -11,6 +10,8 @@ class ChatController extends ChangeNotifier {
   final ChatRepository _repository = ChatRepository();
   List<Chat> _chats = [];
   WebSocketChannel? _channel;
+  bool _wsReady = false;
+  bool _shouldReconnect = true;
   final Map<int, bool> _typingStatusMap = {};
   Chat? _repliedToChat;
 
@@ -53,10 +54,21 @@ class ChatController extends ChangeNotifier {
   }
 
   void connectToChat(int userId) {
+    _shouldReconnect = true;
     try {
       print('Attempting to connect to WebSocket: ${ApiClient.wsUrl} for userId: $userId');
       _channel = WebSocketChannel.connect(Uri.parse(ApiClient.wsUrl));
-      print('WebSocket connected for userId: $userId');
+      _wsReady = false;
+      _channel!.ready.then(
+        (_) {
+          _wsReady = true;
+          print('WebSocket connected for userId: $userId');
+        },
+        onError: (error) {
+          _wsReady = false;
+          print('WebSocket connection failed for userId $userId: $error');
+        },
+      );
       _channel!.sink.add(
         jsonEncode({
           'type': 'register',
@@ -70,17 +82,26 @@ class ChatController extends ChangeNotifier {
           _onNewMessage(message);
         },
         onError: (error) {
+          _wsReady = false;
           print('WebSocket error for userId $userId: $error');
-          Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+          if (_shouldReconnect) {
+            Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+          }
         },
         onDone: () {
+          _wsReady = false;
           print('WebSocket connection closed for userId $userId');
-          Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+          if (_shouldReconnect) {
+            Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+          }
         },
       );
     } catch (e) {
+      _wsReady = false;
       print('Error connecting to WebSocket for userId $userId: $e');
-      Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+      if (_shouldReconnect) {
+        Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+      }
     }
   }
 
@@ -225,8 +246,8 @@ class ChatController extends ChangeNotifier {
         'replied_to_id': repliedToId,
       };
       print('Sending message to WebSocket: $chat');
-      if (_channel == null) {
-        print('Warning: WebSocket channel is null, falling back to HTTP POST');
+      if (_channel == null || !_wsReady) {
+        print('Warning: WebSocket belum terhubung, memakai HTTP POST');
         _fallbackSendMessageHttp(senderId, receiverId, message);
         return;
       }
@@ -251,6 +272,8 @@ class ChatController extends ChangeNotifier {
         'message': message,
       });
       print('Fallback HTTP POST chat berhasil');
+      // Sinkronkan dengan server agar pesan sementara mendapat id_chat asli.
+      await fetchChats(senderId);
     } catch (e) {
       print('Fallback HTTP POST chat gagal: $e');
     }
@@ -317,6 +340,18 @@ class ChatController extends ChangeNotifier {
   }
 
   void closeConnection() {
+    _shouldReconnect = false;
+    _wsReady = false;
     _channel?.sink.close();
+    _channel = null;
+  }
+
+  /// Membersihkan state chat saat logout / ganti akun.
+  void reset() {
+    closeConnection();
+    _chats = [];
+    _typingStatusMap.clear();
+    _repliedToChat = null;
+    notifyListeners();
   }
 }

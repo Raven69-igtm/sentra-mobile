@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../models/pjsrk_report_event_model.dart';
 import '../models/pjsrk_report_location_model.dart';
+import '../repositories/pjsrk_report_repository.dart';
 
 /// CONTROLLER langkah 3 (Kirim).
 class PjsrkReportSendController extends ChangeNotifier {
   final PjsrkReportEventModel event;
   final PjsrkReportLocationModel location;
+  final PjsrkReportRepository _repository = PjsrkReportRepository();
 
   PjsrkReportSendController({required this.event, required this.location});
 
@@ -58,28 +60,15 @@ class PjsrkReportSendController extends ChangeNotifier {
         ...location.toMap(),
       };
 
-  /// Mengirim laporan. Mengembalikan nomor laporan.
+  /// Mengirim laporan ke server. Nomor laporan berasal dari backend.
   Future<String> kirim() async {
     isLoading = true;
     notifyListeners();
     try {
-      debugPrint('Kirim laporan: $payload');
-      // TODO: simpan ke Firebase lewat repository (folder repositories),
-      // lalu pakai nomor laporan dari server.
-      await Future.delayed(const Duration(milliseconds: 1500));
-      return _buatNomorLaporan();
+      return await _repository.kirim(event: event, lokasi: location);
     } finally {
       isLoading = false;
       notifyListeners();
     }
-  }
-
-  String _buatNomorLaporan() {
-    final n = DateTime.now();
-    final tgl = '${n.year}'
-        '${n.month.toString().padLeft(2, '0')}'
-        '${n.day.toString().padLeft(2, '0')}';
-    final urut = (n.millisecondsSinceEpoch % 10000).toString().padLeft(4, '0');
-    return 'PJSRK-$tgl-$urut';
   }
 }

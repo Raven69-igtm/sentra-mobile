@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
-import 'package:sentra/features/auth/views/profile_screen.dart';
-import 'package:sentra/features/notification/views/notification_screen.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_report_event_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_history_screen.dart';
 import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
-import 'package:sentra/features/report/views/history_screen.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
 /// Sesuai dengan desain referensi kedua (pixel-accurate & responsif)
@@ -24,6 +23,18 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
   // Warna tema halaman PJSRK
   static const Color _primaryOrange = Color(0xFFD8782E);
   static const Color _backgroundColor = Color(0xFFF8F9FA);
+  static const int _selectedNavIndex = 1;
+
+  void _handleBack() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
+  }
 
   /// Menampilkan snackbar feedback sementara yang rapi dan konsisten
   void _showFeatureNotice(String featureName) {
@@ -32,7 +43,11 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.info_outline_rounded, color: Colors.white, size: 20),
+            const Icon(
+              Icons.info_outline_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -60,9 +75,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
   void _onRehabilitasiSosialTap() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const RehabilitasiSosialFormScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const RehabilitasiSosialFormScreen()),
     );
   }
 
@@ -70,9 +83,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
   void _onPengaduanBencanaTap() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const PjsrkReportEventScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const PjsrkReportEventScreen()),
     );
   }
 
@@ -84,7 +95,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     if (userId != null && userId > 0) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const HistoryPage()),
+        MaterialPageRoute(builder: (_) => const PjsrkHistoryScreen()),
       );
     } else {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -108,7 +119,9 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
           ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: Colors.orange[800],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         ),
       );
@@ -119,22 +132,13 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
   void _onBottomNavTapped(int index) {
     switch (index) {
       case 0:
-        Navigator.of(context).pop();
-        break;
-      case 1:
         _onLihatLaporanTap();
         break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => NotificationPage()),
-        );
+      case 1:
+        Navigator.of(context).maybePop();
         break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ProfileScreen()),
-        );
+      case 2:
+        _onPengaduanBencanaTap();
         break;
     }
   }
@@ -149,85 +153,77 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
       ),
       child: Scaffold(
         backgroundColor: _backgroundColor,
-        body: Column(
-          children: [
-            _buildHeader(context),
-            Expanded(
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 600),
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const PjsrkInfoCard(
-                          title: 'PJSRK',
-                          description:
-                              'Pilih jenis laporan yang ingin Anda sampaikan. Petugas akan menindaklanjuti dalam 2 hari kerja.',
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Fitur PJSRK',
-                          style: TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF252525),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Fitur 1: Rehabilitasi Sosial → buka form
-                        PjsrkFeatureCard(
-                          title: 'Rehabilitasi Sosial',
-                          description:
-                              'Form pengaduan tunawisma & anak terlantar',
-                          icon: Icons.home_outlined,
-                          iconColor: const Color(0xFFD8782E),
-                          iconBgColor: const Color(0xFFFFF0E4),
-                          onTap: _onRehabilitasiSosialTap,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Fitur 2: Pengaduan Bencana → buka form
-                        PjsrkFeatureCard(
-                          title: 'Pengaduan Bencana',
-                          description:
-                              'Form pengaduan bencana lengkap dengan lokasi & keterangan kejadian',
-                          icon: Icons.warning_amber_rounded,
-                          iconColor: const Color(0xFFE54D5E),
-                          iconBgColor: const Color(0xFFFCE8EB),
-                          onTap: _onPengaduanBencanaTap,
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Fitur 3: masih notice
-                        PjsrkFeatureCard(
-                          title: 'Permasalahan Sosial',
-                          description:
-                              'Form pengaduan permasalahan sosial di lingkungan masyarakat',
-                          icon: Icons.people_outline_rounded,
-                          iconColor: const Color(0xFF379AE6),
-                          iconBgColor: const Color(0xFFE7F2FF),
-                          onTap: () =>
-                              _showFeatureNotice('Permasalahan Sosial'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+        body: _buildPjsrkHome(context),
         bottomNavigationBar: PjsrkBottomNav(
-          selectedIndex: 0,
+          selectedIndex: _selectedNavIndex,
           onTabSelected: _onBottomNavTapped,
         ),
       ),
+    );
+  }
+
+  Widget _buildPjsrkHome(BuildContext context) {
+    return Column(
+      children: [
+        _buildHeader(context),
+        Expanded(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: ListView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                children: [
+                  const PjsrkInfoCard(
+                    title: 'PJSRK',
+                    description:
+                        'Pilih jenis laporan yang ingin Anda sampaikan. Petugas akan menindaklanjuti dalam 2 hari kerja.',
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'Fitur PJSRK',
+                    style: TextStyle(
+                      fontFamily: 'Mulish',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF252525),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  PjsrkFeatureCard(
+                    title: 'Rehabilitasi Sosial',
+                    description: 'Form pengaduan tunawisma & anak terlantar',
+                    icon: Icons.home_outlined,
+                    iconColor: _primaryOrange,
+                    iconBgColor: const Color(0xFFFFF0E4),
+                    onTap: _onRehabilitasiSosialTap,
+                  ),
+                  const SizedBox(height: 12),
+                  PjsrkFeatureCard(
+                    title: 'Pengaduan Bencana',
+                    description:
+                        'Form pengaduan bencana lengkap dengan lokasi & keterangan kejadian',
+                    icon: Icons.warning_amber_rounded,
+                    iconColor: const Color(0xFFE54D5E),
+                    iconBgColor: const Color(0xFFFCE8EB),
+                    onTap: _onPengaduanBencanaTap,
+                  ),
+                  const SizedBox(height: 12),
+                  PjsrkFeatureCard(
+                    title: 'Permasalahan Sosial',
+                    description:
+                        'Form pengaduan permasalahan sosial di lingkungan masyarakat',
+                    icon: Icons.people_outline_rounded,
+                    iconColor: const Color(0xFF379AE6),
+                    iconBgColor: const Color(0xFFE7F2FF),
+                    onTap: () => _showFeatureNotice('Permasalahan Sosial'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -242,9 +238,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
         left: 16,
         right: 16,
       ),
-      decoration: const BoxDecoration(
-        color: _primaryOrange,
-      ),
+      decoration: const BoxDecoration(color: _primaryOrange),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
@@ -259,12 +253,12 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
                     mouseCursor: SystemMouseCursors.click,
-                    onTap: () => Navigator.of(context).pop(),
+                    onTap: _handleBack,
                     child: const SizedBox(
                       width: 38,
                       height: 38,
                       child: Icon(
-                        Icons.chevron_left_rounded,
+                        Icons.arrow_back,
                         color: Colors.white,
                         size: 26,
                       ),
