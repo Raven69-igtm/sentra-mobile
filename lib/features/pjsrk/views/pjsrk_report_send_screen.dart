@@ -56,9 +56,29 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
       return;
     }
 
-    final nomor = await _c.kirim();
-    if (!mounted) return;
-    await _tampilSukses(nomor);
+    try {
+      final nomor = await _c.kirim();
+      if (!mounted) return;
+      await _tampilSukses(nomor);
+    } catch (e) {
+      if (!mounted) return;
+      final String message =
+          e is UnsupportedError
+              ? e.message.toString()
+              : 'Gagal mengirim laporan: $e';
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              message,
+              style: const TextStyle(fontFamily: 'Mulish'),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+    }
   }
 
   Future<void> _tampilSukses(String nomor) async {

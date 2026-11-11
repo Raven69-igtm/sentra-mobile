@@ -1,14 +1,13 @@
 import 'dart:convert';
 
-import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/core/utils/address_field.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/report/views/widgets/stepper_widget.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
-import 'package:sentra/core/utils/custom_spinner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -25,6 +24,7 @@ class LaporanPage extends StatefulWidget {
 class _LaporanPageState extends State<LaporanPage> {
   int _currentStep = 1;
   final LaporanController laporanController = LaporanController();
+  bool _isSubmitting = false;
 
   // Form 1 - Data Diri Pelapor
   final TextEditingController _nikform1 = TextEditingController();
@@ -623,41 +623,44 @@ class _LaporanPageState extends State<LaporanPage> {
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final idAkun = userProvider.idAkun;
+    if (idAkun == null) {
+      CustomSnackbar.show(
+        "Silakan login terlebih dahulu untuk mengirim laporan",
+        warna: Colors.orange,
+        tinggi: 100,
+        icon: Icons.error_outline_rounded,
+      );
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const LoginPage()),
+      );
+      return;
+    }
 
     Map<String, dynamic> laporanData = {
       'id_akun': idAkun,
       'kategori': 'unset',
-      'status': 'diterima',
+      'status': 'dikirim',
       'detail_pelapor': {
         'nik': _nikform1.text.trim(),
         'nama': _namaform1.text.trim(),
         'alamat': _alamatform1.text.trim(),
-        'hubungan_dengan_korban': 'Pelapor / Korban',
-        'no_telp': _telpform1.text.trim(),
-      },
-      'detail_terlapor': {
-        'nik': '-',
-        'nama': 'Dalam Penyelidikan',
-        'umur': '0',
-        'alamat': '-',
-        'jenis_kelamin': 'Laki-laki',
         'hubungan_dengan_korban': '-',
-        'informasi_tambahan': '-',
+        'no_telp': _telpform1.text.trim(),
       },
       'detail_penerima_manfaat': {
         'nik': _nikform1.text.trim(),
         'nama': _namaform1.text.trim(),
-        'Tempat_lahir': '-',
-        'tanggal_lahir': '2000-01-01',
-        'umur': '0',
-        'jenis_kelamin': 'Laki-laki',
-        'pekerjaan': '-',
-        'agama': 'Islam',
+        'Tempat_lahir': null,
+        'tanggal_lahir': null,
+        'umur': null,
+        'jenis_kelamin': null,
+        'pekerjaan': null,
+        'agama': null,
         'alamat': _alamatform1.text.trim(),
-        'pendidikan': 'Tidak Sekolah',
-        'hubungan_dengan_terlapor': '-',
+        'pendidikan': null,
+        'hubungan_dengan_terlapor': null,
         'notelp': _telpform1.text.trim(),
-        'informasi_tambahan': '-',
+        'informasi_tambahan': null,
       },
       'detail_kasus': {
         'tanggal': _tanggalController.text.trim(),
@@ -831,51 +834,136 @@ class _LaporanPageState extends State<LaporanPage> {
                       SizedBox(width: 12),
                       ElevatedButton.icon(
                         onPressed: () async {
+                          if (_isSubmitting) return;
+                          _isSubmitting = true;
+
                           showDialog(
                             context: context,
                             barrierDismissible: false,
+                            barrierColor: Colors.black54,
                             builder:
-                                (context) => Center(
-                                  child: Container(
-                                    padding: EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
+                                (context) => PopScope(
+                                  canPop: false,
+                                  child: Dialog(
+                                    backgroundColor: Colors.transparent,
+                                    insetPadding: const EdgeInsets.symmetric(
+                                      horizontal: 40,
                                     ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        CircularProgressIndicator(),
-                                        SizedBox(height: 16),
-                                        Text(
-                                          "Mengirim laporan...",
-                                          style: TextStyle(
-                                            fontFamily: "Mulish",
+                                    child: Container(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        28,
+                                        30,
+                                        28,
+                                        26,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.14,
+                                            ),
+                                            blurRadius: 28,
+                                            offset: const Offset(0, 12),
                                           ),
+                                        ],
+                                      ),
+                                      child: MediaQuery.withClampedTextScaling(
+                                        minScaleFactor: 1.0,
+                                        maxScaleFactor: 1.3,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 64,
+                                              height: 64,
+                                              padding: const EdgeInsets.all(18),
+                                              decoration: BoxDecoration(
+                                                color: Warna.backgroundIjo
+                                                    .withValues(alpha: 0.12),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child:
+                                                  const CircularProgressIndicator(
+                                                    strokeWidth: 3,
+                                                    color:
+                                                        Warna.backgroundIjo,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 20),
+                                            const Text(
+                                              "Mengirim laporan...",
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                fontFamily: "Mulish",
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w700,
+                                                color: Color(0xFF1F2A37),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            const Text(
+                                              "Mohon tunggu sebentar, jangan tutup aplikasi.",
+                                              textAlign: TextAlign.center,
+                                              style: TextStyle(
+                                                fontFamily: "Mulish",
+                                                fontSize: 12.5,
+                                                height: 1.4,
+                                                color: Color(0xFF6B7280),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      ],
+                                      ),
                                     ),
                                   ),
                                 ),
                           );
 
                           try {
-                            await laporanController.createReport(laporanData);
+                            final created = await laporanController
+                                .createReport(laporanData);
 
                             if (!context.mounted) return;
 
                             Navigator.of(context).pop();
+                            Navigator.of(context).pop();
 
-                            CustomSnackbar.show("Laporan berhasil dikirim");
+                            final idLaporan =
+                                created?['id_laporan']?.toString() ?? '';
+                            CustomSnackbar.show(
+                              idLaporan.isEmpty
+                                  ? "Laporan berhasil dikirim"
+                                  : "Laporan berhasil dikirim. ID: $idLaporan",
+                              warna: Colors.green,
+                              tinggi: 110,
+                              icon: Icons.check_circle_outline_rounded,
+                            );
 
                             _resetForm();
-                            Navigator.of(context).pop();
                           } catch (e) {
                             if (!context.mounted) return;
 
                             Navigator.of(context).pop();
 
-                            CustomSnackbar.show("Gagal mengirim laporan");
+                            final String message =
+                                e.toString().replaceFirst(
+                                  'ApiException: ',
+                                  '',
+                                );
+                            CustomSnackbar.show(
+                              message.isEmpty
+                                  ? "Gagal mengirim laporan"
+                                  : message,
+                              warna: Colors.red,
+                              tinggi: 110,
+                              icon: Icons.error_outline_rounded,
+                            );
+                          } finally {
+                            _isSubmitting = false;
                           }
                         },
                         icon: Icon(Icons.send_rounded, size: 18),

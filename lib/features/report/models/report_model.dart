@@ -14,17 +14,18 @@ class LaporanModel {
   });
 
   factory LaporanModel.fromJson(Map<String, dynamic> json) {
+    final dynamic penerima = json['detail_penerima_manfaat'];
     return LaporanModel(
-      id: json['id_laporan'] ?? 0,
-      kategori: json['kategori'] ?? '',
+      id: json['id_laporan']?.toString() ?? '',
+      kategori: json['kategori']?.toString() ?? '',
       deskripsi:
-          json['detail_penerima_manfaat'] is Map
-              ? json['detail_penerima_manfaat']['nama']?.toString() ?? 'N/A'
-              : json['detail_penerima_manfaat']?.toString() ?? 'N/A',
-      status: json['status'] ?? '',
-      createdAt: DateTime.parse(
-        json['created_at'] ?? DateTime.now().toIso8601String(),
-      ),
+          penerima is Map
+              ? penerima['nama']?.toString() ?? 'N/A'
+              : penerima?.toString() ?? 'N/A',
+      status: json['status']?.toString() ?? '',
+      createdAt:
+          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 }
