@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/pjsrk/repositories/pjsrk_quick_report_repository.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/lokasi_autocomplete_field.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_form_header.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_submit_button.dart';
@@ -38,6 +42,9 @@ class _FormBencanaAlamScreenState extends State<FormBencanaAlamScreen> {
   // Status loading saat tombol submit ditekan
   bool _isLoading = false;
 
+  // Repository pengiriman laporan cepat ke backend SENTRA
+  final PjsrkQuickReportRepository _repository = PjsrkQuickReportRepository();
+
   @override
   void dispose() {
     _namaController.dispose();
@@ -48,8 +55,9 @@ class _FormBencanaAlamScreenState extends State<FormBencanaAlamScreen> {
     super.dispose();
   }
 
+
   /// Menangani aksi saat tombol Submit ditekan
-  void _handleSubmit() async {
+  Future<void> _handleSubmit() async {
     // 1. Validasi semua field apakah sudah terisi dengan benar
     if (!_formKey.currentState!.validate()) {
       HapticFeedback.mediumImpact();
@@ -63,25 +71,71 @@ class _FormBencanaAlamScreenState extends State<FormBencanaAlamScreen> {
       return;
     }
 
+    // 2. Pastikan pengguna sudah login sebelum mengirim laporan
+    final int? idAkun =
+        Provider.of<UserProvider>(context, listen: false).idAkun;
+
+    if (idAkun == null || idAkun <= 0) {
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Silakan login terlebih dahulu untuk mengirim laporan"),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
-    // 2. Simulasi proses pengiriman data bencana alam ke server
-    await Future.delayed(const Duration(milliseconds: 1000));
+    // 3. Kirim laporan bencana alam ke server SENTRA
+    try {
+      final nomor = await _repository.kirim(
+        idAkun: idAkun,
+        layanan: PjsrkQuickReportRepository.layananBencana,
+        nama: _namaController.text,
+        telepon: _teleponController.text,
+        lokasi: _lokasiController.text,
+        jenis: _jenisController.text,
+        deskripsi: _deskripsiController.text,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _isLoading = false;
-    });
+      setState(() {
+        _isLoading = false;
+      });
 
-    // 3. Tampilkan dialog sukses
-    _showSuccessDialog();
+      // 4. Tampilkan dialog sukses beserta nomor laporan
+      _showSuccessDialog(nomor);
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      HapticFeedback.mediumImpact();
+      final pesan = error is ApiException
+          ? error.message
+          : 'Laporan gagal dikirim. Silakan coba lagi.';
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(pesan),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   /// Dialog konfirmasi bahwa laporan bencana alam berhasil terkirim
-  void _showSuccessDialog() {
+  void _showSuccessDialog(String nomor) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -127,6 +181,42 @@ class _FormBencanaAlamScreenState extends State<FormBencanaAlamScreen> {
                   height: 1.4,
                 ),
               ),
+              if (nomor.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        "Nomor Laporan",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'Mulish',
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        nomor.trim(),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Mulish',
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,

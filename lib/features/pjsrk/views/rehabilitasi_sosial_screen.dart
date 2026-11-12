@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
+import 'package:sentra/features/pjsrk/models/pjsrk_rehab_model.dart';
+import 'package:sentra/features/pjsrk/repositories/pjsrk_rehab_repository.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_chips.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_fields.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_foto.dart';
@@ -46,6 +51,9 @@ class _RehabilitasiSosialFormScreenState
   // 4 slot foto (XFile dari image_picker; null = kosong)
   final List<XFile?> photos = List<XFile?>.filled(4, null);
 
+  // Status pengiriman ke server
+  bool _isLoading = false;
+
   final lokasiC = TextEditingController();
   final ciriC = TextEditingController();
   final kontakC = TextEditingController(text: '0812 3456 7890');
@@ -71,24 +79,99 @@ class _RehabilitasiSosialFormScreenState
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_isLoading) return;
     if (lokasiC.text.trim().isEmpty && lat == null) {
       return _snack('Lokasi wajib diisi (ketuk peta atau "Lokasi saya")');
     }
     if (ciriC.text.trim().isEmpty) return _snack('Ciri-ciri wajib diisi');
     if (kontakC.text.trim().isEmpty) return _snack('Kontak wajib diisi');
 
-    // TODO: kirim ke API
-    // - lat, lng
-    // - photos (XFile) → upload multipart
-    // - field lain
-    final jumlahFoto = photos.where((p) => p != null).length;
-    _snack(
-      'Laporan $jenis dikirim'
-      '${lat != null ? " | ($lat, $lng)" : ""}'
-      ' | $jumlahFoto foto',
-      ok: true,
+    final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
+    if (idAkun == null) return _snack('Silakan login terlebih dahulu');
+
+    final data = PjsrkRehabModel(
+      jenisRehabilitasi: jenis,
+      jumlahPenerima: jumlah,
+      jenisKelamin: gender,
+      kelompokUsia: usia,
+      kondisiSaatDitemukan: kondisi,
+      ciriCiri: ciriC.text.trim(),
+      rahasia: rahasia,
+      alamat: lokasiC.text.trim(),
+      latitude: lat ?? 0,
+      longitude: lng ?? 0,
+      kontak: kontakC.text.trim(),
     );
+
+    setState(() => _isLoading = true);
+    try {
+      final nomor = await PjsrkRehabRepository().kirim(
+        idAkun: idAkun,
+        data: data,
+        foto: photos.whereType<XFile>().toList(),
+      );
+      if (!mounted) return;
+      await _tampilSukses(nomor);
+    } catch (e) {
+      if (!mounted) return;
+      _snack(e is ApiException ? e.message : 'Gagal mengirim laporan: $e');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _tampilSukses(String nomor) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Laporan terkirim',
+          style: TextStyle(fontFamily: 'Mulish', fontWeight: FontWeight.w800),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Nomor laporan',
+              style: TextStyle(fontFamily: 'Mulish', fontSize: 12),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              nomor,
+              style: const TextStyle(
+                fontFamily: 'Mulish',
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Petugas Dinsos akan menindaklanjuti laporan ini.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Mulish', fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Selesai',
+              style: TextStyle(
+                fontFamily: 'Mulish',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   @override
@@ -227,7 +310,7 @@ class _RehabilitasiSosialFormScreenState
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _submit,
+                        onPressed: _isLoading ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _orange,
                           foregroundColor: Colors.white,
@@ -236,14 +319,25 @@ class _RehabilitasiSosialFormScreenState
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: const Text(
-                          'Kirim Laporan',
-                          style: TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : const Text(
+                                'Kirim Laporan',
+                                style: TextStyle(
+                                  fontFamily: 'Mulish',
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
                       ),
                     ),
                   ],

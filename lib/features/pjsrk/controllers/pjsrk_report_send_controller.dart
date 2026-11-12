@@ -61,11 +61,15 @@ class PjsrkReportSendController extends ChangeNotifier {
       };
 
   /// Mengirim laporan ke server. Nomor laporan berasal dari backend.
-  Future<String> kirim() async {
+  Future<String> kirim({required int idAkun}) async {
     isLoading = true;
     notifyListeners();
     try {
-      return await _repository.kirim(event: event, lokasi: location);
+      return await _repository.kirim(
+        idAkun: idAkun,
+        event: event,
+        lokasi: location,
+      );
     } finally {
       isLoading = false;
       notifyListeners();

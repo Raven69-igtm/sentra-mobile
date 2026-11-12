@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:sentra/features/auth/controllers/user_provider.dart';
+import '../../../core/network/api_exception.dart';
 import '../controllers/pjsrk_report_send_controller.dart';
 import '../models/pjsrk_report_event_model.dart';
 import '../models/pjsrk_report_location_model.dart';
@@ -56,16 +59,28 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
       return;
     }
 
+    final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
+    if (idAkun == null) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(
+            'Silakan login terlebih dahulu',
+            style: const TextStyle(fontFamily: 'Mulish'),
+          ),
+          behavior: SnackBarBehavior.floating,
+        ));
+      return;
+    }
+
     try {
-      final nomor = await _c.kirim();
+      final nomor = await _c.kirim(idAkun: idAkun);
       if (!mounted) return;
       await _tampilSukses(nomor);
     } catch (e) {
       if (!mounted) return;
       final String message =
-          e is UnsupportedError
-              ? e.message.toString()
-              : 'Gagal mengirim laporan: $e';
+          e is ApiException ? e.message : 'Gagal mengirim laporan: $e';
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
         ..showSnackBar(
