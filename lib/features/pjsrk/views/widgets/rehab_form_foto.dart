@@ -2,12 +2,12 @@ import 'dart:io'; // File dari path lokal (mobile/desktop)
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'pjsrk_foto_source_sheet.dart';
 
 const _muted = Color(0xFF7A7F85);
 const _border = Color(0xFFE8EBEE);
 const _greenSoft = Color(0xFFE4F1E9);
 const _green = Color(0xFF3F8F63);
-const _orange = Color(0xFFD6762E);
 
 // ============================================================
 // BARIS 4 SLOT FOTO
@@ -38,86 +38,25 @@ class RehabFotoRow extends StatelessWidget {
   Future<void> _pick(BuildContext context, int index) async {
     final sudahAda = photos[index] != null;
 
-    // Jika sudah ada foto → tanya mau hapus atau ganti
-    final choice = await showModalBottomSheet<String>(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 8),
-              // Handle strip
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Pilih sumber foto',
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Kamera (utama di HP; di desktop bisa tidak tersedia)
-              if (!kIsWeb)
-                ListTile(
-                  leading: const Icon(Icons.camera_alt_outlined, color: _orange),
-                  title: const Text('Kamera',
-                      style: TextStyle(fontFamily: 'Mulish')),
-                  onTap: () => Navigator.pop(ctx, 'camera'),
-                ),
-
-              // Galeri / File (HP & laptop)
-              ListTile(
-                leading: const Icon(Icons.photo_library_outlined, color: _green),
-                title: Text(
-                  kIsWeb || Platform.isWindows || Platform.isLinux || Platform.isMacOS
-                      ? 'Pilih file gambar'
-                      : 'Galeri',
-                  style: const TextStyle(fontFamily: 'Mulish'),
-                ),
-                onTap: () => Navigator.pop(ctx, 'gallery'),
-              ),
-
-              // Hapus jika slot sudah terisi
-              if (sudahAda)
-                ListTile(
-                  leading: const Icon(Icons.delete_outline, color: Colors.red),
-                  title: const Text('Hapus foto',
-                      style: TextStyle(fontFamily: 'Mulish', color: Colors.red)),
-                  onTap: () => Navigator.pop(ctx, 'delete'),
-                ),
-
-              const SizedBox(height: 8),
-            ],
-          ),
-        );
-      },
+    // Bottom sheet "Ambil Foto Bukti" yang sama dengan halaman
+    // Permasalahan Sosial & Pengaduan Bencana (Kamera / Galeri Foto).
+    final choice = await showPjsrkFotoSourceSheet(
+      context,
+      izinkanHapus: sudahAda,
     );
 
-    if (choice == null) return;
+    if (choice == null || !context.mounted) return;
 
-    if (choice == 'delete') {
+    if (choice == PjsrkFotoSource.hapus) {
       onChanged(index, null);
       return;
     }
 
     // image_picker: ImageSource.camera atau ImageSource.gallery
     final picker = ImagePicker();
-    final source =
-        choice == 'camera' ? ImageSource.camera : ImageSource.gallery;
+    final source = choice == PjsrkFotoSource.kamera
+        ? ImageSource.camera
+        : ImageSource.gallery;
 
     try {
       final file = await picker.pickImage(

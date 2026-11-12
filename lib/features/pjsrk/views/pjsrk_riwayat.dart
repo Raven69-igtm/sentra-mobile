@@ -397,9 +397,9 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
     final statusInfo = _resolveStatus(laporan.status);
     final dateStr =
         DateFormat('d MMM yyyy', 'id_ID').format(laporan.createdAt);
-    final ticketId = laporan.id.toString().startsWith('SP-')
-        ? laporan.id.toString()
-        : 'SP-${laporan.id}';
+    // Nomor tiket asli dari server (contoh: RKN...). Prefix SP- buatan
+    // aplikasi dihapus agar sama dengan nomor tiket di admin Dinsos.
+    final ticketId = laporan.id.toString();
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
@@ -474,6 +474,54 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
                         height: 1.4,
                       ),
                     ),
+                    if (laporan.lokasi.isNotEmpty ||
+                        laporan.fotoUrls.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (laporan.lokasi.isNotEmpty) ...[
+                            const Icon(
+                              Icons.place_outlined,
+                              size: 13,
+                              color: _textGrey,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                laporan.lokasi,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: _textGrey,
+                                  fontSize: 11,
+                                  fontFamily: 'Mulish',
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (laporan.fotoUrls.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.image_outlined,
+                              size: 13,
+                              color: _textGrey,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${laporan.fotoUrls.length}',
+                              style: const TextStyle(
+                                color: _textGrey,
+                                fontSize: 11,
+                                fontFamily: 'Mulish',
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/pjsrk_report_location_model.dart';
 
 /// CONTROLLER langkah 2 (Lokasi).
@@ -14,14 +15,12 @@ class PjsrkReportLocationController extends ChangeNotifier {
   final patokanCtrl = TextEditingController();
   final kontakCtrl = TextEditingController(text: '0812 3456 7890');
 
-  // Daftar foto. Sekarang masih isi tiruan (2 kotak terisi seperti gambar).
-  // TODO: ganti jadi [] dan isi path asli dari paket image_picker.
-  final List<String> foto = ['contoh_1', 'contoh_2'];
+  // Foto bukti dari kamera / galeri (maks 4).
+  final List<XFile> foto = [];
 
-  void tambahFoto() {
+  void tambahFoto(XFile file) {
     if (foto.length >= maksFoto) return;
-    // TODO: buka kamera/galeri pakai image_picker, lalu add path aslinya.
-    foto.add('contoh_${foto.length + 1}');
+    foto.add(file);
     notifyListeners();
   }
 
@@ -49,7 +48,7 @@ class PjsrkReportLocationController extends ChangeNotifier {
     patokan: patokanCtrl.text.trim(),
     latitude: latitude,
     longitude: longitude,
-    foto: List.of(foto),
+    foto: foto.map((e) => e.path).toList(),
     kontak: kontakCtrl.text.trim(),
   );
 

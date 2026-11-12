@@ -4,10 +4,15 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
+import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/pjsrk/views/laporan_sukses_screen.dart';
+import 'package:sentra/features/pjsrk/views/widgets/rehab_form_fields.dart';
 
 /// Model item foto bukti yang mendukung file nyata dari kamera / galeri baik di Mobile maupun Web
 class PhotoItem {
@@ -30,25 +35,9 @@ class PhotoItem {
   });
 }
 
-/// Model opsi lokasi untuk Dropdown
-class LocationOption {
-  final String label;
-  final String address;
-  final double latitude;
-  final double longitude;
-
-  const LocationOption({
-    required this.label,
-    required this.address,
-    required this.latitude,
-    required this.longitude,
-  });
-
-  LatLng get latLng => LatLng(latitude, longitude);
-}
-
 /// Halaman Form Pengaduan Permasalahan Sosial (PJSRK)
-/// Dilengkapi Google Maps Real-Time, Dropdown Lokasi Interaktif, dan Pengambilan Foto dari Kamera / Galeri
+/// Dilengkapi peta interaktif (sama seperti form Rehabilitasi Sosial) dan
+/// pengambilan foto dari kamera / galeri.
 class PermasalahanSosialScreen extends StatefulWidget {
   /// Callback fleksibel untuk menghubungkan ke halaman berikutnya sesuai ketentuan pengguna
   final void Function(Map<String, dynamic> reportData)? onNext;
@@ -71,7 +60,6 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
   static const Color _neutralGrey = Color(0xFF6B7280);
   static const Color _borderGrey = Color(0xFFE5E7EB);
   static const Color _greenActive = Color(0xFF48A868);
-  static const Color _pinRed = Color(0xFFE53935);
 
   // Daftar opsi jenis permasalahan
   final List<String> _jenisPermasalahanList = [
@@ -83,136 +71,6 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     'Lainnya',
   ];
 
-  // Daftar 20 Kecamatan Lengkap di Kabupaten Nganjuk & Titik Utama
-  final List<LocationOption> _locationOptions = const [
-    LocationOption(
-      label: 'Kec. Nganjuk (Kel. Pesantren - RT 05 / RW 02)',
-      address: 'RT 05 / RW 02, Kel. Pesantren, Kec. Nganjuk',
-      latitude: -7.6044,
-      longitude: 111.9022,
-    ),
-    LocationOption(
-      label: 'Kec. Bagor',
-      address: 'Jl. Raya Madiun - Nganjuk, Kec. Bagor, Kab. Nganjuk',
-      latitude: -7.5684,
-      longitude: 111.8502,
-    ),
-    LocationOption(
-      label: 'Kec. Baron',
-      address: 'Jl. Raya Baron, Kec. Baron, Kab. Nganjuk',
-      latitude: -7.6006,
-      longitude: 112.0489,
-    ),
-    LocationOption(
-      label: 'Kec. Berbek',
-      address: 'Jl. Sunan Kalijaga, Kec. Berbek, Kab. Nganjuk',
-      latitude: -7.6433,
-      longitude: 111.8689,
-    ),
-    LocationOption(
-      label: 'Kec. Gondang',
-      address: 'Jl. Raya Gondang, Kec. Gondang, Kab. Nganjuk',
-      latitude: -7.5256,
-      longitude: 112.0089,
-    ),
-    LocationOption(
-      label: 'Kec. Jatikalen',
-      address: 'Jl. Raya Jatikalen, Kec. Jatikalen, Kab. Nganjuk',
-      latitude: -7.4989,
-      longitude: 112.1389,
-    ),
-    LocationOption(
-      label: 'Kec. Kertosono',
-      address: 'Jl. Supriyadi, Kec. Kertosono, Kab. Nganjuk',
-      latitude: -7.5872,
-      longitude: 112.0984,
-    ),
-    LocationOption(
-      label: 'Kec. Lengkong',
-      address: 'Jl. Raya Lengkong, Kec. Lengkong, Kab. Nganjuk',
-      latitude: -7.4722,
-      longitude: 112.0389,
-    ),
-    LocationOption(
-      label: 'Kec. Loceret',
-      address: 'Jl. Raya Kediri - Nganjuk, Kec. Loceret, Kab. Nganjuk',
-      latitude: -7.6489,
-      longitude: 111.9056,
-    ),
-    LocationOption(
-      label: 'Kec. Nganjuk (Pusat Kota)',
-      address: 'Jl. Basuki Rahmad, Mangundikaran, Kec. Nganjuk',
-      latitude: -7.6015,
-      longitude: 111.9011,
-    ),
-    LocationOption(
-      label: 'Kec. Ngetos',
-      address: 'Jl. Raya Ngetos, Kec. Ngetos, Kab. Nganjuk',
-      latitude: -7.7122,
-      longitude: 111.8389,
-    ),
-    LocationOption(
-      label: 'Kec. Ngluyu',
-      address: 'Jl. Raya Ngluyu, Kec. Ngluyu, Kab. Nganjuk',
-      latitude: -7.4389,
-      longitude: 111.9522,
-    ),
-    LocationOption(
-      label: 'Kec. Ngronggot',
-      address: 'Jl. Raya Ngronggot, Kec. Ngronggot, Kab. Nganjuk',
-      latitude: -7.6722,
-      longitude: 112.0489,
-    ),
-    LocationOption(
-      label: 'Kec. Pace',
-      address: 'Jl. Raya Pace, Kec. Pace, Kab. Nganjuk',
-      latitude: -7.6789,
-      longitude: 111.9689,
-    ),
-    LocationOption(
-      label: 'Kec. Patianrowo',
-      address: 'Jl. Raya Patianrowo, Kec. Patianrowo, Kab. Nganjuk',
-      latitude: -7.5389,
-      longitude: 112.0889,
-    ),
-    LocationOption(
-      label: 'Kec. Prambon',
-      address: 'Jl. Raya Prambon, Kec. Prambon, Kab. Nganjuk',
-      latitude: -7.7189,
-      longitude: 112.0289,
-    ),
-    LocationOption(
-      label: 'Kec. Rejoso',
-      address: 'Jl. Raya Rejoso, Kec. Rejoso, Kab. Nganjuk',
-      latitude: -7.5022,
-      longitude: 111.8889,
-    ),
-    LocationOption(
-      label: 'Kec. Sawahan',
-      address: 'Jl. Raya Sedudo, Kec. Sawahan, Kab. Nganjuk',
-      latitude: -7.7422,
-      longitude: 111.7889,
-    ),
-    LocationOption(
-      label: 'Kec. Sukomoro',
-      address: 'Jl. Raya Sukomoro, Kec. Sukomoro, Kab. Nganjuk',
-      latitude: -7.5823,
-      longitude: 111.9421,
-    ),
-    LocationOption(
-      label: 'Kec. Tanjunganom',
-      address: 'Jl. Panglima Sudirman, Kec. Tanjunganom, Kab. Nganjuk',
-      latitude: -7.6189,
-      longitude: 112.0078,
-    ),
-    LocationOption(
-      label: 'Kec. Wilangan',
-      address: 'Jl. Raya Wilangan, Kec. Wilangan, Kab. Nganjuk',
-      latitude: -7.5622,
-      longitude: 111.7889,
-    ),
-  ];
-
   // State Form
   String _selectedJenis = 'Pengemis & pengamen';
   late final TextEditingController _judulController;
@@ -220,11 +78,11 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
   late final TextEditingController _lokasiController;
   bool _isAnonymous = true;
 
-  // State Google Maps & Dropdown Lokasi
-  final MapController _mapController = MapController();
-  late LocationOption _selectedLocation;
+  // true saat laporan sedang dikirim ke API (menahan tap ganda)
+  bool _isSending = false;
+
+  // Titik pusat peta & koordinat lokasi yang dipilih
   late LatLng _currentLatLng;
-  bool _isLoadingGps = false;
 
   // State Foto Bukti (Maksimal 4 foto nyata dari kamera/galeri)
   final ImagePicker _imagePicker = ImagePicker();
@@ -237,11 +95,11 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     _judulController = TextEditingController();
     _uraianController = TextEditingController();
 
-    // Inisialisasi lokasi awal
-    _selectedLocation = _locationOptions.first;
-    _currentLatLng = _selectedLocation.latLng;
+    // Titik awal peta sama dengan form Rehabilitasi Sosial (pusat Nganjuk)
+    _currentLatLng = const LatLng(-7.6051, 111.9046);
     _lokasiController = TextEditingController(
-      text: _selectedLocation.address,
+      text: 'Lat ${_currentLatLng.latitude.toStringAsFixed(5)}, '
+          'Lng ${_currentLatLng.longitude.toStringAsFixed(5)}',
     );
   }
 
@@ -251,103 +109,6 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     _uraianController.dispose();
     _lokasiController.dispose();
     super.dispose();
-  }
-
-  /// Mengubah lokasi berdasarkan pilihan Dropdown
-  void _onLocationDropdownChanged(LocationOption? newLocation) {
-    if (newLocation == null) return;
-    setState(() {
-      _selectedLocation = newLocation;
-      _currentLatLng = newLocation.latLng;
-      _lokasiController.text = newLocation.address;
-    });
-
-    // Pindahkan kamera Google Maps secara halus ke koordinat lokasi yang dipilih
-    _mapController.move(_currentLatLng, 16.0);
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.place_rounded, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Peta diarahkan ke ${newLocation.label}',
-                style: const TextStyle(fontFamily: 'Mulish', fontSize: 13),
-              ),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF2C3E50),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  /// Saat pengguna mengetuk titik mana pun di peta untuk memilih lokasi kustom
-  void _onMapTapped(TapPosition tapPosition, LatLng tappedPoint) {
-    setState(() {
-      _currentLatLng = tappedPoint;
-      _lokasiController.text =
-          'Titik Kustom (${tappedPoint.latitude.toStringAsFixed(4)}, ${tappedPoint.longitude.toStringAsFixed(4)})';
-    });
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Pin diperbarui: Lat ${tappedPoint.latitude.toStringAsFixed(4)}, Long ${tappedPoint.longitude.toStringAsFixed(4)}',
-          style: const TextStyle(fontFamily: 'Mulish', fontSize: 12),
-        ),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(milliseconds: 1500),
-      ),
-    );
-  }
-
-  /// Aksi tombol "Lokasi saya" (mengambil GPS terkini)
-  void _onGetMyLocation() {
-    setState(() {
-      _isLoadingGps = true;
-    });
-
-    // Simulasi deteksi GPS akurat & pembaruan peta
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (!mounted) return;
-      final gpsLocation = _locationOptions.first; // Atau koordinat GPS aktif
-      setState(() {
-        _isLoadingGps = false;
-        _selectedLocation = gpsLocation;
-        _currentLatLng = gpsLocation.latLng;
-        _lokasiController.text = gpsLocation.address;
-      });
-
-      _mapController.move(_currentLatLng, 16.5);
-
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.my_location_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Lokasi GPS Anda berhasil ditemukan!',
-                  style: TextStyle(fontFamily: 'Mulish', fontSize: 13),
-                ),
-              ),
-            ],
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: const Color(0xFF2E7D32),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    });
   }
 
   /// Dialog pemilihan sumber foto (Kamera atau Galeri)
@@ -603,7 +364,7 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
   }
 
   /// Validasi Lengkap & Proses Submit Laporan
-  void _onSubmitReport() {
+  Future<void> _onSubmitReport() async {
     // 1. Validasi Jenis Permasalahan
     if (_selectedJenis.trim().isEmpty) {
       _showWarningSnackBar('Silakan pilih jenis permasalahan terlebih dahulu');
@@ -634,46 +395,139 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
       return;
     }
 
-    // Pembuatan ID Laporan Otomatis (Format: SP-YYMM-XXXX)
-    final DateTime now = DateTime.now();
-    final String yearShort = (now.year % 100).toString().padLeft(2, '0');
-    final String month = now.month.toString().padLeft(2, '0');
-    final String randomCode = ((now.millisecondsSinceEpoch ~/ 1000) % 9000 + 1000).toString();
-    final String autoReportId = 'SP-$yearShort$month-$randomCode';
-
-    // Mengumpulkan seluruh data form lengkap
-    final Map<String, dynamic> reportData = {
-      'id_laporan': autoReportId,
-      'nomor_tiket': autoReportId,
-      'jenis_permasalahan': _selectedJenis,
-      'judul': _judulController.text.trim(),
-      'uraian': _uraianController.text.trim(),
-      'lokasi': _lokasiController.text.trim(),
-      'latitude': _currentLatLng.latitude,
-      'longitude': _currentLatLng.longitude,
-      'foto_paths': _photoList.map((p) => p.path).whereType<String>().toList(),
-      'jumlah_foto': _photoList.length,
-      'is_anonymous': _isAnonymous,
-      'timestamp': now.toIso8601String(),
-    };
-
-    // JIKA USER MEMBERIKAN CALLBACK onNext, MAKA SAMBUNGKAN KE HALAMAN BERIKUTNYA
-    if (widget.onNext != null) {
-      widget.onNext!(reportData);
+    final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
+    if (idAkun == null || idAkun <= 0) {
+      _showWarningSnackBar(
+        'Silakan login terlebih dahulu untuk mengirim laporan',
+      );
       return;
     }
 
-    // DEFAULT ACTION: Navigasi langsung ke halaman Laporan Sukses dengan ID Laporan Otomatis
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => LaporanSuksesScreen(
-          reportData: reportData,
-          nomorTiket: autoReportId,
-          tanggalWaktu: now,
+    FocusScope.of(context).unfocus();
+    setState(() => _isSending = true);
+
+    try {
+      // Form multipart disusun manual. FormData.fromMap mengirim daftar berkas
+      // dengan nama kunci yang sama ("foto"), sehingga PHP hanya menyisakan
+      // satu berkas dan API menolak dengan "The foto field must be an array".
+      // Kunci "foto[]" membuat PHP membentuk array berkas sesuai validasi API.
+      final FormData formData = FormData();
+      formData.fields.addAll(<MapEntry<String, String>>[
+        MapEntry('id_akun', idAkun.toString()),
+        MapEntry('jenis_permasalahan', _selectedJenis),
+        MapEntry('judul', _judulController.text.trim()),
+        MapEntry('uraian', _uraianController.text.trim()),
+        MapEntry('alamat', _lokasiController.text.trim()),
+        MapEntry('latitude', _currentLatLng.latitude.toString()),
+        MapEntry('longitude', _currentLatLng.longitude.toString()),
+        MapEntry('rahasia', _isAnonymous ? '1' : '0'),
+      ]);
+
+      final List<MultipartFile> files = <MultipartFile>[];
+      for (final PhotoItem item in _photoList) {
+        final Uint8List? bytes = await _readPhotoBytes(item);
+        if (bytes == null) continue;
+        final MultipartFile file = MultipartFile.fromBytes(
+          bytes,
+          filename: _photoFileName(item),
+          contentType: _photoContentType(item),
+        );
+        files.add(file);
+        formData.files.add(MapEntry('foto[]', file));
+      }
+
+      final response = await ApiClient.postRequest(
+        '/pjsrk/permasalahan-sosial',
+        formData,
+      );
+
+      final String idLaporan = _bacaIdLaporan(response.data);
+      if (!mounted) return;
+
+      final DateTime now = DateTime.now();
+      final Map<String, dynamic> reportData = <String, dynamic>{
+        'id_laporan': idLaporan,
+        'nomor_tiket': idLaporan,
+        'jenis_permasalahan': _selectedJenis,
+        'judul': _judulController.text.trim(),
+        'uraian': _uraianController.text.trim(),
+        'lokasi': _lokasiController.text.trim(),
+        'latitude': _currentLatLng.latitude,
+        'longitude': _currentLatLng.longitude,
+        'jumlah_foto': files.length,
+        'is_anonymous': _isAnonymous,
+        'timestamp': now.toIso8601String(),
+      };
+
+      // JIKA USER MEMBERIKAN CALLBACK onNext, MAKA SAMBUNGKAN KE HALAMAN BERIKUTNYA
+      if (widget.onNext != null) {
+        widget.onNext!(reportData);
+        return;
+      }
+
+      // DEFAULT ACTION: halaman sukses memakai nomor tiket dari server
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LaporanSuksesScreen(
+            reportData: reportData,
+            nomorTiket: idLaporan.isEmpty ? null : idLaporan,
+            tanggalWaktu: now,
+          ),
         ),
-      ),
-    );
+      );
+    } on ApiException catch (e) {
+      if (mounted) _showWarningSnackBar(e.message);
+    } catch (_) {
+      if (mounted) {
+        _showWarningSnackBar('Gagal mengirim laporan. Silakan coba lagi.');
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
+  }
+
+  /// Nomor tiket asli dibuat trigger database (contoh: RKN...).
+  String _bacaIdLaporan(dynamic body) {
+    if (body is Map && body['data'] is Map) {
+      return (body['data'] as Map)['id_laporan']?.toString() ?? '';
+    }
+    return '';
+  }
+
+  Future<Uint8List?> _readPhotoBytes(PhotoItem item) async {
+    if (item.bytes != null) return item.bytes;
+    if (item.file != null) return item.file!.readAsBytes();
+    final path = item.path ?? '';
+    if (path.isEmpty) return null;
+    return File(path).readAsBytes();
+  }
+
+  String _photoFileName(PhotoItem item) {
+    final fromPath = (item.path ?? '').split(RegExp(r'[/\\]')).last;
+    if (_hasImageExtension(fromPath)) return fromPath;
+    final name = item.name?.trim() ?? '';
+    if (_hasImageExtension(name)) return name;
+    final base = name.isNotEmpty
+        ? name
+        : (fromPath.isNotEmpty ? fromPath : 'foto-${item.id}');
+    return '$base.jpg';
+  }
+
+  bool _hasImageExtension(String value) {
+    final lower = value.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp');
+  }
+
+  /// Tipe konten berkas agar header multipart sesuai ekstensi gambarnya.
+  DioMediaType _photoContentType(PhotoItem item) {
+    final name = _photoFileName(item).toLowerCase();
+    if (name.endsWith('.png')) return DioMediaType('image', 'png');
+    if (name.endsWith('.webp')) return DioMediaType('image', 'webp');
+    return DioMediaType('image', 'jpeg');
   }
 
   void _showWarningSnackBar(String message) {
@@ -886,14 +740,19 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
                         _buildUraianTextField(),
                         const SizedBox(height: 18),
 
-                        // --- Section 4: Lokasi & Real-Time Google Maps & Dropdown ---
+                        // --- Section 4: Lokasi (peta sama seperti Rehabilitasi Sosial) ---
                         _buildSectionTitle('Lokasi'),
                         const SizedBox(height: 8),
-                        _buildLocationDropdown(),
-                        const SizedBox(height: 10),
-                        _buildGoogleMapsPreviewBox(),
-                        const SizedBox(height: 10),
-                        _buildAddressField(),
+                        RehabMapField(
+                          controller: _lokasiController,
+                          initialLat: _currentLatLng.latitude,
+                          initialLng: _currentLatLng.longitude,
+                          onLocationChanged: (la, ln) {
+                            setState(() {
+                              _currentLatLng = LatLng(la, ln);
+                            });
+                          },
+                        ),
                         const SizedBox(height: 18),
 
                         // --- Section 5: Foto Bukti (Maks 4) dari Kamera & Galeri ---
@@ -1141,254 +1000,6 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     );
   }
 
-  /// Dropdown Pemilihan Lokasi (Mengubah posisi Google Maps secara real time)
-  Widget _buildLocationDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _borderGrey, width: 1.2),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<LocationOption>(
-          value: _locationOptions.contains(_selectedLocation)
-              ? _selectedLocation
-              : _locationOptions.first,
-          isExpanded: true,
-          menuMaxHeight: 340,
-          borderRadius: BorderRadius.circular(14),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _primaryOrange),
-          items: _locationOptions.map((LocationOption loc) {
-            return DropdownMenuItem<LocationOption>(
-              value: loc,
-              child: Row(
-                children: [
-                  const Icon(Icons.location_city_rounded,
-                      size: 18, color: _primaryOrange),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      loc.label,
-                      style: const TextStyle(
-                        fontFamily: 'Mulish',
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: _neutralDark,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: _onLocationDropdownChanged,
-        ),
-      ),
-    );
-  }
-
-  /// Section 4: Map Preview dengan Google Maps Real-Time (Live Tiles & Interaktif)
-  Widget _buildGoogleMapsPreviewBox() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        height: 160,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: const Color(0xFFE5E7EB),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _borderGrey, width: 1),
-        ),
-        child: Stack(
-          children: [
-            // Peta Google Maps Real-Time Live Tiles
-            FlutterMap(
-              mapController: _mapController,
-              options: MapOptions(
-                initialCenter: _currentLatLng,
-                initialZoom: 16.0,
-                interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all,
-                ),
-                onTap: _onMapTapped,
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-                  userAgentPackageName: 'com.example.sentra_mobile',
-                  maxZoom: 20,
-                ),
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _currentLatLng,
-                      width: 44,
-                      height: 44,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: _pinRed,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Color(0x40000000),
-                                  blurRadius: 6,
-                                  offset: Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.location_on_rounded,
-                              color: Colors.white,
-                              size: 20,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-
-            // Badge Informasi Google Maps Live
-            Positioned(
-              left: 10,
-              top: 10,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.92),
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x18000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.public_rounded, size: 12, color: Color(0xFF1976D2)),
-                    SizedBox(width: 4),
-                    Text(
-                      'Google Maps Live',
-                      style: TextStyle(
-                        fontFamily: 'Mulish',
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1976D2),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Tombol "Lokasi saya" di pojok kanan bawah
-            Positioned(
-              right: 10,
-              bottom: 10,
-              child: Material(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                elevation: 2,
-                shadowColor: const Color(0x30000000),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: _onGetMyLocation,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_isLoadingGps)
-                          const SizedBox(
-                            width: 13,
-                            height: 13,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Color(0xFF2E7D32),
-                            ),
-                          )
-                        else
-                          const Icon(
-                            Icons.my_location_rounded,
-                            size: 14,
-                            color: Color(0xFF2E7D32),
-                          ),
-                        const SizedBox(width: 5),
-                        const Text(
-                          'Lokasi saya',
-                          style: TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2E7D32),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Input Alamat Textfield di bawah Map
-  Widget _buildAddressField() {
-    return TextFormField(
-      controller: _lokasiController,
-      style: const TextStyle(
-        fontFamily: 'Mulish',
-        fontSize: 13.5,
-        fontWeight: FontWeight.w500,
-        color: _neutralDark,
-      ),
-      decoration: InputDecoration(
-        prefixIcon: const Padding(
-          padding: EdgeInsets.only(left: 12, right: 8),
-          child: Icon(
-            Icons.location_on_outlined,
-            color: Color(0xFF6B7280),
-            size: 20,
-          ),
-        ),
-        prefixIconConstraints: const BoxConstraints(minWidth: 36),
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _borderGrey, width: 1),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _borderGrey, width: 1),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: _primaryOrange, width: 1.5),
-        ),
-      ),
-    );
-  }
-
   /// Section 5: Baris 4 slot foto bukti (Mendukung Kamera & Galeri Nyata)
   Widget _buildPhotoRow() {
     return Row(
@@ -1574,16 +1185,25 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
           ),
           elevation: 0,
         ),
-        onPressed: _onSubmitReport,
-        child: const Text(
-          'Kirim Laporan',
-          style: TextStyle(
-            fontFamily: 'Mulish',
-            fontSize: 15.5,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.2,
-          ),
-        ),
+        onPressed: _isSending ? null : _onSubmitReport,
+        child: _isSending
+            ? const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.4,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : const Text(
+                'Kirim Laporan',
+                style: TextStyle(
+                  fontFamily: 'Mulish',
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.2,
+                ),
+              ),
       ),
     );
   }
