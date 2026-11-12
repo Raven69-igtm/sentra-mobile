@@ -4,13 +4,13 @@ import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_report_event_screen.dart';
-import 'package:sentra/features/pjsrk/views/pjsrk_history_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_riwayat.dart';
 import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
-import 'package:sentra/features/pjsrk/views/pjsrk_riwayat.dart';
+import 'package:sentra/features/pjsrk/views/permasalahan_sosial_screen.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
 /// Sesuai dengan desain referensi kedua (pixel-accurate & responsif)
@@ -97,7 +97,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     if (userId != null && userId > 0) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const HistoryPage()),
+        MaterialPageRoute(builder: (_) => const LaporanSayaScreen()),
       );
     } else {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -140,7 +140,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
         Navigator.of(context).maybePop();
         break;
       case 2:
-        _onPengaduanBencanaTap();
+        _onLihatLaporanTap();
         break;
     }
   }
@@ -209,7 +209,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Fitur 3: masih notice
+                        // Fitur 3: Permasalahan Sosial → buka form
                         PjsrkFeatureCard(
                           title: 'Permasalahan Sosial',
                           description:
@@ -217,8 +217,14 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                           icon: Icons.people_outline_rounded,
                           iconColor: const Color(0xFF379AE6),
                           iconBgColor: const Color(0xFFE7F2FF),
-                          onTap: () =>
-                              _showFeatureNotice('Permasalahan Sosial'),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const PermasalahanSosialScreen(),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 12),
 
