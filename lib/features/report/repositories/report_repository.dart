@@ -8,7 +8,6 @@ class LaporanRepository {
     try {
       final response = await ApiClient.getRequest('/user-reports/$userId');
       List data = response.data['laporan'];
-      print(response.data['laporan']);
       return data.map((e) => LaporanModel.fromJson(e)).toList();
     } catch (e) {
       throw Exception('Gagal mengambil laporan user');
@@ -24,19 +23,19 @@ class LaporanRepository {
         '/user-reports-by-category/$userId/$kategori',
       );
       List data = response.data['laporan'];
-      print(data);
       return data.map((e) => LaporanModel.fromJson(e)).toList();
     } catch (e) {
       throw Exception('Gagal mengambil laporan berdasarkan kategori');
     }
   }
 
-  Future<void> postReport(Map<String, dynamic> laporanData) async {
-    try {
-      await ApiClient.postRequest('/post-report', laporanData);
-    } catch (e) {
-      throw Exception('Gagal membuat laporan');
-    }
+  /// Mengirim laporan ke backend dan mengembalikan isi respons ({success, message, data}).
+  ///
+  /// `DioException` tidak dibungkus agar status HTTP (422/401/403/500)
+  /// dan jenis kesalahan jaringan tetap dapat dikenali pemanggil.
+  Future<dynamic> postReport(Map<String, dynamic> laporanData) async {
+    final response = await ApiClient.postRequest('/post-report', laporanData);
+    return response.data;
   }
 
   Future<String> trackingReport(String trackingCode) async {
@@ -44,11 +43,8 @@ class LaporanRepository {
       final response = await ApiClient.postRequest('/track-report', {
         "id_laporan": trackingCode
       });
-      print(trackingCode);
-      print(response.data);
-      return response.data['status'];
+      return response.data['status'] ?? '';
     } catch (e) {
-      print(e);
       throw Exception('Gagal tracking laporan : $e');
     }
   }

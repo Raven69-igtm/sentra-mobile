@@ -3,7 +3,7 @@ import 'package:sentra/features/dashboard/models/info_model.dart';
 import 'package:dio/dio.dart';
 
 class InformasiService {
-  static const String baseUrl =
+  static final String baseUrl =
       '${ApiClient.protocol}://${ApiClient.baseUrl}/api';
   final Dio _dio = Dio();
 

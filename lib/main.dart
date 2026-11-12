@@ -49,9 +49,17 @@ void main() async {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    // Catatan: konfigurasi Firebase belum tersedia di platform aktif
+    // (mis. build web tanpa firebase_options untuk web). Aplikasi tetap
+    // berjalan; hanya fitur berbasis Firebase (notifikasi/chat) yang
+    // tidak aktif. Perilaku build native/Android tidak berubah.
+    debugPrint('Firebase di-skip: $e');
+  }
 
   if (!kIsWeb) {
     await NotificationService.initialize();
