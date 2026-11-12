@@ -3,6 +3,10 @@ import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/dashboard/models/info_model.dart';
 
 class InformasiService {
+  static const String baseUrl =
+      '${ApiClient.protocol}://${ApiClient.baseUrl}/api';
+  final Dio _dio = Dio();
+
   Future<List<Informasi>> fetchInformasi() async {
     final response = await ApiClient.getRequest('/informasi');
     final body = response.data;
