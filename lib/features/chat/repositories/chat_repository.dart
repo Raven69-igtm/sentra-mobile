@@ -34,6 +34,22 @@ class ChatRepository {
     }
   }
 
+  Future<void> sendMessage({
+    required int receiverId,
+    required String message,
+    int? repliedToId,
+  }) async {
+    try {
+      await dio.post('/chats', data: {
+        'receiver_id': receiverId,
+        'message': message,
+        if (repliedToId != null) 'replied_to_id': repliedToId,
+      });
+    } catch (e) {
+      throw Exception('Gagal mengirim pesan: $e');
+    }
+  }
+
   Future<void> editMessage(int chatId, String newMessage) async {
     try {
       await dio.put('/chat/update/$chatId', data: {'message': newMessage});
