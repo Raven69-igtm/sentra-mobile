@@ -139,9 +139,30 @@ class _LineChartScreenState extends State<LineChartScreen> {
         ? _buildShimmerChart()
         : _errorMessage.isNotEmpty
             ? Center(
-                child: Text(
-                  _errorMessage,
-                  style: const TextStyle(color: Colors.red),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.bar_chart_rounded,
+                        size: 40,
+                        color: Colors.redAccent,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        _errorMessage,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _fetchStatistics,
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text('Coba Lagi'),
+                      ),
+                    ],
+                  ),
                 ),
               )
             : _statistics == null || _statistics!.isEmpty

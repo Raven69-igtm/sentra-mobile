@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 
 class CustomTextField extends StatefulWidget {
@@ -10,6 +11,7 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController? controller;
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
+  final List<TextInputFormatter>? inputFormatters;
 
   const CustomTextField({
     super.key,
@@ -21,6 +23,7 @@ class CustomTextField extends StatefulWidget {
     this.controller,
     this.validator,
     this.onChanged,
+    this.inputFormatters,
   });
 
   @override
@@ -45,6 +48,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       validator: widget.validator,
       onChanged: widget.onChanged,
       keyboardType: widget.keyboardType ?? TextInputType.text,
+      inputFormatters: widget.inputFormatters,
       decoration: InputDecoration(
         labelStyle: const TextStyle(
           color: Colors.black,

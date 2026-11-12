@@ -1,50 +1,78 @@
 import 'package:dio/dio.dart';
 
+import 'api_exception.dart';
+
 class ApiClient {
-  static const bool isLocal = true;
+  // Base URL dapat diganti saat build tanpa mengubah kode, contoh:
+  // flutter build apk --dart-define=SENTRA_API_ORIGIN=https://domain/api-host
+  static const String _apiOriginOverride = String.fromEnvironment(
+    'SENTRA_API_ORIGIN',
+  );
+  static const String _wsUrlOverride = String.fromEnvironment(
+    'SENTRA_WS_URL',
+  );
+
+  static const bool isLocal = bool.fromEnvironment(
+    'SENTRA_IS_LOCAL',
+    defaultValue: true,
+  );
   static const String protocol = isLocal ? 'http' : 'https';
-  static const String baseUrl = isLocal ? '127.0.0.1:8000' : 'sentra.pbltifnganjuk.com/public';
-  static const String wsUrl = isLocal ? 'ws://127.0.0.1:3021' : 'ws://18.136.209.83:3021';
+  static const String baseUrl =
+      isLocal ? '127.0.0.1:8000' : 'sentra.pbltifnganjuk.com/public';
+
+  static String get apiOrigin =>
+      _apiOriginOverride.isNotEmpty ? _apiOriginOverride : '$protocol://$baseUrl';
+
+  static String get wsUrl =>
+      _wsUrlOverride.isNotEmpty
+          ? _wsUrlOverride
+          : (isLocal ? 'ws://127.0.0.1:3021' : 'ws://18.136.209.83:3021');
 
   static final Dio dio = Dio(
     BaseOptions(
-      baseUrl: "$protocol://$baseUrl/api",
-      connectTimeout: Duration(seconds: 10),
-      receiveTimeout: Duration(seconds: 10),
-      headers: {'Content-Type': 'application/json'},
+      baseUrl: '$apiOrigin/api',
+      connectTimeout: const Duration(seconds: 12),
+      sendTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      headers: {
+        'Content-Type': 'application/json',
+        // Laravel hanya mengembalikan JSON (422/401) bila diminta via header ini.
+        'Accept': 'application/json',
+      },
     ),
-  ); 
+  );
 
   static Future<Response> getRequest(
     String url, {
     Map<String, dynamic>? params,
-  }) async {
-    try {
-      return await dio.get(url, queryParameters: params);
-    } catch (e) {
-      throw Exception("Failed to load data");
-    }
+    Options? options,
+  }) {
+    return _guard(
+      () => dio.get(url, queryParameters: params, options: options),
+    );
   }
+
   static Future<Response> putRequest(
     String url, {
     Map<String, dynamic>? data,
-  }) async {
-    try {
-      return await dio.put(url, data: data);
-    } catch (e) {
-      throw Exception("Failed to update data: $e");
-    }
+    Options? options,
+  }) {
+    return _guard(() => dio.put(url, data: data, options: options));
   }
-
 
   static Future<Response> postRequest(
     String url,
-    Map<String, dynamic> data,
-  ) async {
+    Map<String, dynamic> data, {
+    Options? options,
+  }) {
+    return _guard(() => dio.post(url, data: data, options: options));
+  }
+
+  static Future<Response> _guard(Future<Response> Function() request) async {
     try {
-      return await dio.post(url, data: data);
-    } catch (e) {
-      throw Exception("Failed to send data.$e");
+      return await request();
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
     }
   }
 }
