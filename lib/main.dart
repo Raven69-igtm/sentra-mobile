@@ -2,10 +2,11 @@ import 'package:sentra/firebase_options.dart';
 import 'package:sentra/features/auth/controllers/login_controller.dart';
 import 'package:sentra/features/auth/controllers/forgot_password_controller.dart';
 import 'package:sentra/features/auth/controllers/register_controller.dart';
-import 'package:sentra/features/auth/preferences/account_prefs.dart';
+import 'package:sentra/features/auth/services/auth_session.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/chat/controllers/chat_controller.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/notification/services/notif_service.dart';
 import 'package:sentra/features/splash/splash_screen.dart';
 import 'package:sentra/features/welcome/welcome_screen.dart';
@@ -49,9 +50,7 @@ void main() async {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   if (!kIsWeb) {
     await NotificationService.initialize();
@@ -76,16 +75,17 @@ void main() async {
     DevicePreview(
       enabled: !kReleaseMode,
       backgroundColor: const Color(0xFF1E1E1E),
-      builder: (context) => MultiProvider(
-        providers: [
-          ChangeNotifierProvider(create: (_) => LoginController()),
-          ChangeNotifierProvider(create: (_) => RegisterController()),
-          ChangeNotifierProvider(create: (_) => LupaPasswordController()),
-          ChangeNotifierProvider(create: (_) => UserProvider()),
-          ChangeNotifierProvider(create: (_) => ChatController()),
-        ],
-        child: const MyApp(),
-      ),
+      builder:
+          (context) => MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (_) => LoginController()),
+              ChangeNotifierProvider(create: (_) => RegisterController()),
+              ChangeNotifierProvider(create: (_) => LupaPasswordController()),
+              ChangeNotifierProvider(create: (_) => UserProvider()),
+              ChangeNotifierProvider(create: (_) => ChatController()),
+            ],
+            child: const MyApp(),
+          ),
     ),
   );
 }
@@ -97,46 +97,66 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        fontFamily: 'Mulish',
-      ),
+      theme: ThemeData(fontFamily: 'Mulish'),
       locale: DevicePreview.locale(context),
       builder: DevicePreview.appBuilder,
       scaffoldMessengerKey: scaffoldMessengerKey,
-      home: FutureBuilder<Map<String, String?>>(
-        future: AkunPrefs.getAkun(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return SplashScreen(); 
-          } else if (snapshot.hasError) {
-            
-            return WelcomeWithSplashScreen();
-          } else {
-            final userData = snapshot.data;
-            if (userData != null &&
-                userData['id_akun'] != null &&
-                userData['id_akun']!.isNotEmpty) {
-              final userModel = UserModel(
-                id: int.tryParse(userData['id_akun'] ?? '') ?? 0,
-                nama: userData['nama'],
-                notelp: userData['notelp'],
-                email: userData['email'] ?? '',
-                role: userData['role'] ?? '',
-                alamat: userData['alamat'] ?? '',
-                jeniskelamin: userData['jenis_kelamin'] ?? '',
-              );
-              final userProvider = Provider.of<UserProvider>(
-                context,
-                listen: false,
-              );
-              userProvider.setUser(userModel);
-              return SplashScreen(); 
-            } else {   
-              return WelcomeWithSplashScreen();
-            }
-          }
-        },
-      ),
+      home: const StartupGate(),
     );
+  }
+}
+
+/// Memulihkan sesi sebelum menentukan halaman awal.
+///
+/// Sesi tersimpan divalidasi ke server memakai endpoint yang tersedia
+/// (POST /auth/biometric). Bila server tidak dapat dihubungi, sesi lokal
+/// tetap dipakai agar aplikasi dapat dibuka secara offline.
+class StartupGate extends StatefulWidget {
+  const StartupGate({super.key});
+
+  @override
+  State<StartupGate> createState() => _StartupGateState();
+}
+
+class _StartupGateState extends State<StartupGate> {
+  static const Duration _minimumSplash = Duration(milliseconds: 1400);
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    final startedAt = DateTime.now();
+    UserModel? user;
+    try {
+      user = await AuthSession.restore();
+    } catch (_) {
+      user = null;
+    }
+
+    final elapsed = DateTime.now().difference(startedAt);
+    if (elapsed < _minimumSplash) {
+      await Future.delayed(_minimumSplash - elapsed);
+    }
+
+    if (!mounted) return;
+
+    if (user != null) {
+      Provider.of<UserProvider>(context, listen: false).setUser(user);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen(initialIndex: 0)),
+      );
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const WelcomeWithSplashScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const SplashScreen(autoNavigate: false);
   }
 }

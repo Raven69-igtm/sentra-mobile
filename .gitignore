@@ -56,3 +56,5 @@ lib/firebase_options.dart
 *.jks
 *.keystore
 key.properties
+# Widget Preview related
+.widget_preview/

@@ -20,13 +20,13 @@ class AkunPrefs {
     required String? alamat,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keyAkun, idAkun!);
-    await prefs.setString(_keyNama, nama!);
-    await prefs.setString(_keyJenisKelamin, jenisKelamin!);
-    await prefs.setString(_keyNoHP, noHP!);
-    await prefs.setString(_keyRole, role!);
-    await prefs.setString(_keyEmail, email!);
-    await prefs.setString(_keyAlamat, alamat!);
+    await prefs.setString(_keyAkun, idAkun ?? '');
+    await prefs.setString(_keyNama, nama ?? '');
+    await prefs.setString(_keyJenisKelamin, jenisKelamin ?? '');
+    await prefs.setString(_keyNoHP, noHP ?? '');
+    await prefs.setString(_keyRole, role ?? '');
+    await prefs.setString(_keyEmail, email ?? '');
+    await prefs.setString(_keyAlamat, alamat ?? '');
   }
 
   // Ambil data akun

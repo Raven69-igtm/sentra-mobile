@@ -1,45 +1,39 @@
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
-import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/core/network/endpoints.dart';
 
 class RegisterRepository {
-  Future<UserModel?> register({
+  Future<String> register({
     required String notelp,
     required String nama,
     required String password,
     required String emergencyQuestion,
     required String answer,
     required String gender,
-    required String alamat
+    required String alamat,
   }) async {
-    try {
-      Response response = await ApiClient.postRequest(Endpoints.register, {
-        'notelp': notelp,
-        'nama': nama,
-        'password': password,
-        'role': "user",
-        'emerquest': emergencyQuestion,
-        'answquest': answer,
-        'gender': gender,
-        'alamat':alamat
-      });
+    final response = await ApiClient.postRequest(Endpoints.register, {
+      'notelp': notelp.trim(),
+      'nama': nama.trim(),
+      'password': password,
+      'role': 'user',
+      'emerquest': emergencyQuestion,
+      'answquest': answer.trim(),
+      'gender': gender,
+      'alamat': alamat.trim(),
+    });
 
-      if (response.statusCode == 200) {
-        // Periksa apakah 'user' ada dan tidak null
-        if (response.data['message'] != null) {
-          print(response.data['message']);
-          return null;
-        } else {
-          throw Exception('Gagal Daftar');
-        }
-      } else {
-        throw Exception(response.data['message']);
-      }
-    } catch (e) {
-      debugPrint('Error saat register: $e', wrapWidth: 1024);
-      throw Exception("Register gagal: $e");
+    final data = response.data;
+    if (data is Map && data['success'] == true) {
+      return data['message'] as String? ?? 'Akun berhasil dibuat';
     }
+
+    throw ApiException(
+      message:
+          data is Map && data['message'] is String
+              ? data['message'] as String
+              : 'Pendaftaran gagal.',
+      statusCode: response.statusCode,
+    );
   }
 }

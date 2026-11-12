@@ -13,33 +13,36 @@ class PjsrkStepper extends StatelessWidget {
   Widget _step(int n) {
     final done = n < current;
     final filled = n <= current;
-    return Row(children: [
-      CircleAvatar(
-        radius: 14,
-        backgroundColor: filled ? PjsrkColors.primary : PjsrkColors.graySoft,
-        child: done
-            ? const Icon(Icons.check, size: 16, color: Colors.white)
-            : Text('$n',
-                style: TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: filled ? Colors.white : PjsrkColors.muted)),
-      ),
-      const SizedBox(width: 8),
-      Text(_labels[n - 1],
-          style: const TextStyle(
-              fontFamily: 'Mulish',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: PjsrkColors.muted)),
-    ]);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 12,
+          backgroundColor: filled ? PjsrkColors.primary : PjsrkColors.graySoft,
+          child: done
+              ? const Icon(Icons.check, size: 14, color: Colors.white)
+              : Text('$n',
+                  style: TextStyle(
+                      fontFamily: 'Mulish',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: filled ? Colors.white : PjsrkColors.muted)),
+        ),
+        const SizedBox(width: 4),
+        Text(_labels[n - 1],
+            style: const TextStyle(
+                fontFamily: 'Mulish',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: PjsrkColors.muted)),
+      ],
+    );
   }
 
   Widget _line(bool done) => Expanded(
         child: Container(
           height: 2,
-          margin: const EdgeInsets.symmetric(horizontal: 8),
+          margin: const EdgeInsets.symmetric(horizontal: 4),
           color: done ? PjsrkColors.primary : PjsrkColors.graySoft,
         ),
       );

@@ -4,22 +4,28 @@ import 'package:rxdart/rxdart.dart';
 class NotificationController {
   final NotificationRepository _repository = NotificationRepository();
   final BehaviorSubject<List<Map<String, dynamic>>> _notificationsSubject =
-      BehaviorSubject<List<Map<String, dynamic>>>();
+      BehaviorSubject<List<Map<String, dynamic>>>.seeded([]);
 
   Stream<List<Map<String, dynamic>>> get notificationStream =>
       _notificationsSubject.stream;
 
   NotificationController(String userId) {
-    _repository
-        .getNotifications(userId)
-        .listen(
-          (notifications) {
-            _notificationsSubject.add(notifications);
-          },
-          onError: (error) {
-            _notificationsSubject.addError(error);
-          },
-        );
+    _repository.getNotifications(userId).listen(
+      (notifications) {
+        if (!_notificationsSubject.isClosed) {
+          _notificationsSubject.add(notifications);
+        }
+      },
+      onError: (error) {
+        // Error sudah di-handle di repository, tapi sebagai safety net:
+        print('NotificationController stream error (non-fatal): $error');
+        if (!_notificationsSubject.isClosed) {
+          // Tetap emit list kosong, jangan crash
+          _notificationsSubject.add([]);
+        }
+      },
+      cancelOnError: false, // Jangan cancel stream saat error
+    );
   }
 
   Future<void> sendNewMessage(

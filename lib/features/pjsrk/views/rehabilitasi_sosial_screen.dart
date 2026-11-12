@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_chips.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_fields.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_foto.dart';
@@ -22,6 +23,18 @@ class _RehabilitasiSosialFormScreenState
   String jenis = 'Tunawisma';
   int jumlah = 2;
   String gender = 'Laki-laki';
+
+  void _handleBack() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacement(
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
+  }
+
   String usia = 'Dewasa';
   String kondisi = 'Sakit';
   bool rahasia = true;
@@ -102,9 +115,13 @@ class _RehabilitasiSosialFormScreenState
                   Align(
                     alignment: Alignment.centerLeft,
                     child: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                          color: Colors.white, size: 20),
+                      tooltip: 'Kembali',
+                      onPressed: _handleBack,
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
                   ),
                   const Text(
