@@ -238,93 +238,58 @@ class ChatController extends ChangeNotifier {
       );
       _chats.add(localChat);
       notifyListeners();
-      final chat = {
-        'type': 'send_message',
-        'sender_id': senderId,
-        'receiver_id': receiverId,
-        'message': message,
-        'replied_to_id': repliedToId,
-      };
-      print('Sending message to WebSocket: $chat');
-      if (_channel == null || !_wsReady) {
-        print('Warning: WebSocket belum terhubung, memakai HTTP POST');
-        _fallbackSendMessageHttp(senderId, receiverId, message);
-        return;
-      }
-      try {
-        _channel!.sink.add(jsonEncode(chat));
-        print('Message sent successfully to WebSocket');
-      } catch (e) {
-        print('Error sending message to WebSocket: $e, falling back to HTTP POST');
-        _fallbackSendMessageHttp(senderId, receiverId, message);
-      }
+      // Pesan selalu dikirim lewat REST API agar backend memakai identitas
+      // dari token, bukan sender_id yang dikirim aplikasi.
+      _sendMessageHttp(senderId, receiverId, message, repliedToId);
     } else {
       print('Message is empty, not sending');
     }
   }
 
-  Future<void> _fallbackSendMessageHttp(int senderId, int receiverId, String message) async {
+  Future<void> _sendMessageHttp(
+    int senderId,
+    int receiverId,
+    String message,
+    int? repliedToId,
+  ) async {
     try {
-      final dio = ApiClient.dio;
-      await dio.post('/chats', data: {
-        'sender_id': senderId,
-        'receiver_id': receiverId,
-        'message': message,
-      });
-      print('Fallback HTTP POST chat berhasil');
+      await _repository.sendMessage(
+        receiverId: receiverId,
+        message: message,
+        repliedToId: repliedToId,
+      );
+      print('HTTP POST chat berhasil');
       // Sinkronkan dengan server agar pesan sementara mendapat id_chat asli.
       await fetchChats(senderId);
     } catch (e) {
-      print('Fallback HTTP POST chat gagal: $e');
+      print('HTTP POST chat gagal: $e');
     }
   }
 
-  void editMessage(
+  Future<void> editMessage(
     int chatId,
     String newMessage,
     int senderId,
     int receiverId,
-  ) {
-    if (newMessage.isNotEmpty) {
-      final chatData = {
-        'type': 'edit_message',
-        'id_chat': chatId,
-        'new_message': newMessage,
-        // 'senderId': senderId,
-        // 'receiverId': receiverId,
-      };
-      print('Sending edit message to WebSocket: $chatData');
-      if (_channel == null) {
-        print('Error: WebSocket channel is null');
-        return;
-      }
-      try {
-        _channel!.sink.add(jsonEncode(chatData));
-        print('Edit message sent successfully to WebSocket');
-      } catch (e) {
-        print('Error sending edit message to WebSocket: $e');
-      }
-    } else {
+  ) async {
+    if (newMessage.isEmpty) {
       print('Edited message is empty, not sending');
-    }
-  }
-
-  void deleteMessage(int chatId, int senderId) {
-    final chatData = {
-      'type': 'delete_message',
-      'id_chat': chatId,
-      // 'sender_id': senderId,
-    };
-    print('Sending delete message to WebSocket: $chatData');
-    if (_channel == null) {
-      print('Error: WebSocket channel is null');
       return;
     }
     try {
-      _channel!.sink.add(jsonEncode(chatData));
-      print('Delete message sent successfully to WebSocket');
+      await _repository.editMessage(chatId, newMessage);
+      await fetchChats(senderId);
     } catch (e) {
-      print('Error sending delete message to WebSocket: $e');
+      print('Gagal mengubah pesan: $e');
+    }
+  }
+
+  Future<void> deleteMessage(int chatId, int senderId) async {
+    try {
+      await _repository.deleteMessage(chatId);
+      await fetchChats(senderId);
+    } catch (e) {
+      print('Gagal menghapus pesan: $e');
     }
   }
 

@@ -8,6 +8,7 @@ class AkunPrefs {
   static const _keyRole = 'role';
   static const _keyEmail = 'email';
   static const _keyAlamat = 'alamat';
+  static const _keyToken = 'auth_token';
 
   // Simpan data akun
   static Future<void> simpanAkun({
@@ -43,6 +44,17 @@ class AkunPrefs {
     };
   }
 
+  // Simpan token Sanctum untuk autentikasi API mobile
+  static Future<void> simpanToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyToken, token);
+  }
+
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyToken);
+  }
+
   // Hapus data akun (misalnya saat logout)
   static Future<void> hapusAkun() async {
     final prefs = await SharedPreferences.getInstance();
@@ -53,5 +65,6 @@ class AkunPrefs {
     await prefs.remove(_keyRole);
     await prefs.remove(_keyEmail);
     await prefs.remove(_keyAlamat);
+    await prefs.remove(_keyToken);
   }
 }
