@@ -1,41 +1,27 @@
-import 'dart:convert';
-
+import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
-import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
-import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/core/utils/address_field.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/report/views/widgets/stepper_widget.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
+import 'package:sentra/core/utils/custom_spinner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 class LaporanPage extends StatefulWidget {
-  const LaporanPage({super.key});
+  const LaporanPage({super.key, this.openedFromPpa = false});
+
+  /// `true` bila halaman dibuka dari kartu PPPA pada Beranda:
+  /// menampilkan tombol Back di AppBar dan konfirmasi keluar bila form terisi.
+  /// `false` (default) mempertahankan perilaku tab Laporan existing.
+  final bool openedFromPpa;
 
   @override
   _LaporanPageState createState() => _LaporanPageState();
 }
 
-class _AnakFormData {
-  final TextEditingController nama = TextEditingController();
-  final TextEditingController tanggalLahir = TextEditingController();
-  final TextEditingController umur = TextEditingController();
-  String? jenisKelamin;
-  String? pendidikan;
-  String? agama;
-  String? status;
-
-  void dispose() {
-    nama.dispose();
-    tanggalLahir.dispose();
-    umur.dispose();
-  }
-}
 
 class _LaporanPageState extends State<LaporanPage> {
   int _currentStep = 1;
@@ -47,37 +33,66 @@ class _LaporanPageState extends State<LaporanPage> {
   final TextEditingController _namaform1 = TextEditingController();
   final TextEditingController _telpform1 = TextEditingController();
   final TextEditingController _alamatform1 = TextEditingController();
-  final TextEditingController _hubunganform1 = TextEditingController();
 
-  // Form 1 - Penerima Manfaat
-  bool _penerimaSamaDenganPelapor = true;
-  final TextEditingController _nikPenerima = TextEditingController();
-  final TextEditingController _namaPenerima = TextEditingController();
-  final TextEditingController _tempatLahirPenerima = TextEditingController();
-  final TextEditingController _tanggalLahirPenerima = TextEditingController();
-  final TextEditingController _umurPenerima = TextEditingController();
-  final TextEditingController _pekerjaanPenerima = TextEditingController();
-  final TextEditingController _alamatPenerima = TextEditingController();
-  final TextEditingController _hubunganTerlaporPenerima = TextEditingController();
-  final TextEditingController _telpPenerima = TextEditingController();
-  final TextEditingController _infoTambahanPenerima = TextEditingController();
-  String? _jenisKelaminPenerima;
-  String? _agamaPenerima;
-  String? _pendidikanPenerima;
+  // Kategori pengaduan — nilai-exact sesuai kolom enum `laporan.kategori` di backend.
+  static const List<String> daftarKategoriPengaduan = [
+    'Kekerasan Fisik',
+    'Kekerasan Psikis',
+    'Kekerasan Seksual',
+    'Penelantaran',
+    'Eksploitasi',
+    'TPPO',
+    'Lainnya',
+  ];
+  String? _kategoriPengaduan;
 
-  // Form 1 - Terlapor (opsional)
-  bool _sertakanTerlapor = false;
-  final TextEditingController _nikTerlapor = TextEditingController();
-  final TextEditingController _namaTerlapor = TextEditingController();
-  final TextEditingController _umurTerlapor = TextEditingController();
-  final TextEditingController _alamatTerlapor = TextEditingController();
-  final TextEditingController _hubunganTerlapor = TextEditingController();
-  final TextEditingController _infoTambahanTerlapor = TextEditingController();
-  String? _jenisKelaminTerlapor;
+  // Hubungan pelapor dengan korban (kolom string di backend).
+  static const List<String> daftarHubunganKorban = [
+    'Pelapor / Korban',
+    'Orang tua',
+    'Wali',
+    'Keluarga',
+    'Saudara',
+    'Teman',
+    'Lainnya',
+  ];
+  String? _hubunganDenganKorban;
 
-  // Form 1 - Informasi Anak (opsional)
-  bool _sertakanAnak = false;
-  final List<_AnakFormData> _anakList = [];
+  // Data Korban / Penerima Manfaat (detail_penerima_manfaat — wajib di backend)
+  final TextEditingController _korbanNama = TextEditingController();
+  final TextEditingController _korbanNik = TextEditingController();
+  final TextEditingController _korbanTempatLahir = TextEditingController();
+  final TextEditingController _korbanTanggalLahirText = TextEditingController();
+  final TextEditingController _korbanUmur = TextEditingController();
+  final TextEditingController _korbanPekerjaan = TextEditingController();
+  final TextEditingController _korbanAlamat = TextEditingController();
+  final TextEditingController _korbanTelp = TextEditingController();
+  final TextEditingController _korbanInfoTambahan = TextEditingController();
+  DateTime? _korbanTanggalLahir;
+  String? _korbanJenisKelamin;
+  String? _korbanAgama;
+  String? _korbanPendidikan;
+
+  static const List<String> daftarJenisKelamin = ['Laki-laki', 'Perempuan'];
+  static const List<String> daftarAgama = [
+    'Islam',
+    'Kristen Protestan',
+    'Katolik',
+    'Hindu',
+    'Buddha',
+    'Konghucu',
+    'Kepercayaan',
+  ];
+  static const List<String> daftarPendidikan = [
+    'Tidak Sekolah',
+    'SD',
+    'SMP',
+    'SMA/SMK',
+    'Diploma',
+    'S1',
+    'S2',
+    'S3',
+  ];
 
   // Form 2 - Kronologi Kejadian
   final TextEditingController _kronologiform4 = TextEditingController();
@@ -85,9 +100,6 @@ class _LaporanPageState extends State<LaporanPage> {
   // Form 3 - Tanggal & Lokasi Kejadian
   final TextEditingController _tanggalController = TextEditingController();
   final TextEditingController _tempatkejadianform3 = TextEditingController();
-  DateTime? _waktuKejadian;
-  bool _isFetchingLocation = false;
-  bool _hasRequestedLocation = false;
 
   void _addAutoCapitalizeListener(TextEditingController controller) {
     controller.addListener(() {
@@ -120,155 +132,16 @@ class _LaporanPageState extends State<LaporanPage> {
     }
 
     if (isValid) {
-      final enteringIncidentDetails = _currentStep == 2;
       setState(() {
         if (_currentStep < 3) _currentStep++;
       });
-      if (enteringIncidentDetails) {
-        _initializeIncidentDateAndLocation();
-      }
     }
   }
-
-  Future<void> _initializeIncidentDateAndLocation() async {
-    final now = DateTime.now();
-    _waktuKejadian ??= now;
-    if (_tanggalController.text.isEmpty) {
-      _tanggalController.text = _formatDateForApi(now);
-    }
-
-    if (_hasRequestedLocation || _tempatkejadianform3.text.trim().isNotEmpty) {
-      return;
-    }
-    _hasRequestedLocation = true;
-
-    setState(() => _isFetchingLocation = true);
-    try {
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        CustomSnackbar.show(
-          'GPS tidak aktif. Silakan isi lokasi kejadian secara manual.',
-          warna: Colors.orange,
-        );
-        return;
-      }
-
-      var permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        CustomSnackbar.show(
-          'Izin lokasi tidak tersedia. Silakan isi lokasi kejadian secara manual.',
-          warna: Colors.orange,
-        );
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 15),
-        ),
-      );
-      if (!mounted) return;
-
-      final coordinates =
-          'Lat ${position.latitude.toStringAsFixed(5)}, '
-          'Lng ${position.longitude.toStringAsFixed(5)}';
-      if (_tempatkejadianform3.text.trim().isNotEmpty) return;
-      _tempatkejadianform3.text = coordinates;
-
-      try {
-        final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
-          'lat': '${position.latitude}',
-          'lon': '${position.longitude}',
-          'format': 'jsonv2',
-          'addressdetails': '1',
-          'zoom': '18',
-        });
-        final response = await http
-            .get(
-              uri,
-              headers: const {
-                'User-Agent': 'SENTRA-DPPPA-Nganjuk/1.0',
-                'Accept-Language': 'id',
-              },
-            )
-            .timeout(const Duration(seconds: 10));
-        if (response.statusCode != 200) {
-          throw Exception('Reverse geocoding gagal: ${response.statusCode}');
-        }
-
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final address =
-            (data['address'] as Map?)?.cast<String, dynamic>() ?? {};
-        final addressParts = [
-          address['road'],
-          address['suburb'] ?? address['neighbourhood'] ?? address['village'],
-          address['city_district'] ?? address['county'] ?? address['city'],
-          address['state'],
-        ].where((part) => part != null && '$part'.trim().isNotEmpty);
-        final resolvedAddress =
-            addressParts.isNotEmpty
-                ? addressParts.join(', ')
-                : (data['display_name'] as String?)
-                    ?.split(',')
-                    .take(4)
-                    .join(',');
-
-        if (mounted &&
-            _tempatkejadianform3.text == coordinates &&
-            resolvedAddress != null &&
-            resolvedAddress.isNotEmpty) {
-          _tempatkejadianform3.text = resolvedAddress;
-        }
-      } catch (error) {
-        debugPrint('Gagal mendapatkan alamat dari koordinat GPS: $error');
-        if (mounted) {
-          CustomSnackbar.show(
-            'Koordinat GPS terisi, tetapi alamat tidak dapat ditemukan.',
-            warna: Colors.orange,
-          );
-        }
-      }
-    } catch (error) {
-      debugPrint('Gagal mendapatkan lokasi GPS untuk laporan PPA: $error');
-      if (mounted) {
-        CustomSnackbar.show(
-          'Lokasi GPS gagal didapatkan. Silakan isi lokasi kejadian secara manual.',
-          warna: Colors.orange,
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isFetchingLocation = false);
-    }
-  }
-
-  String _formatDateForApi(DateTime date) =>
-      '${date.year}-${date.month.toString().padLeft(2, '0')}-'
-      '${date.day.toString().padLeft(2, '0')}';
 
   void _prevStep() {
     setState(() {
       if (_currentStep > 1) _currentStep--;
     });
-  }
-
-  void _handleBackNavigation() {
-    if (_currentStep > 1) {
-      _prevStep();
-      return;
-    }
-
-    final navigator = Navigator.of(context);
-    if (navigator.canPop()) {
-      navigator.pop();
-    } else {
-      navigator.pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-    }
   }
 
   @override
@@ -279,19 +152,13 @@ class _LaporanPageState extends State<LaporanPage> {
       final userProvider = Provider.of<UserProvider>(context, listen: false);
       final user = userProvider.user;
       if (user != null) {
-        if (user.nama != null &&
-            user.nama!.isNotEmpty &&
-            _namaform1.text.isEmpty) {
+        if (user.nama != null && user.nama!.isNotEmpty && _namaform1.text.isEmpty) {
           _namaform1.text = user.nama!;
         }
-        if (user.notelp != null &&
-            user.notelp!.isNotEmpty &&
-            _telpform1.text.isEmpty) {
+        if (user.notelp != null && user.notelp!.isNotEmpty && _telpform1.text.isEmpty) {
           _telpform1.text = user.notelp!;
         }
-        if (user.alamat != null &&
-            user.alamat!.isNotEmpty &&
-            _alamatform1.text.isEmpty) {
+        if (user.alamat != null && user.alamat!.isNotEmpty && _alamatform1.text.isEmpty) {
           _alamatform1.text = user.alamat!;
         }
       }
@@ -301,52 +168,15 @@ class _LaporanPageState extends State<LaporanPage> {
       _namaform1,
       _alamatform1,
       _tempatkejadianform3,
-      _namaPenerima,
-      _tempatLahirPenerima,
-      _alamatPenerima,
-      _namaTerlapor,
-      _alamatTerlapor,
+      _korbanNama,
+      _korbanTempatLahir,
+      _korbanPekerjaan,
+      _korbanAlamat,
     ];
 
     for (var controller in namaControllers) {
       _addAutoCapitalizeListener(controller);
     }
-  }
-
-  @override
-  void dispose() {
-    for (final controller in [
-      _nikform1,
-      _namaform1,
-      _telpform1,
-      _alamatform1,
-      _hubunganform1,
-      _nikPenerima,
-      _namaPenerima,
-      _tempatLahirPenerima,
-      _tanggalLahirPenerima,
-      _umurPenerima,
-      _pekerjaanPenerima,
-      _alamatPenerima,
-      _hubunganTerlaporPenerima,
-      _telpPenerima,
-      _infoTambahanPenerima,
-      _nikTerlapor,
-      _namaTerlapor,
-      _umurTerlapor,
-      _alamatTerlapor,
-      _hubunganTerlapor,
-      _infoTambahanTerlapor,
-      _kronologiform4,
-      _tanggalController,
-      _tempatkejadianform3,
-    ]) {
-      controller.dispose();
-    }
-    for (final anak in _anakList) {
-      anak.dispose();
-    }
-    super.dispose();
   }
 
   // Validator untuk Form 1: Data Diri
@@ -371,6 +201,61 @@ class _LaporanPageState extends State<LaporanPage> {
       CustomSnackbar.show("Mohon isi alamat lengkap", warna: Colors.red);
       return false;
     }
+    if (_kategoriPengaduan == null) {
+      CustomSnackbar.show("Mohon pilih kategori pengaduan", warna: Colors.red);
+      return false;
+    }
+    if (_hubunganDenganKorban == null) {
+      CustomSnackbar.show(
+        "Mohon pilih hubungan Anda dengan korban",
+        warna: Colors.red,
+      );
+      return false;
+    }
+    // Data Korban / Penerima Manfaat
+    if (_korbanNama.text.trim().isEmpty) {
+      CustomSnackbar.show("Mohon isi nama korban", warna: Colors.red);
+      return false;
+    }
+    if (_korbanNik.text.trim().isEmpty) {
+      CustomSnackbar.show("Mohon isi NIK korban", warna: Colors.red);
+      return false;
+    }
+    if (_korbanTempatLahir.text.trim().isEmpty) {
+      CustomSnackbar.show("Mohon isi tempat lahir korban", warna: Colors.red);
+      return false;
+    }
+    if (_korbanTanggalLahir == null) {
+      CustomSnackbar.show("Mohon pilih tanggal lahir korban", warna: Colors.red);
+      return false;
+    }
+    if (_korbanJenisKelamin == null) {
+      CustomSnackbar.show(
+        "Mohon pilih jenis kelamin korban",
+        warna: Colors.red,
+      );
+      return false;
+    }
+    if (_korbanPekerjaan.text.trim().isEmpty) {
+      CustomSnackbar.show("Mohon isi pekerjaan korban", warna: Colors.red);
+      return false;
+    }
+    if (_korbanAgama == null) {
+      CustomSnackbar.show("Mohon pilih agama korban", warna: Colors.red);
+      return false;
+    }
+    if (_korbanPendidikan == null) {
+      CustomSnackbar.show("Mohon pilih pendidikan terakhir korban", warna: Colors.red);
+      return false;
+    }
+    if (_korbanAlamat.text.trim().isEmpty) {
+      CustomSnackbar.show("Mohon isi alamat korban", warna: Colors.red);
+      return false;
+    }
+    if (_korbanTelp.text.trim().isEmpty) {
+      CustomSnackbar.show("Mohon isi nomor telepon korban", warna: Colors.red);
+      return false;
+    }
     return true;
   }
 
@@ -390,10 +275,7 @@ class _LaporanPageState extends State<LaporanPage> {
       return false;
     }
     if (_tempatkejadianform3.text.trim().isEmpty) {
-      CustomSnackbar.show(
-        "Mohon isi lokasi / tempat kejadian",
-        warna: Colors.red,
-      );
+      CustomSnackbar.show("Mohon isi lokasi / tempat kejadian", warna: Colors.red);
       return false;
     }
     return true;
@@ -401,9 +283,12 @@ class _LaporanPageState extends State<LaporanPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // PopScope hanya aktif bila halaman dibuka sebagai route (dari kartu PPPA),
+    // sehingga perilaku tab Laporan existing tidak berubah.
+    Widget scaffold = Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         elevation: 0,
         backgroundColor: Colors.transparent,
         flexibleSpace: Container(
@@ -415,11 +300,13 @@ class _LaporanPageState extends State<LaporanPage> {
             ),
           ),
         ),
-        leading: IconButton(
-          tooltip: 'Kembali',
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _handleBackNavigation,
-        ),
+        leading: widget.openedFromPpa
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                tooltip: "Kembali",
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
         title: Row(
           children: [
             Image.asset('assets/logo/Image.png', height: 30, width: 30),
@@ -500,6 +387,8 @@ class _LaporanPageState extends State<LaporanPage> {
               Expanded(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.only(bottom: 20),
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
                   child: Column(
                     children: [
                       _buildCurrentForm(),
@@ -553,9 +442,8 @@ class _LaporanPageState extends State<LaporanPage> {
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Warna.backgroundBiru.withOpacity(
-                                          0.3,
-                                        ),
+                                        color: Warna.backgroundBiru
+                                            .withOpacity(0.3),
                                         spreadRadius: 0,
                                         blurRadius: 8,
                                         offset: Offset(0, 3),
@@ -681,6 +569,25 @@ class _LaporanPageState extends State<LaporanPage> {
         ),
       ),
     );
+
+    if (!widget.openedFromPpa) {
+      return scaffold;
+    }
+
+    return PopScope(
+      // Halaman dibuka sebagai route: gesture back perlu konfirmasi
+      // bila form berisi data agar data tidak hilang tiba-tiba.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (!_formAdaData()) {
+          Navigator.of(context).pop();
+          return;
+        }
+        _konfirmasiKeluarBilaPerlu();
+      },
+      child: scaffold,
+    );
   }
 
   List<Color> _getFormBackgroundColors() {
@@ -709,122 +616,47 @@ class _LaporanPageState extends State<LaporanPage> {
     }
   }
 
-  /// Nilai opsional: string kosong dikirim sebagai null agar backend tidak
-  /// menyimpan placeholder palsu.
-  String? _optionalText(TextEditingController controller) {
-    final value = controller.text.trim();
-    return value.isEmpty ? null : value;
-  }
-
-  /// Satu sumber pembentukan payload PPA: setiap bagian diambil dari state
-  /// pihaknya masing-masing, bukan disalin dari pelapor.
-  Map<String, dynamic> _buildLaporanPayload(int idAkun) {
-    final pelaporNik = _nikform1.text.trim();
-    final pelaporNama = _namaform1.text.trim();
-    final pelaporTelepon = _telpform1.text.trim();
-    final pelaporAlamat = _alamatform1.text.trim();
-
-    final pelapor = {
-      'nik': pelaporNik,
-      'nama': pelaporNama,
-      'alamat': pelaporAlamat,
-      'no_telp': pelaporTelepon,
-      'hubungan_dengan_korban': _optionalText(_hubunganform1),
-    };
-
-    // Penerima = pelapor: identitas yang sama, diturunkan dari satu sumber.
-    // Penerima berbeda: seluruh data berasal dari state penerima.
-    final penerima =
-        _penerimaSamaDenganPelapor
-            ? {
-              'nik': pelaporNik,
-              'nama': pelaporNama,
-              'alamat': pelaporAlamat,
-              'notelp': pelaporTelepon,
-            }
-            : {
-              'nik': _optionalText(_nikPenerima),
-              'nama': _optionalText(_namaPenerima),
-              'tempat_lahir': _optionalText(_tempatLahirPenerima),
-              'tanggal_lahir': _optionalText(_tanggalLahirPenerima),
-              'umur': _optionalText(_umurPenerima),
-              'jenis_kelamin': _jenisKelaminPenerima,
-              'pekerjaan': _optionalText(_pekerjaanPenerima),
-              'agama': _agamaPenerima,
-              'alamat': _optionalText(_alamatPenerima),
-              'pendidikan': _pendidikanPenerima,
-              'hubungan_dengan_terlapor': _optionalText(
-                _hubunganTerlaporPenerima,
-              ),
-              'notelp': _optionalText(_telpPenerima),
-              'informasi_tambahan': _optionalText(_infoTambahanPenerima),
-            };
-
-    final terlapor =
-        _sertakanTerlapor
-            ? {
-              'nik': _optionalText(_nikTerlapor),
-              'nama': _optionalText(_namaTerlapor),
-              'umur': _optionalText(_umurTerlapor),
-              'alamat': _optionalText(_alamatTerlapor),
-              'jenis_kelamin': _jenisKelaminTerlapor,
-              'hubungan_dengan_korban': _optionalText(_hubunganTerlapor),
-              'informasi_tambahan': _optionalText(_infoTambahanTerlapor),
-            }
-            : null;
-
-    final informasiAnak =
-        _sertakanAnak
-            ? _anakList
-                .map(
-                  (anak) => {
-                    'nama': _optionalText(anak.nama),
-                    'tanggal_lahir': _optionalText(anak.tanggalLahir),
-                    'umur': _optionalText(anak.umur),
-                    'jenis_kelamin': anak.jenisKelamin,
-                    'pendidikan': anak.pendidikan,
-                    'agama': anak.agama,
-                    'status': anak.status,
-                  },
-                )
-                .toList()
-            : <Map<String, dynamic>>[];
-
-    return {
-      'id_akun': idAkun,
-      'kategori': 'unset',
-      'detail_pelapor': pelapor,
-      'detail_penerima_manfaat': penerima,
-      'detail_terlapor': terlapor,
-      'detail_kasus': {
-        'tanggal': _tanggalController.text.trim(),
-        'waktu_kejadian': (_waktuKejadian ?? DateTime.now()).toIso8601String(),
-        'tempat_kejadian': _tempatkejadianform3.text.trim(),
-        'kronologi': _kronologiform4.text.trim(),
-      },
-      'informasi_anak': informasiAnak,
-    };
-  }
-
   void _showPreviewDialog() async {
     if (!_validateForm3()) return;
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final idAkun = userProvider.idAkun;
-    if (idAkun == null) {
-      CustomSnackbar.show(
-        "Silakan login terlebih dahulu untuk mengirim laporan",
-        warna: Colors.orange,
-        tinggi: 100,
-        icon: Icons.error_outline_rounded,
-      );
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
-      return;
-    }
 
-    Map<String, dynamic> laporanData = _buildLaporanPayload(idAkun);
+    Map<String, dynamic> laporanData = {
+      'id_akun': idAkun,
+      'kategori': _kategoriPengaduan,
+      'status': 'diterima',
+      'detail_pelapor': {
+        'nik': _nikform1.text.trim(),
+        'nama': _namaform1.text.trim(),
+        'alamat': _alamatform1.text.trim(),
+        'hubungan_dengan_korban': _hubunganDenganKorban,
+        'no_telp': _telpform1.text.trim(),
+      },
+      // detail_terlapor sengaja tidak dikirim: backend mengizinkannya
+      // (validasi `sometimes|array`) sehingga tidak ada identitas karangan.
+      'detail_penerima_manfaat': {
+        'nik': _korbanNik.text.trim(),
+        'nama': _korbanNama.text.trim(),
+        'Tempat_lahir': _korbanTempatLahir.text.trim(),
+        'tanggal_lahir': _korbanTanggalLahirText.text.trim(),
+        'umur': '${_hitungUmurKorban()}',
+        'jenis_kelamin': _korbanJenisKelamin,
+        'pekerjaan': _korbanPekerjaan.text.trim(),
+        'agama': _korbanAgama,
+        'alamat': _korbanAlamat.text.trim(),
+        'pendidikan': _korbanPendidikan,
+        'hubungan_dengan_terlapor': '-',
+        'notelp': _korbanTelp.text.trim(),
+        'informasi_tambahan': _korbanInfoTambahan.text.trim(),
+      },
+      'detail_kasus': {
+        'tanggal': _tanggalController.text.trim(),
+        'tempat_kejadian': _tempatkejadianform3.text.trim(),
+        'kronologi': _kronologiform4.text.trim(),
+      },
+      'informasi_anak': [],
+    };
 
     showDialog(
       context: context,
@@ -917,6 +749,18 @@ class _LaporanPageState extends State<LaporanPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildEnhancedPreviewSection(
+                          "Kategori Pengaduan",
+                          {
+                            'kategori': _kategoriPengaduan ?? '-',
+                            'hubungan_pelapor_dengan_korban':
+                                _hubunganDenganKorban ?? '-',
+                          },
+                          Icons.category_outlined,
+                          Colors.indigo,
+                        ),
+                        SizedBox(height: 16),
+
+                        _buildEnhancedPreviewSection(
                           "Data Diri Pelapor",
                           {
                             'nik': _nikform1.text.trim(),
@@ -927,12 +771,35 @@ class _LaporanPageState extends State<LaporanPage> {
                           Icons.person_outline,
                           Colors.blue,
                         ),
-                        ..._buildPartyPreviewSections(),
+                        SizedBox(height: 16),
+
+                        _buildEnhancedPreviewSection(
+                          "Data Korban (Penerima Manfaat)",
+                          {
+                            'nama': _korbanNama.text.trim(),
+                            'nik': _korbanNik.text.trim(),
+                            'jenis_kelamin': _korbanJenisKelamin ?? '-',
+                            'umur': '${_hitungUmurKorban()}',
+                            'tanggal_lahir': _korbanTanggalLahirText.text.trim(),
+                            'tempat_lahir': _korbanTempatLahir.text.trim(),
+                            'pendidikan': _korbanPendidikan ?? '-',
+                            'pekerjaan': _korbanPekerjaan.text.trim(),
+                            'agama': _korbanAgama ?? '-',
+                            'alamat': _korbanAlamat.text.trim(),
+                            'no_telepon': _korbanTelp.text.trim(),
+                            'informasi_tambahan':
+                                _korbanInfoTambahan.text.trim(),
+                          },
+                          Icons.volunteer_activism_outlined,
+                          Warna.backgroundIjo,
+                        ),
                         SizedBox(height: 16),
 
                         _buildEnhancedPreviewSection(
                           "Kronologi Kejadian",
-                          {'kronologi': _kronologiform4.text.trim()},
+                          {
+                            'kronologi': _kronologiform4.text.trim(),
+                          },
                           Icons.history_edu_outlined,
                           Colors.deepOrange,
                         ),
@@ -942,9 +809,6 @@ class _LaporanPageState extends State<LaporanPage> {
                           "Waktu & Lokasi Kejadian",
                           {
                             'tanggal_kejadian': _tanggalController.text.trim(),
-                            'waktu_kejadian':
-                                (_waktuKejadian ?? DateTime.now())
-                                    .toIso8601String(),
                             'lokasi_kejadian': _tempatkejadianform3.text.trim(),
                           },
                           Icons.location_on_outlined,
@@ -990,136 +854,83 @@ class _LaporanPageState extends State<LaporanPage> {
                       SizedBox(width: 12),
                       ElevatedButton.icon(
                         onPressed: () async {
+                          // Cegah pengiriman berulang selama request aktif.
                           if (_isSubmitting) return;
-                          _isSubmitting = true;
+
+                          final unloadingContext = context;
+                          setState(() => _isSubmitting = true);
 
                           showDialog(
-                            context: context,
+                            context: unloadingContext,
                             barrierDismissible: false,
-                            barrierColor: Colors.black54,
                             builder:
-                                (context) => PopScope(
-                                  canPop: false,
-                                  child: Dialog(
-                                    backgroundColor: Colors.transparent,
-                                    insetPadding: const EdgeInsets.symmetric(
-                                      horizontal: 40,
+                                (context) => Center(
+                                  child: Container(
+                                    padding: EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
-                                    child: Container(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        28,
-                                        30,
-                                        28,
-                                        26,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.14,
-                                            ),
-                                            blurRadius: 28,
-                                            offset: const Offset(0, 12),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        CircularProgressIndicator(),
+                                        SizedBox(height: 16),
+                                        Text(
+                                          "Mengirim laporan...",
+                                          style: TextStyle(
+                                            fontFamily: "Mulish",
                                           ),
-                                        ],
-                                      ),
-                                      child: MediaQuery.withClampedTextScaling(
-                                        minScaleFactor: 1.0,
-                                        maxScaleFactor: 1.3,
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 64,
-                                              height: 64,
-                                              padding: const EdgeInsets.all(18),
-                                              decoration: BoxDecoration(
-                                                color: Warna.backgroundIjo
-                                                    .withValues(alpha: 0.12),
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child:
-                                                  const CircularProgressIndicator(
-                                                    strokeWidth: 3,
-                                                    color:
-                                                        Warna.backgroundIjo,
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 20),
-                                            const Text(
-                                              "Mengirim laporan...",
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontFamily: "Mulish",
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700,
-                                                color: Color(0xFF1F2A37),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            const Text(
-                                              "Mohon tunggu sebentar, jangan tutup aplikasi.",
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontFamily: "Mulish",
-                                                fontSize: 12.5,
-                                                height: 1.4,
-                                                color: Color(0xFF6B7280),
-                                              ),
-                                            ),
-                                          ],
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ),
                                 ),
                           );
 
                           try {
-                            final created = await laporanController
+                            final hasil = await laporanController
                                 .createReport(laporanData);
 
                             if (!context.mounted) return;
 
-                            Navigator.of(context).pop();
-                            Navigator.of(context).pop();
+                            Navigator.of(context).pop(); // tutup loading
 
-                            final idLaporan =
-                                created?['id_laporan']?.toString() ?? '';
+                            final bool sukses =
+                                hasil is Map && hasil['success'] == true;
+
+                            if (sukses) {
+                              CustomSnackbar.show("Laporan berhasil dikirim");
+                              _resetForm();
+                              Navigator.of(context).pop(); // tutup pratinjau
+                            } else {
+                              // Respons tidak sesuai kontrak, jangan dianggap tersimpan.
+                              CustomSnackbar.show(
+                                "Server tidak mengonfirmasi laporan tersimpan. Data Anda tetap aman — silakan coba lagi.",
+                                warna: Colors.red,
+                                icon: Icons.error_outline,
+                              );
+                            }
+                          } on LaporanException catch (e) {
+                            if (!context.mounted) return;
+                            Navigator.of(context).pop(); // tutup loading
                             CustomSnackbar.show(
-                              idLaporan.isEmpty
-                                  ? "Laporan berhasil dikirim"
-                                  : "Laporan berhasil dikirim. ID: $idLaporan",
-                              warna: Colors.green,
-                              tinggi: 110,
-                              icon: Icons.check_circle_outline_rounded,
+                              e.pesan,
+                              warna: Colors.red,
+                              icon: Icons.error_outline,
                             );
-
-                            _resetForm();
                           } catch (e) {
                             if (!context.mounted) return;
-
-                            Navigator.of(context).pop();
-
-                            final String message =
-                                e.toString().replaceFirst(
-                                  'ApiException: ',
-                                  '',
-                                );
+                            Navigator.of(context).pop(); // tutup loading
                             CustomSnackbar.show(
-                              message.isEmpty
-                                  ? "Gagal mengirim laporan"
-                                  : message,
+                              "Gagal mengirim laporan. Data Anda tetap aman — silakan coba lagi.",
                               warna: Colors.red,
-                              tinggi: 110,
-                              icon: Icons.error_outline_rounded,
+                              icon: Icons.error_outline,
                             );
                           } finally {
-                            _isSubmitting = false;
+                            if (mounted) {
+                              setState(() => _isSubmitting = false);
+                            }
                           }
                         },
                         icon: Icon(Icons.send_rounded, size: 18),
@@ -1264,115 +1075,6 @@ class _LaporanPageState extends State<LaporanPage> {
     );
   }
 
-  /// Hanya menampilkan field yang benar-benar terisi agar data kosong tidak
-  /// muncul sebagai placeholder "-" pada pratinjau.
-  Map<String, String> _filledPreviewData(Map<String, String?> values) {
-    return {
-      for (final entry in values.entries)
-        if ((entry.value ?? '').trim().isNotEmpty)
-          entry.key: entry.value!.trim(),
-    };
-  }
-
-  List<Widget> _buildPartyPreviewSections() {
-    final widgets = <Widget>[];
-
-    if (_penerimaSamaDenganPelapor) {
-      final rows = _filledPreviewData({
-        'NIK': _nikform1.text,
-        'Nama': _namaform1.text,
-        'No. Telepon': _telpform1.text,
-        'Alamat': _alamatform1.text,
-      });
-      if (rows.isNotEmpty) {
-        widgets.add(const SizedBox(height: 16));
-        widgets.add(
-          _buildIdentitySummary(
-            title: 'Penerima manfaat sama dengan pelapor',
-            rows: rows,
-          ),
-        );
-      }
-    } else {
-      final penerima = _filledPreviewData({
-        'nik': _nikPenerima.text,
-        'nama': _namaPenerima.text,
-        'tempat_lahir': _tempatLahirPenerima.text,
-        'tanggal_lahir': _tanggalLahirPenerima.text,
-        'umur': _umurPenerima.text,
-        'jenis_kelamin': _jenisKelaminPenerima,
-        'pekerjaan': _pekerjaanPenerima.text,
-        'agama': _agamaPenerima,
-        'pendidikan': _pendidikanPenerima,
-        'alamat': _alamatPenerima.text,
-        'hubungan_dengan_terlapor': _hubunganTerlaporPenerima.text,
-        'no_telepon': _telpPenerima.text,
-        'informasi_tambahan': _infoTambahanPenerima.text,
-      });
-      if (penerima.isNotEmpty) {
-        widgets.add(const SizedBox(height: 16));
-        widgets.add(
-          _buildEnhancedPreviewSection(
-            'Penerima Manfaat',
-            penerima,
-            Icons.volunteer_activism_outlined,
-            Colors.indigo,
-          ),
-        );
-      }
-    }
-
-    if (_sertakanTerlapor) {
-      final terlapor = _filledPreviewData({
-        'nik': _nikTerlapor.text,
-        'nama': _namaTerlapor.text,
-        'umur': _umurTerlapor.text,
-        'alamat': _alamatTerlapor.text,
-        'jenis_kelamin': _jenisKelaminTerlapor,
-        'hubungan_dengan_korban': _hubunganTerlapor.text,
-        'informasi_tambahan': _infoTambahanTerlapor.text,
-      });
-      if (terlapor.isNotEmpty) {
-        widgets.add(const SizedBox(height: 16));
-        widgets.add(
-          _buildEnhancedPreviewSection(
-            'Terlapor',
-            terlapor,
-            Icons.gavel_outlined,
-            Colors.deepOrange,
-          ),
-        );
-      }
-    }
-
-    if (_sertakanAnak) {
-      for (var index = 0; index < _anakList.length; index++) {
-        final anak = _anakList[index];
-        final data = _filledPreviewData({
-          'nama': anak.nama.text,
-          'tanggal_lahir': anak.tanggalLahir.text,
-          'umur': anak.umur.text,
-          'jenis_kelamin': anak.jenisKelamin,
-          'pendidikan': anak.pendidikan,
-          'agama': anak.agama,
-          'status': anak.status,
-        });
-        if (data.isEmpty) continue;
-        widgets.add(const SizedBox(height: 16));
-        widgets.add(
-          _buildEnhancedPreviewSection(
-            'Anak ke-${index + 1}',
-            data,
-            Icons.child_care_outlined,
-            Colors.purple,
-          ),
-        );
-      }
-    }
-
-    return widgets;
-  }
-
   Widget _buildChildInfoCard(String title, Map<String, dynamic> data) {
     return Container(
       padding: EdgeInsets.all(12),
@@ -1449,43 +1151,137 @@ class _LaporanPageState extends State<LaporanPage> {
     _namaform1.clear();
     _alamatform1.clear();
     _telpform1.clear();
-    _hubunganform1.clear();
-    _nikPenerima.clear();
-    _namaPenerima.clear();
-    _tempatLahirPenerima.clear();
-    _tanggalLahirPenerima.clear();
-    _umurPenerima.clear();
-    _pekerjaanPenerima.clear();
-    _alamatPenerima.clear();
-    _hubunganTerlaporPenerima.clear();
-    _telpPenerima.clear();
-    _infoTambahanPenerima.clear();
-    _nikTerlapor.clear();
-    _namaTerlapor.clear();
-    _umurTerlapor.clear();
-    _alamatTerlapor.clear();
-    _hubunganTerlapor.clear();
-    _infoTambahanTerlapor.clear();
     _kronologiform4.clear();
     _tanggalController.clear();
     _tempatkejadianform3.clear();
-    _waktuKejadian = null;
-    _hasRequestedLocation = false;
-    _isFetchingLocation = false;
-    for (final anak in _anakList) {
-      anak.dispose();
-    }
-    _anakList.clear();
+    _korbanNama.clear();
+    _korbanNik.clear();
+    _korbanTempatLahir.clear();
+    _korbanTanggalLahirText.clear();
+    _korbanUmur.clear();
+    _korbanPekerjaan.clear();
+    _korbanAlamat.clear();
+    _korbanTelp.clear();
+    _korbanInfoTambahan.clear();
     setState(() {
       _currentStep = 1;
-      _penerimaSamaDenganPelapor = true;
-      _jenisKelaminPenerima = null;
-      _agamaPenerima = null;
-      _pendidikanPenerima = null;
-      _sertakanTerlapor = false;
-      _jenisKelaminTerlapor = null;
-      _sertakanAnak = false;
+      _kategoriPengaduan = null;
+      _hubunganDenganKorban = null;
+      _korbanTanggalLahir = null;
+      _korbanJenisKelamin = null;
+      _korbanAgama = null;
+      _korbanPendidikan = null;
     });
+  }
+
+  /// Umur korban dihitung otomatis dari tanggal lahir (bukan dikarang).
+  int _hitungUmurKorban() {
+    final lahir = _korbanTanggalLahir;
+    if (lahir == null) return 0;
+    final now = DateTime.now();
+    int umur = now.year - lahir.year;
+    if (now.month < lahir.month ||
+        (now.month == lahir.month && now.day < lahir.day)) {
+      umur--;
+    }
+    return umur < 0 ? 0 : umur;
+  }
+
+  /// Apakah ada isian yang sudah diisi — dipakai untuk konfirmasi keluar.
+  bool _formAdaData() {
+    final bool pelaporTerisi = [
+      _nikform1,
+      _namaform1,
+      _telpform1,
+      _alamatform1,
+      _kronologiform4,
+      _tanggalController,
+      _tempatkejadianform3,
+    ].any((c) => c.text.trim().isNotEmpty);
+
+    final bool korbanTerisi = [
+      _korbanNama,
+      _korbanNik,
+      _korbanTempatLahir,
+      _korbanTanggalLahirText,
+      _korbanPekerjaan,
+      _korbanAlamat,
+      _korbanTelp,
+      _korbanInfoTambahan,
+    ].any((c) => c.text.trim().isNotEmpty);
+
+    final bool dropdownTerisi = _kategoriPengaduan != null ||
+        _hubunganDenganKorban != null ||
+        _korbanJenisKelamin != null ||
+        _korbanAgama != null ||
+        _korbanPendidikan != null;
+
+    return pelaporTerisi || korbanTerisi || dropdownTerisi;
+  }
+
+  /// Dialog konfirmasi meninggalkan form bila terdapat data yang belum tersimpan.
+  Future<void> _konfirmasiKeluarBilaPerlu() async {
+    final bool? keluar = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
+              const SizedBox(width: 8),
+              const Text(
+                "Batalkan Pengaduan?",
+                style: TextStyle(
+                  fontFamily: "Mulish",
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            "Data yang sudah Anda isi belum tersimpan dan akan hilang jika Anda keluar sekarang.",
+            style: TextStyle(
+              fontFamily: "Mulish",
+              fontSize: 14,
+              height: 1.5,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text(
+                "Lanjut Mengisi",
+                style: TextStyle(
+                  fontFamily: "Mulish",
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              icon: const Icon(Icons.delete_outline, size: 18),
+              label: const Text(
+                "Buang & Keluar",
+                style: TextStyle(fontFamily: "Mulish"),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[600],
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (keluar == true && mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   Widget _buildPreviewSection(String title, Map<String, dynamic> data) {
@@ -1698,18 +1494,440 @@ class _LaporanPageState extends State<LaporanPage> {
               ),
 
               SizedBox(height: 8),
-              _buildPenerimaSection(),
 
-              SizedBox(height: 16),
-              _buildTerlaporSection(),
+              // Kategori Pengaduan (enum `laporan.kategori` di backend)
+              _buildDropdownField(
+                label: 'Kategori Pengaduan',
+                value: _kategoriPengaduan,
+                items: daftarKategoriPengaduan,
+                themeColor: Colors.blue[600]!,
+                icon: Icons.category_outlined,
+                onChanged: (value) {
+                  setState(() => _kategoriPengaduan = value);
+                },
+              ),
 
-              SizedBox(height: 16),
-              _buildAnakSection(),
+              // Hubungan pelapor dengan korban
+              _buildDropdownField(
+                label: 'Hubungan Anda dengan Korban',
+                value: _hubunganDenganKorban,
+                items: daftarHubunganKorban,
+                themeColor: Colors.blue[600]!,
+                icon: Icons.link,
+                onChanged: (value) {
+                  setState(() {
+                    _hubunganDenganKorban = value;
+                    // Bila pelapor adalah korban sendiri, saling isi otomatis
+                    // dari data diri pelapor yang benar-benar diisi pengguna.
+                    if (value == 'Pelapor / Korban') {
+                      if (_korbanNama.text.trim().isEmpty) {
+                        _korbanNama.text = _namaform1.text.trim();
+                      }
+                      if (_korbanNik.text.trim().isEmpty) {
+                        _korbanNik.text = _nikform1.text.trim();
+                      }
+                      if (_korbanTelp.text.trim().isEmpty) {
+                        _korbanTelp.text = _telpform1.text.trim();
+                      }
+                      if (_korbanAlamat.text.trim().isEmpty) {
+                        _korbanAlamat.text = _alamatform1.text.trim();
+                      }
+                    }
+                  });
+                },
+              ),
+
+              SizedBox(height: 8),
+
+              // Section Data Korban (penerima manfaat) — data nyata, diisi pengguna
+              _buildSectionHeader(
+                title: "Data Korban",
+                subtitle: "Formulir 1 (lanjutan): Data Penerima Manfaat",
+                icon: Icons.volunteer_activism_outlined,
+                color: Colors.blue[600]!,
+              ),
+              SizedBox(height: 24),
+
+              _buildEnhancedTextField(
+                label: 'Nama Korban',
+                controller: _korbanNama,
+                keyboardType: TextInputType.name,
+                icon: Icons.person_outline,
+                themeColor: Colors.blue[600]!,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                  LengthLimitingTextInputFormatter(50),
+                ],
+              ),
+
+              _buildEnhancedTextField(
+                label: 'NIK Korban',
+                controller: _korbanNik,
+                keyboardType: TextInputType.number,
+                icon: Icons.credit_card,
+                themeColor: Colors.blue[600]!,
+                inputFormatters: [LengthLimitingTextInputFormatter(16)],
+              ),
+
+              _buildEnhancedTextField(
+                label: 'Tempat Lahir Korban',
+                controller: _korbanTempatLahir,
+                icon: Icons.location_city,
+                themeColor: Colors.blue[600]!,
+              ),
+
+              _buildKorbanTanggalLahirField(themeColor: Colors.blue[600]!),
+
+              _buildEnhancedTextField(
+                label: 'Umur Korban (otomatis dari tanggal lahir)',
+                controller: _korbanUmur,
+                icon: Icons.cake_outlined,
+                themeColor: Colors.blue[600]!,
+                inputFormatters: [LengthLimitingTextInputFormatter(3)],
+                keyboardType: TextInputType.number,
+              ),
+
+              _buildDropdownField(
+                label: 'Jenis Kelamin Korban',
+                value: _korbanJenisKelamin,
+                items: daftarJenisKelamin,
+                themeColor: Colors.blue[600]!,
+                icon: Icons.face,
+                onChanged: (value) {
+                  setState(() => _korbanJenisKelamin = value);
+                },
+              ),
+
+              _buildEnhancedTextField(
+                label: 'Pekerjaan Korban',
+                controller: _korbanPekerjaan,
+                icon: Icons.work_outline,
+                themeColor: Colors.blue[600]!,
+              ),
+
+              _buildDropdownField(
+                label: 'Agama Korban',
+                value: _korbanAgama,
+                items: daftarAgama,
+                themeColor: Colors.blue[600]!,
+                icon: Icons.church_outlined,
+                onChanged: (value) {
+                  setState(() => _korbanAgama = value);
+                },
+              ),
+
+              _buildDropdownField(
+                label: 'Pendidikan Terakhir Korban',
+                value: _korbanPendidikan,
+                items: daftarPendidikan,
+                themeColor: Colors.blue[600]!,
+                icon: Icons.school_outlined,
+                onChanged: (value) {
+                  setState(() => _korbanPendidikan = value);
+                },
+              ),
+
+              AddressAutocompleteEnhanced(
+                label: "Alamat Korban",
+                themeColor: Colors.blue[600]!,
+                controller: _korbanAlamat,
+              ),
+
+              _buildEnhancedTextField(
+                label: 'No. Telepon / WhatsApp Korban',
+                controller: _korbanTelp,
+                keyboardType: TextInputType.phone,
+                icon: Icons.phone_outlined,
+                themeColor: Colors.blue[600]!,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(15),
+                ],
+              ),
+
+              _buildEnhancedTextField(
+                label: 'Informasi Tambahan Korban (opsional)',
+                controller: _korbanInfoTambahan,
+                icon: Icons.info_outline,
+                themeColor: Colors.blue[600]!,
+                maxLines: 3,
+              ),
 
               SizedBox(height: 20),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Dropdown rangkaian style existing (`_buildEnhancedTextField`).
+  Widget _buildDropdownField({
+    required String label,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+    required Color themeColor,
+    IconData? icon,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: "Mulish",
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: DropdownButtonFormField<String>(
+              value: value,
+              isExpanded: true,
+              items: items
+                  .map(
+                    (item) => DropdownMenuItem<String>(
+                      value: item,
+                      child: Text(
+                        item,
+                        style: TextStyle(
+                          fontFamily: "Mulish",
+                          fontSize: 15,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: onChanged,
+              iconEnabledColor: themeColor,
+              dropdownColor: Colors.white,
+              decoration: InputDecoration(
+                hintText: 'Pilih $label',
+                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                filled: true,
+                fillColor: Colors.grey[50],
+                prefixIcon:
+                    icon != null
+                        ? Container(
+                          margin: EdgeInsets.all(12),
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: themeColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(icon, color: themeColor, size: 20),
+                        )
+                        : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: themeColor, width: 2),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: icon != null ? 8 : 16,
+                  vertical: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Header section serupa desain header tiap formulir.
+  Widget _buildSectionHeader({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color, color.withOpacity(0.75)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: "Mulish",
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontFamily: "Mulish",
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Pemilih tanggal lahir korban; umur dihitung ulang otomatis setiap dipilih.
+  Widget _buildKorbanTanggalLahirField({required Color themeColor}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tanggal Lahir Korban',
+            style: TextStyle(
+              fontFamily: "Mulish",
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: TextField(
+              controller: _korbanTanggalLahirText,
+              readOnly: true,
+              cursorColor: themeColor,
+              style: TextStyle(
+                fontFamily: "Mulish",
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[800],
+              ),
+              onTap: () async {
+                final today = DateTime.now();
+                DateTime? pickedDate = await showDatePicker(
+                  context: context,
+                  initialDate: _korbanTanggalLahir ?? today,
+                  firstDate: DateTime(today.year - 100),
+                  lastDate: today,
+                  builder: (BuildContext context, Widget? child) {
+                    return Theme(
+                      data: Theme.of(context).copyWith(
+                        colorScheme: ColorScheme.light(
+                          primary: themeColor,
+                          onPrimary: Colors.white,
+                          onSurface: Colors.black,
+                        ),
+                        textButtonTheme: TextButtonThemeData(
+                          style: TextButton.styleFrom(
+                            foregroundColor: themeColor,
+                          ),
+                        ),
+                      ),
+                      child: child!,
+                    );
+                  },
+                );
+
+                if (pickedDate != null) {
+                  setState(() {
+                    _korbanTanggalLahir = pickedDate;
+                    _korbanTanggalLahirText.text =
+                        "${pickedDate.year}-"
+                        "${pickedDate.month.toString().padLeft(2, '0')}-"
+                        "${pickedDate.day.toString().padLeft(2, '0')}";
+                    _korbanUmur.text = '${_hitungUmurKorban()}';
+                  });
+                }
+              },
+              decoration: InputDecoration(
+                hintText: 'Pilih tanggal lahir korban',
+                hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                filled: true,
+                fillColor: Colors.grey[50],
+                prefixIcon: Container(
+                  margin: EdgeInsets.all(12),
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: themeColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.calendar_today_outlined,
+                    color: themeColor,
+                    size: 20,
+                  ),
+                ),
+                suffixIcon: Icon(Icons.keyboard_arrow_down, color: themeColor),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: themeColor, width: 2),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 16,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1722,7 +1940,6 @@ class _LaporanPageState extends State<LaporanPage> {
     List<TextInputFormatter>? inputFormatters,
     TextCapitalization? textCapitalization,
     int maxLines = 1,
-    Widget? suffixIcon,
     required Color themeColor,
   }) {
     return Container(
@@ -1765,7 +1982,6 @@ class _LaporanPageState extends State<LaporanPage> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: Colors.grey[50],
-                suffixIcon: suffixIcon,
                 prefixIcon:
                     icon != null
                         ? Container(
@@ -1832,850 +2048,6 @@ class _LaporanPageState extends State<LaporanPage> {
       ),
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
     );
-  }
-
-  Widget _buildPenerimaSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildToggleCard(
-          title: 'Penerima Manfaat',
-          subtitle:
-              _penerimaSamaDenganPelapor
-                  ? 'Identitas penerima mengikuti pelapor'
-                  : 'Isi identitas penerima manfaat',
-          icon: Icons.volunteer_activism_outlined,
-          color: Colors.indigo,
-          value: _penerimaSamaDenganPelapor,
-          onChanged: (value) {
-            setState(() => _penerimaSamaDenganPelapor = value);
-          },
-        ),
-        if (_penerimaSamaDenganPelapor)
-          AnimatedBuilder(
-            animation: Listenable.merge([
-              _nikform1,
-              _namaform1,
-              _telpform1,
-              _alamatform1,
-            ]),
-            builder:
-                (context, _) => _buildIdentitySummary(
-                  title: 'Data penerima disalin dari pelapor',
-                  rows: {
-                    'NIK': _nikform1.text.trim(),
-                    'Nama': _namaform1.text.trim(),
-                    'No. Telepon': _telpform1.text.trim(),
-                    'Alamat': _alamatform1.text.trim(),
-                  },
-                ),
-          )
-        else
-          _buildPartyFields(
-            color: Colors.indigo,
-            children: [
-              _buildEnhancedTextField(
-                label: 'NIK Penerima Manfaat',
-                controller: _nikPenerima,
-                keyboardType: TextInputType.number,
-                icon: Icons.credit_card,
-                themeColor: Colors.indigo,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(16),
-                ],
-              ),
-              _buildEnhancedTextField(
-                label: 'Nama Penerima Manfaat',
-                controller: _namaPenerima,
-                keyboardType: TextInputType.name,
-                icon: Icons.person_outline,
-                themeColor: Colors.indigo,
-                textCapitalization: TextCapitalization.words,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                  LengthLimitingTextInputFormatter(50),
-                ],
-              ),
-              _buildEnhancedTextField(
-                label: 'Tempat Lahir',
-                controller: _tempatLahirPenerima,
-                icon: Icons.location_city_outlined,
-                themeColor: Colors.indigo,
-                textCapitalization: TextCapitalization.words,
-                inputFormatters: [LengthLimitingTextInputFormatter(100)],
-              ),
-              _buildDateField(
-                label: 'Tanggal Lahir',
-                controller: _tanggalLahirPenerima,
-                themeColor: Colors.indigo,
-              ),
-              _buildEnhancedTextField(
-                label: 'Umur',
-                controller: _umurPenerima,
-                keyboardType: TextInputType.number,
-                icon: Icons.cake_outlined,
-                themeColor: Colors.indigo,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(3),
-                ],
-              ),
-              _buildDropdownField(
-                label: 'Jenis Kelamin',
-                icon: Icons.wc_outlined,
-                themeColor: Colors.indigo,
-                value: _jenisKelaminPenerima,
-                items: const ['Laki-laki', 'Perempuan'],
-                onChanged: (value) {
-                  setState(() => _jenisKelaminPenerima = value);
-                },
-              ),
-              _buildEnhancedTextField(
-                label: 'Pekerjaan',
-                controller: _pekerjaanPenerima,
-                icon: Icons.work_outline,
-                themeColor: Colors.indigo,
-                textCapitalization: TextCapitalization.words,
-                inputFormatters: [LengthLimitingTextInputFormatter(100)],
-              ),
-              _buildDropdownField(
-                label: 'Agama',
-                icon: Icons.menu_book_outlined,
-                themeColor: Colors.indigo,
-                value: _agamaPenerima,
-                items: const [
-                  'Islam',
-                  'Kristen',
-                  'Katolik',
-                  'Hindu',
-                  'Buddha',
-                  'Konghucu',
-                  'Lainnya',
-                ],
-                onChanged: (value) {
-                  setState(() => _agamaPenerima = value);
-                },
-              ),
-              _buildDropdownField(
-                label: 'Pendidikan',
-                icon: Icons.school_outlined,
-                themeColor: Colors.indigo,
-                value: _pendidikanPenerima,
-                items: const [
-                  'Tidak Sekolah',
-                  'SD',
-                  'SMP',
-                  'SMA',
-                  'Diploma',
-                  'S1',
-                  'S2',
-                  'S3',
-                  'Lainnya',
-                ],
-                onChanged: (value) {
-                  setState(() => _pendidikanPenerima = value);
-                },
-              ),
-              _buildEnhancedTextField(
-                label: 'Alamat Penerima Manfaat',
-                controller: _alamatPenerima,
-                icon: Icons.home_outlined,
-                themeColor: Colors.indigo,
-                maxLines: 2,
-                inputFormatters: [LengthLimitingTextInputFormatter(255)],
-              ),
-              _buildEnhancedTextField(
-                label: 'Hubungan dengan Terlapor',
-                controller: _hubunganTerlaporPenerima,
-                icon: Icons.people_alt_outlined,
-                themeColor: Colors.indigo,
-                textCapitalization: TextCapitalization.words,
-                inputFormatters: [LengthLimitingTextInputFormatter(100)],
-              ),
-              _buildEnhancedTextField(
-                label: 'No. Telepon Penerima',
-                controller: _telpPenerima,
-                keyboardType: TextInputType.phone,
-                icon: Icons.phone_outlined,
-                themeColor: Colors.indigo,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(15),
-                ],
-              ),
-              _buildEnhancedTextField(
-                label: 'Informasi Tambahan',
-                controller: _infoTambahanPenerima,
-                icon: Icons.notes_outlined,
-                themeColor: Colors.indigo,
-                maxLines: 3,
-                inputFormatters: [LengthLimitingTextInputFormatter(500)],
-              ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTerlaporSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildToggleCard(
-          title: 'Terlapor (opsional)',
-          subtitle:
-              _sertakanTerlapor
-                  ? 'Isi identitas terlapor jika diketahui'
-                  : 'Aktifkan jika identitas terlapor diketahui',
-          icon: Icons.gavel_outlined,
-          color: Colors.deepOrange,
-          value: _sertakanTerlapor,
-          onChanged: (value) {
-            setState(() => _sertakanTerlapor = value);
-          },
-        ),
-        if (_sertakanTerlapor)
-          _buildPartyFields(
-            color: Colors.deepOrange,
-            children: [
-              _buildEnhancedTextField(
-                label: 'NIK Terlapor',
-                controller: _nikTerlapor,
-                keyboardType: TextInputType.number,
-                icon: Icons.credit_card,
-                themeColor: Colors.deepOrange,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(16),
-                ],
-              ),
-              _buildEnhancedTextField(
-                label: 'Nama Terlapor',
-                controller: _namaTerlapor,
-                keyboardType: TextInputType.name,
-                icon: Icons.person_outline,
-                themeColor: Colors.deepOrange,
-                textCapitalization: TextCapitalization.words,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-                  LengthLimitingTextInputFormatter(100),
-                ],
-              ),
-              _buildEnhancedTextField(
-                label: 'Umur',
-                controller: _umurTerlapor,
-                keyboardType: TextInputType.number,
-                icon: Icons.cake_outlined,
-                themeColor: Colors.deepOrange,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(3),
-                ],
-              ),
-              _buildEnhancedTextField(
-                label: 'Alamat',
-                controller: _alamatTerlapor,
-                icon: Icons.home_outlined,
-                themeColor: Colors.deepOrange,
-                maxLines: 2,
-                inputFormatters: [LengthLimitingTextInputFormatter(255)],
-              ),
-              _buildDropdownField(
-                label: 'Jenis Kelamin',
-                icon: Icons.wc_outlined,
-                themeColor: Colors.deepOrange,
-                value: _jenisKelaminTerlapor,
-                items: const ['Laki-laki', 'Perempuan'],
-                onChanged: (value) {
-                  setState(() => _jenisKelaminTerlapor = value);
-                },
-              ),
-              _buildEnhancedTextField(
-                label: 'Hubungan dengan Korban',
-                controller: _hubunganTerlapor,
-                icon: Icons.people_alt_outlined,
-                themeColor: Colors.deepOrange,
-                textCapitalization: TextCapitalization.words,
-                inputFormatters: [LengthLimitingTextInputFormatter(100)],
-              ),
-              _buildEnhancedTextField(
-                label: 'Informasi Tambahan',
-                controller: _infoTambahanTerlapor,
-                icon: Icons.notes_outlined,
-                themeColor: Colors.deepOrange,
-                maxLines: 3,
-                inputFormatters: [LengthLimitingTextInputFormatter(255)],
-              ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  Widget _buildAnakSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildToggleCard(
-          title: 'Informasi Anak (opsional)',
-          subtitle:
-              _sertakanAnak
-                  ? 'Tambahkan data anak yang terlibat'
-                  : 'Aktifkan jika kasus melibatkan anak',
-          icon: Icons.child_care_outlined,
-          color: Colors.purple,
-          value: _sertakanAnak,
-          onChanged: (value) {
-            setState(() => _sertakanAnak = value);
-          },
-        ),
-        if (_sertakanAnak) ...[
-          if (_anakList.isEmpty)
-            Container(
-              margin: const EdgeInsets.only(top: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.purple.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.purple.withOpacity(0.2)),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 18,
-                    color: Colors.purple.shade400,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Belum ada data anak. Tekan "Tambah Anak" jika diperlukan.',
-                      style: TextStyle(
-                        fontFamily: 'Mulish',
-                        fontSize: 12,
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ...List.generate(_anakList.length, _buildAnakCard),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _addAnak,
-              icon: const Icon(Icons.add_circle_outline, size: 18),
-              label: const Text('Tambah Anak'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.purple,
-                side: BorderSide(color: Colors.purple.withOpacity(0.4)),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle: const TextStyle(
-                  fontFamily: 'Mulish',
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ] else if (_anakList.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 8, left: 4),
-            child: Text(
-              '${_anakList.length} data anak tersimpan namun tidak akan dikirim.',
-              style: TextStyle(
-                fontFamily: 'Mulish',
-                fontSize: 11.5,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildAnakCard(int index) {
-    final anak = _anakList[index];
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.purple.withOpacity(0.25)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.child_care,
-                  size: 18,
-                  color: Colors.purple,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Anak ke-${index + 1}',
-                  style: const TextStyle(
-                    fontFamily: 'Mulish',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Colors.purple,
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Hapus data anak',
-                onPressed: () => _removeAnak(index),
-                icon: Icon(
-                  Icons.delete_outline,
-                  color: Colors.red.shade400,
-                  size: 20,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          _buildEnhancedTextField(
-            label: 'Nama Anak',
-            controller: anak.nama,
-            icon: Icons.person_outline,
-            themeColor: Colors.purple,
-            textCapitalization: TextCapitalization.words,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
-              LengthLimitingTextInputFormatter(100),
-            ],
-          ),
-          _buildDateField(
-            label: 'Tanggal Lahir',
-            controller: anak.tanggalLahir,
-            themeColor: Colors.purple,
-          ),
-          _buildEnhancedTextField(
-            label: 'Umur',
-            controller: anak.umur,
-            keyboardType: TextInputType.number,
-            icon: Icons.cake_outlined,
-            themeColor: Colors.purple,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(3),
-            ],
-          ),
-          _buildDropdownField(
-            label: 'Jenis Kelamin',
-            icon: Icons.wc_outlined,
-            themeColor: Colors.purple,
-            value: anak.jenisKelamin,
-            items: const ['Laki-laki', 'Perempuan'],
-            onChanged: (value) {
-              setState(() => anak.jenisKelamin = value);
-            },
-          ),
-          _buildDropdownField(
-            label: 'Pendidikan',
-            icon: Icons.school_outlined,
-            themeColor: Colors.purple,
-            value: anak.pendidikan,
-            items: const [
-              'Tidak Sekolah',
-              'PAUD',
-              'TK',
-              'SD',
-              'SMP',
-              'SMA',
-              'Lainnya',
-            ],
-            onChanged: (value) {
-              setState(() => anak.pendidikan = value);
-            },
-          ),
-          _buildDropdownField(
-            label: 'Agama',
-            icon: Icons.menu_book_outlined,
-            themeColor: Colors.purple,
-            value: anak.agama,
-            items: const [
-              'Islam',
-              'Kristen',
-              'Katolik',
-              'Hindu',
-              'Buddha',
-              'Konghucu',
-              'Lainnya',
-            ],
-            onChanged: (value) {
-              setState(() => anak.agama = value);
-            },
-          ),
-          _buildDropdownField(
-            label: 'Status Anak',
-            icon: Icons.family_restroom_outlined,
-            themeColor: Colors.purple,
-            value: anak.status,
-            items: const ['Anak Kandung', 'Anak Angkat'],
-            onChanged: (value) {
-              setState(() => anak.status = value);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _addAnak() {
-    if (_anakList.length >= 10) {
-      CustomSnackbar.show(
-        'Maksimal 10 data anak dalam satu laporan',
-        warna: Colors.orange,
-      );
-      return;
-    }
-    setState(() => _anakList.add(_AnakFormData()));
-  }
-
-  void _removeAnak(int index) {
-    final removed = _anakList.removeAt(index);
-    setState(() {});
-    WidgetsBinding.instance.addPostFrameCallback((_) => removed.dispose());
-  }
-
-  Widget _buildToggleCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.22)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: color.withOpacity(0.9),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 11.5,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Switch(
-            value: value,
-            activeThumbColor: color,
-            onChanged: onChanged,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPartyFields({
-    required Color color,
-    required List<Widget> children,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
-      child: Column(children: children),
-    );
-  }
-
-  Widget _buildIdentitySummary({
-    required String title,
-    required Map<String, String> rows,
-  }) {
-    final entries =
-        rows.entries.where((entry) => entry.value.trim().isNotEmpty).toList();
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.indigo.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.indigo.withOpacity(0.18)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.link, size: 16, color: Colors.indigo),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.indigo,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (entries.isEmpty)
-            Text(
-              'Lengkapi data pelapor di atas.',
-              style: TextStyle(
-                fontFamily: 'Mulish',
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-                color: Colors.grey.shade600,
-              ),
-            )
-          else
-            ...entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      width: 96,
-                      child: Text(
-                        '${entry.key}:',
-                        style: TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Text(
-                        entry.value,
-                        style: const TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 12,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDropdownField({
-    required String label,
-    required IconData icon,
-    required Color themeColor,
-    required String? value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Mulish',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey[50],
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: Row(
-              children: [
-                Icon(icon, color: themeColor, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: value,
-                      isExpanded: true,
-                      hint: Text(
-                        'Pilih $label',
-                        style: TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                      style: TextStyle(
-                        fontFamily: 'Mulish',
-                        fontSize: 14,
-                        color: Colors.grey[800],
-                      ),
-                      items:
-                          items
-                              .map(
-                                (item) => DropdownMenuItem<String>(
-                                  value: item,
-                                  child: Text(item),
-                                ),
-                              )
-                              .toList(),
-                      onChanged: onChanged,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDateField({
-    required String label,
-    required TextEditingController controller,
-    required Color themeColor,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontFamily: 'Mulish',
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            readOnly: true,
-            onTap: () => _pickDate(controller: controller),
-            style: TextStyle(
-              fontFamily: 'Mulish',
-              fontSize: 16,
-              color: Colors.grey[800],
-            ),
-            decoration: InputDecoration(
-              hintText: 'Pilih tanggal',
-              hintStyle: TextStyle(
-                fontFamily: 'Mulish',
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
-              filled: true,
-              fillColor: Colors.grey[50],
-              prefixIcon: Icon(
-                Icons.calendar_month_outlined,
-                color: themeColor,
-                size: 20,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: themeColor, width: 2),
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 16,
-                horizontal: 16,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _pickDate({required TextEditingController controller}) async {
-    final now = DateTime.now();
-    final parsed = DateTime.tryParse(controller.text);
-    final initialDate =
-        parsed != null && !parsed.isAfter(now) ? parsed : now;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: initialDate,
-      firstDate: DateTime(1900),
-      lastDate: now,
-    );
-    if (picked != null) {
-      setState(() => controller.text = _formatDateForApi(picked));
-    }
   }
 
   Widget _buildFormulir2() {
@@ -2860,17 +2232,6 @@ class _LaporanPageState extends State<LaporanPage> {
                 themeColor: Colors.teal[600]!,
                 maxLines: 2,
                 inputFormatters: [LengthLimitingTextInputFormatter(100)],
-                suffixIcon:
-                    _isFetchingLocation
-                        ? const Padding(
-                          padding: EdgeInsets.all(14),
-                          child: SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        )
-                        : null,
               ),
 
               SizedBox(height: 20),
@@ -3077,17 +2438,12 @@ class _LaporanPageState extends State<LaporanPage> {
                 );
 
                 if (pickedDate != null) {
-                  final previousTime = _waktuKejadian ?? DateTime.now();
+                  String formattedDate =
+                      "${pickedDate.year}-"
+                      "${pickedDate.month.toString().padLeft(2, '0')}-"
+                      "${pickedDate.day.toString().padLeft(2, '0')}";
                   setState(() {
-                    _tanggalController.text = _formatDateForApi(pickedDate);
-                    _waktuKejadian = DateTime(
-                      pickedDate.year,
-                      pickedDate.month,
-                      pickedDate.day,
-                      previousTime.hour,
-                      previousTime.minute,
-                      previousTime.second,
-                    );
+                    _tanggalController.text = formattedDate;
                   });
                 }
               },
@@ -3139,69 +2495,17 @@ class _LaporanPageState extends State<LaporanPage> {
                 color: themeColor.withOpacity(0.05),
                 borderRadius: BorderRadius.circular(6),
               ),
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 6,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.check_circle_outline, color: themeColor, size: 14),
+                  SizedBox(width: 6),
                   Text(
-                    'Kejadian: ${_formatDateToReadable(_tanggalController.text)}',
+                    'Tanggal dipilih: ${_formatDateToReadable(_tanggalController.text)}',
                     style: TextStyle(
                       fontSize: 11,
                       color: themeColor,
                       fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    '${(_waktuKejadian ?? DateTime.now()).hour.toString().padLeft(2, '0')}:'
-                    '${(_waktuKejadian ?? DateTime.now()).minute.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: themeColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Ubah waktu kejadian',
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
-                    ),
-                    onPressed: () async {
-                      final currentTime = _waktuKejadian ?? DateTime.now();
-                      final pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(currentTime),
-                        builder:
-                            (context, child) => Theme(
-                              data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: themeColor,
-                                  onPrimary: Colors.white,
-                                  onSurface: Colors.black,
-                                ),
-                              ),
-                              child: child!,
-                            ),
-                      );
-                      if (pickedTime != null && mounted) {
-                        setState(() {
-                          _waktuKejadian = DateTime(
-                            currentTime.year,
-                            currentTime.month,
-                            currentTime.day,
-                            pickedTime.hour,
-                            pickedTime.minute,
-                          );
-                        });
-                      }
-                    },
-                    icon: Icon(
-                      Icons.edit_outlined,
-                      color: themeColor,
-                      size: 16,
                     ),
                   ),
                 ],
