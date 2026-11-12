@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
-import 'package:sentra/features/auth/views/login_screen.dart';
-import 'package:sentra/features/notification/views/notification_screen.dart';
+import 'package:sentra/features/dashboard/views/pppa_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
-import 'package:sentra/features/report/views/report_screen.dart';
+import 'package:sentra/features/notification/views/notification_screen.dart';
 
 /// Model data untuk Menu Layanan
 class LayananItem {
@@ -108,8 +107,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
         break;
 
       case 'pppa':
-        // Formulir pengaduan Sentra existing (LaporanPage) — bukan placeholder.
-        _bukaFormPengaduanPppa(context);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PppaScreen()),
+        );
         break;
 
       default:
@@ -135,102 +136,14 @@ class _BerandaScreenState extends State<BerandaScreen> {
       );
       return;
     }
-
     if (item.id == 'pppa') {
-      if (tag == 'Pengaduan Kekerasan') {
-        // Tag utama PPPA membuka formulir pengaduan Sentra yang sama
-        // dengan navigasi kartu PPPA.
-        _bukaFormPengaduanPppa(context);
-      } else {
-        // Tag lain (mis. "Pemberdayaan Anak") tetap memakai placeholder
-        // existing sampai flow resminya tersedia.
-        _showInteractiveBottomSheet(context, item, tag);
-      }
-      return;
-    }
-
-    _showInteractiveBottomSheet(context, item, tag);
-  }
-
-  /// Membuka formulir pengaduan Sentra (`LaporanPage`) untuk layanan PPPA.
-  /// Pengguna wajib login terlebih dahulu karena backend mewajibkan
-  /// `id_akun` (required|exists) pada POST /api/post-report.
-  void _bukaFormPengaduanPppa(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context, listen: false);
-
-    if (userProvider.idAkun == null) {
-      showDialog(
-        context: context,
-        builder: (dialogContext) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Row(
-              children: [
-                Icon(Icons.lock_outline_rounded, color: const Color(0xFF389753)),
-                const SizedBox(width: 10),
-                const Text(
-                  "Perlu Login",
-                  style: TextStyle(
-                    fontFamily: "Mulish",
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ],
-            ),
-            content: const Text(
-              "Untuk mengirim pengaduan, Anda perlu masuk menggunakan akun terlebih dahulu.",
-              style: TextStyle(
-                fontFamily: "Mulish",
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                child: const Text(
-                  "Nanti",
-                  style: TextStyle(
-                    fontFamily: "Mulish",
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(dialogContext).pop();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginPage()),
-                  );
-                },
-                icon: const Icon(Icons.login, size: 18),
-                label: const Text(
-                  "Login",
-                  style: TextStyle(fontFamily: "Mulish"),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF389753),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PppaScreen()),
       );
       return;
     }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const LaporanPage(openedFromPpa: true)),
-    );
+    _showInteractiveBottomSheet(context, item, tag);
   }
 
   /// Menampilkan bottom sheet interaktif sebagai placeholder interaktif
@@ -580,7 +493,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 // 👉 Arahkan ke Halaman Notifikasi
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => NotificationPage()),
+                  MaterialPageRoute(builder: (_) => const NotificationPage()),
                 );
               },
               child: Container(

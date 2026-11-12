@@ -1,231 +1,117 @@
-import 'package:sentra/core/network/api_client.dart';
-import 'package:sentra/features/report/models/report_model.dart';
-import 'package:sentra/features/report/models/statistic_model.dart';
-import 'package:sentra/features/report/repositories/report_repository.dart';
-import 'package:dio/dio.dart';
 import 'package:get/get.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/report/models/report_model.dart';
+import 'package:sentra/features/report/repositories/report_repository.dart';
 import 'package:sentra/features/report/services/detail_service.dart';
-
-/// Kegagalan pengiriman laporan yang membawa pesan siap-tampil
-/// (sudah dipetakan dari status HTTP / jenis error jaringan).
-class LaporanException implements Exception {
-  final String pesan;
-  LaporanException(this.pesan);
-
-  @override
-  String toString() => pesan;
-}
 
 class LaporanController extends GetxController {
   final LaporanRepository _laporanRepo = LaporanRepository();
+  final ReportDetailService _detailService = ReportDetailService();
 
-  var laporanList = <LaporanModel>[].obs;
-  var laporanByCategoryList = <LaporanModel>[].obs;
-  var statistik = StatistikModel().obs;
-  var trackingStatus = ''.obs;
-  var isLoading = false.obs;
-  var errorMessage = ''.obs;
+  final laporanList = <LaporanModel>[].obs;
+  final laporanByCategoryList = <LaporanModel>[].obs;
+  final trackingStatus = ''.obs;
+  final isLoading = false.obs;
+  final errorMessage = ''.obs;
 
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: '${ApiClient.protocol}://${ApiClient.baseUrl}',
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {'Content-Type': 'application/json'},
-    ),
-  );
+  final detailLoading = false.obs;
+  final detailError = ''.obs;
+  final Rxn<Map<String, dynamic>> selectedReportDetail =
+      Rxn<Map<String, dynamic>>();
 
   Future<void> getUserReports(int userId) async {
+    isLoading.value = true;
+    errorMessage.value = '';
     try {
-      isLoading.value = true;
-      final response = await _dio.get(
-        '/api/user-reports/$userId'
-      );
-      if (response.statusCode == 200) {
-        final List<dynamic> data =
-            response.data is List ? response.data : response.data['laporan'] ?? [];
-        laporanList.value =
-            data.map((json) => LaporanModel.fromJson(json)).toList();
-      } else {
-        laporanList.clear();
-      }
-    } catch (e) {
-      if (e is DioException) {
-        print('Reports fetch error: ${e.type}, status: ${e.response?.statusCode}');
-      }
-      laporanList.clear();
+      final reports = await _laporanRepo.getUserReports(userId);
+      laporanList.assignAll(reports);
+    } on ApiException catch (e) {
+      errorMessage.value = e.message;
     } finally {
       isLoading.value = false;
     }
   }
 
   Future<void> getUserReportsByCategory(int userId, String category) async {
+    isLoading.value = true;
+    errorMessage.value = '';
     try {
-      isLoading.value = true;
-      final response = await _dio.get(
-        '/api/user-reports-by-category/$userId/$category',
+      final reports = await _laporanRepo.getUserReportsByCategory(
+        userId,
+        category,
       );
-      if (response.statusCode == 200) {
-        final List<dynamic> data =
-            response.data is List ? response.data : response.data['laporan'] ?? [];
-        laporanByCategoryList.value =
-            data.map((json) => LaporanModel.fromJson(json)).toList();
-      } else {
-        laporanByCategoryList.clear();
-      }
-    } catch (e) {
-      if (e is DioException) {
-        print('Reports fetch error: ${e.type}, status: ${e.response?.statusCode}');
-      }
-      laporanByCategoryList.clear();
+      laporanByCategoryList.assignAll(reports);
+    } on ApiException catch (e) {
+      errorMessage.value = e.message;
     } finally {
       isLoading.value = false;
     }
   }
-   final RxBool detailLoading = false.obs;
-  final RxString detailError = ''.obs;
-  final Rxn<Map<String, dynamic>> selectedReportDetail =
-      Rxn<Map<String, dynamic>>();
 
-  final ReportDetailService _detailService = ReportDetailService(
-  );
-
-  Future<Map<String, dynamic>?> getReportDetailById(
-    String idLaporan, {
-    String? bearerToken,
-  }) async {
+  Future<Map<String, dynamic>?> getReportDetailById(String idLaporan) async {
+    detailLoading.value = true;
+    detailError.value = '';
     try {
-      detailLoading.value = true;
-      detailError.value = '';
-      final result = await _detailService.fetchReportDetailById(
-        idLaporan,
-      );
+      final result = await _detailService.fetchReportDetailById(idLaporan);
       selectedReportDetail.value = result;
       return result;
-    } catch (e) {
-      detailError.value = e.toString();
+    } on ApiException catch (e) {
+      detailError.value = e.message;
       rethrow;
     } finally {
       detailLoading.value = false;
     }
   }
 
-  /// Mengirim laporan ke backend.
-  ///
-  /// Sukses hanya jika respons 2xx dan `success == true` dari server.
-  /// Kegagalan dilempar sebagai [LaporanException] berisi pesan yang
-  /// aman untuk ditampilkan ke pengguna (tanpa detail internal server).
-  Future<dynamic> createReport(Map<String, dynamic> laporanData) async {
+  Future<Map<String, dynamic>?> createReport(
+    Map<String, dynamic> laporanData,
+  ) async {
+    isLoading.value = true;
+    errorMessage.value = '';
     try {
-      isLoading.value = true;
-      errorMessage.value = '';
-      final hasil = await _laporanRepo.postReport(laporanData);
-      final bool terkonfirmasi =
-          hasil is Map && hasil['success'] == true;
-      if (!terkonfirmasi) {
-        // Respons 2xx tetapi isi ambigu — jangan menyatakan laporan tersimpan.
-        throw LaporanException(
-          'Server tidak mengonfirmasi laporan tersimpan. Silakan coba lagi.',
-        );
-      }
-      return hasil;
-    } on LaporanException {
+      return await _laporanRepo.postReport(laporanData);
+    } on ApiException catch (e) {
+      errorMessage.value = e.message;
       rethrow;
-    } on DioException catch (e) {
-      final pesan = _pesanErrorDariDio(e);
-      errorMessage.value = pesan;
-      throw LaporanException(pesan);
-    } catch (e) {
-      errorMessage.value = 'Terjadi kesalahan. Silakan coba lagi.';
-      throw LaporanException('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       isLoading.value = false;
     }
   }
 
-  /// Memetakan kesalahan jaringan/status HTTP menjadi pesan yang informatif
-  /// dan aman untuk pengguna (tidak membocorkan struktur internal server).
-  String _pesanErrorDariDio(DioException e) {
-    switch (e.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return 'Koneksi ke server kehabisan waktu. Periksa jaringan Anda dan coba lagi.';
-      case DioExceptionType.connectionError:
-        return 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
-      default:
-        break;
-    }
-
-    final statusCode = e.response?.statusCode;
-    final data = e.response?.data;
-
-    switch (statusCode) {
-      case 422:
-        if (data is Map && data['errors'] is Map) {
-          final errors = data['errors'] as Map;
-          if (errors.isNotEmpty) {
-            final first = errors.values.first;
-            final pesan = (first is List && first.isNotEmpty)
-                ? first.first.toString()
-                : first.toString();
-            return 'Data belum sesuai: $pesan';
-          }
-        }
-        if (data is Map && data['message'] is String) {
-          final pesan = data['message'] as String;
-          if (pesan.isNotEmpty) return 'Data belum sesuai: $pesan';
-        }
-        return 'Data laporan belum lengkap. Periksa kembali isian Anda.';
-      case 401:
-      case 403:
-        return 'Sesi Anda telah berakhir. Silakan login kembali.';
-      case 404:
-        return 'Layanan pengaduan tidak ditemukan. Silakan coba lagi.';
-      case 500:
-      case 502:
-      case 503:
-        return 'Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.';
-      default:
-        return 'Gagal mengirim laporan${statusCode != null ? ' (kode $statusCode)' : ''}. Silakan coba lagi.';
-    }
-  }
   void updateSearchResults(List<LaporanModel> results) {
-    laporanList.assignAll(
-      results,
-    );
+    laporanList.assignAll(results);
   }
 
   void clearSearchResults() {
-    laporanList.clear(); 
+    laporanList.clear();
   }
 
   Future<void> trackingReport(String trackingCode) async {
+    isLoading.value = true;
+    errorMessage.value = '';
+    trackingStatus.value = '';
     try {
-      isLoading.value = true;
-
       final result = await _laporanRepo.trackingReport(trackingCode);
-
-      if (result.isNotEmpty) {
-        trackingStatus.value = result;
-      } else {
-        errorMessage.value = 'Tracking report kosong atau tidak ditemukan.';
+      if (result.isEmpty) {
+        errorMessage.value = 'Status laporan tidak ditemukan.';
+        return;
       }
-    } catch (e) {
-      errorMessage.value = e.toString();
+      trackingStatus.value = result;
+    } on ApiException catch (e) {
+      errorMessage.value = e.message;
     } finally {
       isLoading.value = false;
     }
   }
 
-  Future<void> getStatistic() async {
-    try {
-      isLoading.value = true;
-      statistik.value = await _laporanRepo.getReportStatistic();
-    } catch (e) {
-      errorMessage.value = e.toString();
-    } finally {
-      isLoading.value = false;
-    }
+  void reset() {
+    laporanList.clear();
+    laporanByCategoryList.clear();
+    trackingStatus.value = '';
+    errorMessage.value = '';
+    detailError.value = '';
+    selectedReportDetail.value = null;
+    isLoading.value = false;
+    detailLoading.value = false;
   }
 }

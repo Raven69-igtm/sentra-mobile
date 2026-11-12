@@ -5,11 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:sentra/core/utils/address_field.dart';
 import 'package:sentra/core/utils/app_colors.dart';
+import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
 import 'package:sentra/core/utils/custom_button.dart';
 import 'package:sentra/features/report/services/quick_report_service.dart';
+import 'package:sentra/features/report/views/pelaporan_cepat_menu_screen.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 class WelcomeWithSplashScreen extends StatefulWidget {
   const WelcomeWithSplashScreen({super.key});
@@ -298,12 +301,14 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
                               child: child,
                             ),
                         child: CustomRoundedButton(
-                          text: "Buat Laporan",
+                          text: "Laporan Cepat",
                           icon: Icons.flash_on,
                           backgroundColor: const Color(0xFFFDF6E3),
                           textColor: const Color(0xFF8B6220),
                           onPressed: () {
-                            showQuickReportDialog();
+                            Navigator.of(context).push(
+                              _slideUpRoute(const PelaporanCepatMenuScreen()),
+                            );
                           },
                         ),
                       ),
@@ -412,8 +417,29 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
                             });
 
                             try {
+                              final int? idAkun =
+                                  Provider.of<UserProvider>(
+                                    context,
+                                    listen: false,
+                                  ).idAkun;
+                              if (idAkun == null) {
+                                setState(() {
+                                  isLoading = false;
+                                  errorMessage =
+                                      'Silakan login terlebih dahulu untuk '
+                                      'mengirim laporan cepat.';
+                                });
+                                CustomSnackbar.show(
+                                  'Silakan login terlebih dahulu',
+                                  warna: Colors.orange,
+                                  tinggi: 100,
+                                  icon: Icons.lock_outline_rounded,
+                                );
+                                return;
+                              }
+
                               final result = await _service.kirimLaporanCepat(
-                                idAkun: 3,
+                                idAkun: idAkun,
                                 nik: nikController.text,
                                 nama: namaController.text,
                                 noTelp: telpController.text,

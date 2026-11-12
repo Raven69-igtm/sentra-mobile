@@ -1,60 +1,72 @@
 import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/report/models/report_model.dart';
-import 'package:sentra/features/report/models/statistic_model.dart';
 
 class LaporanRepository {
-
   Future<List<LaporanModel>> getUserReports(int userId) async {
-    try {
-      final response = await ApiClient.getRequest('/user-reports/$userId');
-      List data = response.data['laporan'];
-      return data.map((e) => LaporanModel.fromJson(e)).toList();
-    } catch (e) {
-      throw Exception('Gagal mengambil laporan user');
-    }
+    final response = await ApiClient.getRequest('/user-reports/$userId');
+    return _parseLaporanList(response.data);
   }
 
   Future<List<LaporanModel>> getUserReportsByCategory(
     int userId,
     String kategori,
   ) async {
-    try {
-      final response = await ApiClient.getRequest(
-        '/user-reports-by-category/$userId/$kategori',
-      );
-      List data = response.data['laporan'];
-      return data.map((e) => LaporanModel.fromJson(e)).toList();
-    } catch (e) {
-      throw Exception('Gagal mengambil laporan berdasarkan kategori');
-    }
+    final response = await ApiClient.getRequest(
+      '/user-reports-by-category/$userId/$kategori',
+    );
+    return _parseLaporanList(response.data);
   }
 
-  /// Mengirim laporan ke backend dan mengembalikan isi respons ({success, message, data}).
-  ///
-  /// `DioException` tidak dibungkus agar status HTTP (422/401/403/500)
-  /// dan jenis kesalahan jaringan tetap dapat dikenali pemanggil.
-  Future<dynamic> postReport(Map<String, dynamic> laporanData) async {
+  Future<Map<String, dynamic>> postReport(
+    Map<String, dynamic> laporanData,
+  ) async {
     final response = await ApiClient.postRequest('/post-report', laporanData);
-    return response.data;
+    final data = response.data;
+    if (data is Map && data['success'] == true) {
+      final created = data['data'];
+      if (created is Map && created['laporan'] is Map) {
+        return Map<String, dynamic>.from(created['laporan'] as Map);
+      }
+      return <String, dynamic>{};
+    }
+
+    throw ApiException(
+      message:
+          data is Map && data['message'] is String
+              ? data['message'] as String
+              : 'Gagal membuat laporan.',
+      statusCode: response.statusCode,
+    );
   }
 
   Future<String> trackingReport(String trackingCode) async {
-    try {
-      final response = await ApiClient.postRequest('/track-report', {
-        "id_laporan": trackingCode
-      });
-      return response.data['status'] ?? '';
-    } catch (e) {
-      throw Exception('Gagal tracking laporan : $e');
+    final response = await ApiClient.postRequest('/track-report', {
+      'id_laporan': trackingCode.trim(),
+    });
+    final data = response.data;
+    if (data is Map && data['status'] is String) {
+      return data['status'] as String;
     }
+    throw ApiException(
+      message: 'Status laporan tidak ditemukan pada respons server.',
+      statusCode: response.statusCode,
+    );
   }
 
-  Future<StatistikModel> getReportStatistic() async {
-    try {
-      final response = await ApiClient.getRequest('/report-statistics');
-      return StatistikModel.fromJson(response.data['data']);
-    } catch (e) {
-      throw Exception('Gagal mengambil statistik laporan');
+  List<LaporanModel> _parseLaporanList(dynamic data) {
+    if (data is Map && data['laporan'] is List) {
+      return (data['laporan'] as List)
+          .whereType<Map>()
+          .map((json) => LaporanModel.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
     }
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((json) => LaporanModel.fromJson(Map<String, dynamic>.from(json)))
+          .toList();
+    }
+    throw ApiException(message: 'Respons daftar laporan tidak valid.');
   }
 }

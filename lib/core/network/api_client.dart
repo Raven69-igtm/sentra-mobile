@@ -1,82 +1,92 @@
 import 'package:dio/dio.dart';
 
-/// Base URL dapat dioverride lewat build command tanpa mengubah kode:
-///
-///   flutter run --dart-define=SENTRA_API_URL=10.0.2.2:8000          (emulator Android)
-///   flutter run --dart-define=SENTRA_API_URL=192.168.1.10:8000      (perangkat fisik, IP host)
-///   flutter build apk --dart-define=SENTRA_API_URL=https://domain.com/public
-///
-/// Konversi scheme http/https mengikuti URL yang diberikan.
-/// Jangan pernah menghardcode kredensial di sini.
+import 'api_exception.dart';
+
 class ApiClient {
-  static const String _configuredUrl = String.fromEnvironment(
-    'SENTRA_API_URL',
-    defaultValue: '127.0.0.1:8000',
+  // Base URL dapat diganti saat build tanpa mengubah kode, contoh:
+  // flutter build apk --dart-define=SENTRA_API_ORIGIN=https://domain/api-host
+  static const String _apiOriginOverride = String.fromEnvironment(
+    'SENTRA_API_ORIGIN',
+  );
+  static const String _wsUrlOverride = String.fromEnvironment(
+    'SENTRA_WS_URL',
   );
 
-  static const bool isLocal = _configuredUrl == '127.0.0.1:8000';
-  static String get protocol =>
-      _configuredUrl.startsWith('https') ? 'https' : 'http';
-  static String get baseUrl =>
-      _configuredUrl.replaceFirst(RegExp(r'^https?://'), '');
-  static const String wsUrl = isLocal
-      ? 'ws://127.0.0.1:3021'
-      : 'ws://18.136.209.83:3021';
+  static const bool isLocal = bool.fromEnvironment(
+    'SENTRA_IS_LOCAL',
+    defaultValue: true,
+  );
+  static const String protocol = isLocal ? 'http' : 'https';
+  static const String baseUrl =
+      isLocal ? '127.0.0.1:8000' : 'sentra.pbltifnganjuk.com/public';
+
+  static String get apiOrigin =>
+      _apiOriginOverride.isNotEmpty ? _apiOriginOverride : '$protocol://$baseUrl';
+
+  static String get wsUrl =>
+      _wsUrlOverride.isNotEmpty
+          ? _wsUrlOverride
+          : (isLocal ? 'ws://127.0.0.1:3021' : 'ws://18.136.209.83:3021');
 
   static final Dio dio = Dio(
     BaseOptions(
-      baseUrl: '$protocol://$baseUrl/api',
-      connectTimeout: const Duration(seconds: 15),
+      baseUrl: '$apiOrigin/api',
+      connectTimeout: const Duration(seconds: 12),
+      sendTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
       headers: {
         'Content-Type': 'application/json',
-        // Wajib: tanpa header ini backend Laravel membalas error validasi
-        // dengan 302 redirect (behavior web) alih-alih JSON 422.
+        // Laravel hanya mengembalikan JSON (422/401) bila diminta via header ini.
         'Accept': 'application/json',
       },
     ),
   );
 
+  static String? _authToken;
+
+  /// Menyimpan token Sanctum agar setiap request API membawa header Bearer.
+  static void setAuthToken(String? token) {
+    _authToken = token;
+    if (token == null || token.isEmpty) {
+      dio.options.headers.remove('Authorization');
+    } else {
+      dio.options.headers['Authorization'] = 'Bearer $token';
+    }
+  }
+
+  static String? get authToken => _authToken;
+
   static Future<Response> getRequest(
     String url, {
     Map<String, dynamic>? params,
-  }) async {
-    try {
-      return await dio.get(url, queryParameters: params);
-    } on DioException {
-      // Dilempar kembali apa adanya agar pemanggil dapat
-      // membedakan status HTTP (422/401/500) dan jenis error jaringan.
-      rethrow;
-    } catch (e) {
-      throw Exception("Failed to load data: $e");
-    }
+    Options? options,
+  }) {
+    return _guard(
+      () => dio.get(url, queryParameters: params, options: options),
+    );
   }
 
   static Future<Response> putRequest(
     String url, {
     Map<String, dynamic>? data,
-  }) async {
-    try {
-      return await dio.put(url, data: data);
-    } on DioException {
-      rethrow;
-    } catch (e) {
-      throw Exception("Failed to update data: $e");
-    }
+    Options? options,
+  }) {
+    return _guard(() => dio.put(url, data: data, options: options));
   }
 
   static Future<Response> postRequest(
     String url,
-    Map<String, dynamic> data,
-  ) async {
+    Map<String, dynamic> data, {
+    Options? options,
+  }) {
+    return _guard(() => dio.post(url, data: data, options: options));
+  }
+
+  static Future<Response> _guard(Future<Response> Function() request) async {
     try {
-      return await dio.post(url, data: data);
-    } on DioException {
-      // Dilempar kembali apa adanya agar pemanggil dapat
-      // membedakan status HTTP (422/401/403/500) dan jenis error jaringan.
-      rethrow;
-    } catch (e) {
-      throw Exception("Failed to send data: $e");
+      return await request();
+    } on DioException catch (error) {
+      throw ApiException.fromDio(error);
     }
   }
 }

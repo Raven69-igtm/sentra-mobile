@@ -10,6 +10,7 @@ class CustomRoundedButton extends StatelessWidget {
   final double horizontalMargin;
   final bool isFullWidth;
   final double iconSize;
+  final bool isLoading;
 
   const CustomRoundedButton({
     super.key,
@@ -21,6 +22,7 @@ class CustomRoundedButton extends StatelessWidget {
     this.horizontalMargin = 20,
     this.isFullWidth = true,
     this.iconSize = 24,
+    this.isLoading = false,
   });
 
   @override
@@ -29,7 +31,7 @@ class CustomRoundedButton extends StatelessWidget {
       width: isFullWidth ? double.infinity : null,
       margin: EdgeInsets.symmetric(horizontal: horizontalMargin),
       child: GestureDetector(
-        onTap: onPressed,
+        onTap: isLoading ? null : onPressed,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           decoration: BoxDecoration(
@@ -60,7 +62,17 @@ class CustomRoundedButton extends StatelessWidget {
             mainAxisSize: isFullWidth ? MainAxisSize.max : MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (icon != null) ...[
+              if (isLoading) ...[
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    color: textColor,
+                    strokeWidth: 2,
+                  ),
+                ),
+                SizedBox(width: 8),
+              ] else if (icon != null) ...[
                 Icon(icon, color: textColor, size: iconSize),
                 SizedBox(width: 8),
               ],
