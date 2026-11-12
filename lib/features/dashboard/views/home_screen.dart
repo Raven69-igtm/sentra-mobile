@@ -7,7 +7,7 @@ import 'package:sentra/features/auth/views/profile_screen.dart';
 class HomeScreen extends StatefulWidget {
   final int initialIndex;
 
-  const HomeScreen({super.key, this.initialIndex = 0});
+  const HomeScreen({Key? key, this.initialIndex = 0}) : super(key: key);
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();

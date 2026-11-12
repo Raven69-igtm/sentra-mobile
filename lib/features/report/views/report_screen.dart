@@ -21,6 +21,22 @@ class LaporanPage extends StatefulWidget {
   _LaporanPageState createState() => _LaporanPageState();
 }
 
+class _AnakFormData {
+  final TextEditingController nama = TextEditingController();
+  final TextEditingController tanggalLahir = TextEditingController();
+  final TextEditingController umur = TextEditingController();
+  String? jenisKelamin;
+  String? pendidikan;
+  String? agama;
+  String? status;
+
+  void dispose() {
+    nama.dispose();
+    tanggalLahir.dispose();
+    umur.dispose();
+  }
+}
+
 class _LaporanPageState extends State<LaporanPage> {
   int _currentStep = 1;
   final LaporanController laporanController = LaporanController();
@@ -32,6 +48,36 @@ class _LaporanPageState extends State<LaporanPage> {
   final TextEditingController _telpform1 = TextEditingController();
   final TextEditingController _alamatform1 = TextEditingController();
   final TextEditingController _hubunganform1 = TextEditingController();
+
+  // Form 1 - Penerima Manfaat
+  bool _penerimaSamaDenganPelapor = true;
+  final TextEditingController _nikPenerima = TextEditingController();
+  final TextEditingController _namaPenerima = TextEditingController();
+  final TextEditingController _tempatLahirPenerima = TextEditingController();
+  final TextEditingController _tanggalLahirPenerima = TextEditingController();
+  final TextEditingController _umurPenerima = TextEditingController();
+  final TextEditingController _pekerjaanPenerima = TextEditingController();
+  final TextEditingController _alamatPenerima = TextEditingController();
+  final TextEditingController _hubunganTerlaporPenerima = TextEditingController();
+  final TextEditingController _telpPenerima = TextEditingController();
+  final TextEditingController _infoTambahanPenerima = TextEditingController();
+  String? _jenisKelaminPenerima;
+  String? _agamaPenerima;
+  String? _pendidikanPenerima;
+
+  // Form 1 - Terlapor (opsional)
+  bool _sertakanTerlapor = false;
+  final TextEditingController _nikTerlapor = TextEditingController();
+  final TextEditingController _namaTerlapor = TextEditingController();
+  final TextEditingController _umurTerlapor = TextEditingController();
+  final TextEditingController _alamatTerlapor = TextEditingController();
+  final TextEditingController _hubunganTerlapor = TextEditingController();
+  final TextEditingController _infoTambahanTerlapor = TextEditingController();
+  String? _jenisKelaminTerlapor;
+
+  // Form 1 - Informasi Anak (opsional)
+  bool _sertakanAnak = false;
+  final List<_AnakFormData> _anakList = [];
 
   // Form 2 - Kronologi Kejadian
   final TextEditingController _kronologiform4 = TextEditingController();
@@ -251,11 +297,56 @@ class _LaporanPageState extends State<LaporanPage> {
       }
     });
 
-    final namaControllers = [_namaform1, _alamatform1, _tempatkejadianform3];
+    final namaControllers = [
+      _namaform1,
+      _alamatform1,
+      _tempatkejadianform3,
+      _namaPenerima,
+      _tempatLahirPenerima,
+      _alamatPenerima,
+      _namaTerlapor,
+      _alamatTerlapor,
+    ];
 
     for (var controller in namaControllers) {
       _addAutoCapitalizeListener(controller);
     }
+  }
+
+  @override
+  void dispose() {
+    for (final controller in [
+      _nikform1,
+      _namaform1,
+      _telpform1,
+      _alamatform1,
+      _hubunganform1,
+      _nikPenerima,
+      _namaPenerima,
+      _tempatLahirPenerima,
+      _tanggalLahirPenerima,
+      _umurPenerima,
+      _pekerjaanPenerima,
+      _alamatPenerima,
+      _hubunganTerlaporPenerima,
+      _telpPenerima,
+      _infoTambahanPenerima,
+      _nikTerlapor,
+      _namaTerlapor,
+      _umurTerlapor,
+      _alamatTerlapor,
+      _hubunganTerlapor,
+      _infoTambahanTerlapor,
+      _kronologiform4,
+      _tanggalController,
+      _tempatkejadianform3,
+    ]) {
+      controller.dispose();
+    }
+    for (final anak in _anakList) {
+      anak.dispose();
+    }
+    super.dispose();
   }
 
   // Validator untuk Form 1: Data Diri
@@ -618,6 +709,103 @@ class _LaporanPageState extends State<LaporanPage> {
     }
   }
 
+  /// Nilai opsional: string kosong dikirim sebagai null agar backend tidak
+  /// menyimpan placeholder palsu.
+  String? _optionalText(TextEditingController controller) {
+    final value = controller.text.trim();
+    return value.isEmpty ? null : value;
+  }
+
+  /// Satu sumber pembentukan payload PPA: setiap bagian diambil dari state
+  /// pihaknya masing-masing, bukan disalin dari pelapor.
+  Map<String, dynamic> _buildLaporanPayload(int idAkun) {
+    final pelaporNik = _nikform1.text.trim();
+    final pelaporNama = _namaform1.text.trim();
+    final pelaporTelepon = _telpform1.text.trim();
+    final pelaporAlamat = _alamatform1.text.trim();
+
+    final pelapor = {
+      'nik': pelaporNik,
+      'nama': pelaporNama,
+      'alamat': pelaporAlamat,
+      'no_telp': pelaporTelepon,
+      'hubungan_dengan_korban': _optionalText(_hubunganform1),
+    };
+
+    // Penerima = pelapor: identitas yang sama, diturunkan dari satu sumber.
+    // Penerima berbeda: seluruh data berasal dari state penerima.
+    final penerima =
+        _penerimaSamaDenganPelapor
+            ? {
+              'nik': pelaporNik,
+              'nama': pelaporNama,
+              'alamat': pelaporAlamat,
+              'notelp': pelaporTelepon,
+            }
+            : {
+              'nik': _optionalText(_nikPenerima),
+              'nama': _optionalText(_namaPenerima),
+              'tempat_lahir': _optionalText(_tempatLahirPenerima),
+              'tanggal_lahir': _optionalText(_tanggalLahirPenerima),
+              'umur': _optionalText(_umurPenerima),
+              'jenis_kelamin': _jenisKelaminPenerima,
+              'pekerjaan': _optionalText(_pekerjaanPenerima),
+              'agama': _agamaPenerima,
+              'alamat': _optionalText(_alamatPenerima),
+              'pendidikan': _pendidikanPenerima,
+              'hubungan_dengan_terlapor': _optionalText(
+                _hubunganTerlaporPenerima,
+              ),
+              'notelp': _optionalText(_telpPenerima),
+              'informasi_tambahan': _optionalText(_infoTambahanPenerima),
+            };
+
+    final terlapor =
+        _sertakanTerlapor
+            ? {
+              'nik': _optionalText(_nikTerlapor),
+              'nama': _optionalText(_namaTerlapor),
+              'umur': _optionalText(_umurTerlapor),
+              'alamat': _optionalText(_alamatTerlapor),
+              'jenis_kelamin': _jenisKelaminTerlapor,
+              'hubungan_dengan_korban': _optionalText(_hubunganTerlapor),
+              'informasi_tambahan': _optionalText(_infoTambahanTerlapor),
+            }
+            : null;
+
+    final informasiAnak =
+        _sertakanAnak
+            ? _anakList
+                .map(
+                  (anak) => {
+                    'nama': _optionalText(anak.nama),
+                    'tanggal_lahir': _optionalText(anak.tanggalLahir),
+                    'umur': _optionalText(anak.umur),
+                    'jenis_kelamin': anak.jenisKelamin,
+                    'pendidikan': anak.pendidikan,
+                    'agama': anak.agama,
+                    'status': anak.status,
+                  },
+                )
+                .toList()
+            : <Map<String, dynamic>>[];
+
+    return {
+      'id_akun': idAkun,
+      'kategori': 'unset',
+      'detail_pelapor': pelapor,
+      'detail_penerima_manfaat': penerima,
+      'detail_terlapor': terlapor,
+      'detail_kasus': {
+        'tanggal': _tanggalController.text.trim(),
+        'waktu_kejadian': (_waktuKejadian ?? DateTime.now()).toIso8601String(),
+        'tempat_kejadian': _tempatkejadianform3.text.trim(),
+        'kronologi': _kronologiform4.text.trim(),
+      },
+      'informasi_anak': informasiAnak,
+    };
+  }
+
   void _showPreviewDialog() async {
     if (!_validateForm3()) return;
 
@@ -636,40 +824,7 @@ class _LaporanPageState extends State<LaporanPage> {
       return;
     }
 
-    Map<String, dynamic> laporanData = {
-      'id_akun': idAkun,
-      'kategori': 'unset',
-      'status': 'dikirim',
-      'detail_pelapor': {
-        'nik': _nikform1.text.trim(),
-        'nama': _namaform1.text.trim(),
-        'alamat': _alamatform1.text.trim(),
-        'hubungan_dengan_korban': '-',
-        'no_telp': _telpform1.text.trim(),
-      },
-      'detail_penerima_manfaat': {
-        'nik': _nikform1.text.trim(),
-        'nama': _namaform1.text.trim(),
-        'Tempat_lahir': null,
-        'tanggal_lahir': null,
-        'umur': null,
-        'jenis_kelamin': null,
-        'pekerjaan': null,
-        'agama': null,
-        'alamat': _alamatform1.text.trim(),
-        'pendidikan': null,
-        'hubungan_dengan_terlapor': null,
-        'notelp': _telpform1.text.trim(),
-        'informasi_tambahan': null,
-      },
-      'detail_kasus': {
-        'tanggal': _tanggalController.text.trim(),
-        'waktu_kejadian': (_waktuKejadian ?? DateTime.now()).toIso8601String(),
-        'tempat_kejadian': _tempatkejadianform3.text.trim(),
-        'kronologi': _kronologiform4.text.trim(),
-      },
-      'informasi_anak': [],
-    };
+    Map<String, dynamic> laporanData = _buildLaporanPayload(idAkun);
 
     showDialog(
       context: context,
@@ -772,6 +927,7 @@ class _LaporanPageState extends State<LaporanPage> {
                           Icons.person_outline,
                           Colors.blue,
                         ),
+                        ..._buildPartyPreviewSections(),
                         SizedBox(height: 16),
 
                         _buildEnhancedPreviewSection(
@@ -1108,6 +1264,115 @@ class _LaporanPageState extends State<LaporanPage> {
     );
   }
 
+  /// Hanya menampilkan field yang benar-benar terisi agar data kosong tidak
+  /// muncul sebagai placeholder "-" pada pratinjau.
+  Map<String, String> _filledPreviewData(Map<String, String?> values) {
+    return {
+      for (final entry in values.entries)
+        if ((entry.value ?? '').trim().isNotEmpty)
+          entry.key: entry.value!.trim(),
+    };
+  }
+
+  List<Widget> _buildPartyPreviewSections() {
+    final widgets = <Widget>[];
+
+    if (_penerimaSamaDenganPelapor) {
+      final rows = _filledPreviewData({
+        'NIK': _nikform1.text,
+        'Nama': _namaform1.text,
+        'No. Telepon': _telpform1.text,
+        'Alamat': _alamatform1.text,
+      });
+      if (rows.isNotEmpty) {
+        widgets.add(const SizedBox(height: 16));
+        widgets.add(
+          _buildIdentitySummary(
+            title: 'Penerima manfaat sama dengan pelapor',
+            rows: rows,
+          ),
+        );
+      }
+    } else {
+      final penerima = _filledPreviewData({
+        'nik': _nikPenerima.text,
+        'nama': _namaPenerima.text,
+        'tempat_lahir': _tempatLahirPenerima.text,
+        'tanggal_lahir': _tanggalLahirPenerima.text,
+        'umur': _umurPenerima.text,
+        'jenis_kelamin': _jenisKelaminPenerima,
+        'pekerjaan': _pekerjaanPenerima.text,
+        'agama': _agamaPenerima,
+        'pendidikan': _pendidikanPenerima,
+        'alamat': _alamatPenerima.text,
+        'hubungan_dengan_terlapor': _hubunganTerlaporPenerima.text,
+        'no_telepon': _telpPenerima.text,
+        'informasi_tambahan': _infoTambahanPenerima.text,
+      });
+      if (penerima.isNotEmpty) {
+        widgets.add(const SizedBox(height: 16));
+        widgets.add(
+          _buildEnhancedPreviewSection(
+            'Penerima Manfaat',
+            penerima,
+            Icons.volunteer_activism_outlined,
+            Colors.indigo,
+          ),
+        );
+      }
+    }
+
+    if (_sertakanTerlapor) {
+      final terlapor = _filledPreviewData({
+        'nik': _nikTerlapor.text,
+        'nama': _namaTerlapor.text,
+        'umur': _umurTerlapor.text,
+        'alamat': _alamatTerlapor.text,
+        'jenis_kelamin': _jenisKelaminTerlapor,
+        'hubungan_dengan_korban': _hubunganTerlapor.text,
+        'informasi_tambahan': _infoTambahanTerlapor.text,
+      });
+      if (terlapor.isNotEmpty) {
+        widgets.add(const SizedBox(height: 16));
+        widgets.add(
+          _buildEnhancedPreviewSection(
+            'Terlapor',
+            terlapor,
+            Icons.gavel_outlined,
+            Colors.deepOrange,
+          ),
+        );
+      }
+    }
+
+    if (_sertakanAnak) {
+      for (var index = 0; index < _anakList.length; index++) {
+        final anak = _anakList[index];
+        final data = _filledPreviewData({
+          'nama': anak.nama.text,
+          'tanggal_lahir': anak.tanggalLahir.text,
+          'umur': anak.umur.text,
+          'jenis_kelamin': anak.jenisKelamin,
+          'pendidikan': anak.pendidikan,
+          'agama': anak.agama,
+          'status': anak.status,
+        });
+        if (data.isEmpty) continue;
+        widgets.add(const SizedBox(height: 16));
+        widgets.add(
+          _buildEnhancedPreviewSection(
+            'Anak ke-${index + 1}',
+            data,
+            Icons.child_care_outlined,
+            Colors.purple,
+          ),
+        );
+      }
+    }
+
+    return widgets;
+  }
+
   Widget _buildChildInfoCard(String title, Map<String, dynamic> data) {
     return Container(
       padding: EdgeInsets.all(12),
@@ -1185,14 +1450,41 @@ class _LaporanPageState extends State<LaporanPage> {
     _alamatform1.clear();
     _telpform1.clear();
     _hubunganform1.clear();
+    _nikPenerima.clear();
+    _namaPenerima.clear();
+    _tempatLahirPenerima.clear();
+    _tanggalLahirPenerima.clear();
+    _umurPenerima.clear();
+    _pekerjaanPenerima.clear();
+    _alamatPenerima.clear();
+    _hubunganTerlaporPenerima.clear();
+    _telpPenerima.clear();
+    _infoTambahanPenerima.clear();
+    _nikTerlapor.clear();
+    _namaTerlapor.clear();
+    _umurTerlapor.clear();
+    _alamatTerlapor.clear();
+    _hubunganTerlapor.clear();
+    _infoTambahanTerlapor.clear();
     _kronologiform4.clear();
     _tanggalController.clear();
     _tempatkejadianform3.clear();
     _waktuKejadian = null;
     _hasRequestedLocation = false;
     _isFetchingLocation = false;
+    for (final anak in _anakList) {
+      anak.dispose();
+    }
+    _anakList.clear();
     setState(() {
       _currentStep = 1;
+      _penerimaSamaDenganPelapor = true;
+      _jenisKelaminPenerima = null;
+      _agamaPenerima = null;
+      _pendidikanPenerima = null;
+      _sertakanTerlapor = false;
+      _jenisKelaminTerlapor = null;
+      _sertakanAnak = false;
     });
   }
 
@@ -1405,6 +1697,15 @@ class _LaporanPageState extends State<LaporanPage> {
                 controller: _alamatform1,
               ),
 
+              SizedBox(height: 8),
+              _buildPenerimaSection(),
+
+              SizedBox(height: 16),
+              _buildTerlaporSection(),
+
+              SizedBox(height: 16),
+              _buildAnakSection(),
+
               SizedBox(height: 20),
             ],
           ),
@@ -1531,6 +1832,850 @@ class _LaporanPageState extends State<LaporanPage> {
       ),
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
     );
+  }
+
+  Widget _buildPenerimaSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildToggleCard(
+          title: 'Penerima Manfaat',
+          subtitle:
+              _penerimaSamaDenganPelapor
+                  ? 'Identitas penerima mengikuti pelapor'
+                  : 'Isi identitas penerima manfaat',
+          icon: Icons.volunteer_activism_outlined,
+          color: Colors.indigo,
+          value: _penerimaSamaDenganPelapor,
+          onChanged: (value) {
+            setState(() => _penerimaSamaDenganPelapor = value);
+          },
+        ),
+        if (_penerimaSamaDenganPelapor)
+          AnimatedBuilder(
+            animation: Listenable.merge([
+              _nikform1,
+              _namaform1,
+              _telpform1,
+              _alamatform1,
+            ]),
+            builder:
+                (context, _) => _buildIdentitySummary(
+                  title: 'Data penerima disalin dari pelapor',
+                  rows: {
+                    'NIK': _nikform1.text.trim(),
+                    'Nama': _namaform1.text.trim(),
+                    'No. Telepon': _telpform1.text.trim(),
+                    'Alamat': _alamatform1.text.trim(),
+                  },
+                ),
+          )
+        else
+          _buildPartyFields(
+            color: Colors.indigo,
+            children: [
+              _buildEnhancedTextField(
+                label: 'NIK Penerima Manfaat',
+                controller: _nikPenerima,
+                keyboardType: TextInputType.number,
+                icon: Icons.credit_card,
+                themeColor: Colors.indigo,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(16),
+                ],
+              ),
+              _buildEnhancedTextField(
+                label: 'Nama Penerima Manfaat',
+                controller: _namaPenerima,
+                keyboardType: TextInputType.name,
+                icon: Icons.person_outline,
+                themeColor: Colors.indigo,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                  LengthLimitingTextInputFormatter(50),
+                ],
+              ),
+              _buildEnhancedTextField(
+                label: 'Tempat Lahir',
+                controller: _tempatLahirPenerima,
+                icon: Icons.location_city_outlined,
+                themeColor: Colors.indigo,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [LengthLimitingTextInputFormatter(100)],
+              ),
+              _buildDateField(
+                label: 'Tanggal Lahir',
+                controller: _tanggalLahirPenerima,
+                themeColor: Colors.indigo,
+              ),
+              _buildEnhancedTextField(
+                label: 'Umur',
+                controller: _umurPenerima,
+                keyboardType: TextInputType.number,
+                icon: Icons.cake_outlined,
+                themeColor: Colors.indigo,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(3),
+                ],
+              ),
+              _buildDropdownField(
+                label: 'Jenis Kelamin',
+                icon: Icons.wc_outlined,
+                themeColor: Colors.indigo,
+                value: _jenisKelaminPenerima,
+                items: const ['Laki-laki', 'Perempuan'],
+                onChanged: (value) {
+                  setState(() => _jenisKelaminPenerima = value);
+                },
+              ),
+              _buildEnhancedTextField(
+                label: 'Pekerjaan',
+                controller: _pekerjaanPenerima,
+                icon: Icons.work_outline,
+                themeColor: Colors.indigo,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [LengthLimitingTextInputFormatter(100)],
+              ),
+              _buildDropdownField(
+                label: 'Agama',
+                icon: Icons.menu_book_outlined,
+                themeColor: Colors.indigo,
+                value: _agamaPenerima,
+                items: const [
+                  'Islam',
+                  'Kristen',
+                  'Katolik',
+                  'Hindu',
+                  'Buddha',
+                  'Konghucu',
+                  'Lainnya',
+                ],
+                onChanged: (value) {
+                  setState(() => _agamaPenerima = value);
+                },
+              ),
+              _buildDropdownField(
+                label: 'Pendidikan',
+                icon: Icons.school_outlined,
+                themeColor: Colors.indigo,
+                value: _pendidikanPenerima,
+                items: const [
+                  'Tidak Sekolah',
+                  'SD',
+                  'SMP',
+                  'SMA',
+                  'Diploma',
+                  'S1',
+                  'S2',
+                  'S3',
+                  'Lainnya',
+                ],
+                onChanged: (value) {
+                  setState(() => _pendidikanPenerima = value);
+                },
+              ),
+              _buildEnhancedTextField(
+                label: 'Alamat Penerima Manfaat',
+                controller: _alamatPenerima,
+                icon: Icons.home_outlined,
+                themeColor: Colors.indigo,
+                maxLines: 2,
+                inputFormatters: [LengthLimitingTextInputFormatter(255)],
+              ),
+              _buildEnhancedTextField(
+                label: 'Hubungan dengan Terlapor',
+                controller: _hubunganTerlaporPenerima,
+                icon: Icons.people_alt_outlined,
+                themeColor: Colors.indigo,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [LengthLimitingTextInputFormatter(100)],
+              ),
+              _buildEnhancedTextField(
+                label: 'No. Telepon Penerima',
+                controller: _telpPenerima,
+                keyboardType: TextInputType.phone,
+                icon: Icons.phone_outlined,
+                themeColor: Colors.indigo,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(15),
+                ],
+              ),
+              _buildEnhancedTextField(
+                label: 'Informasi Tambahan',
+                controller: _infoTambahanPenerima,
+                icon: Icons.notes_outlined,
+                themeColor: Colors.indigo,
+                maxLines: 3,
+                inputFormatters: [LengthLimitingTextInputFormatter(500)],
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildTerlaporSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildToggleCard(
+          title: 'Terlapor (opsional)',
+          subtitle:
+              _sertakanTerlapor
+                  ? 'Isi identitas terlapor jika diketahui'
+                  : 'Aktifkan jika identitas terlapor diketahui',
+          icon: Icons.gavel_outlined,
+          color: Colors.deepOrange,
+          value: _sertakanTerlapor,
+          onChanged: (value) {
+            setState(() => _sertakanTerlapor = value);
+          },
+        ),
+        if (_sertakanTerlapor)
+          _buildPartyFields(
+            color: Colors.deepOrange,
+            children: [
+              _buildEnhancedTextField(
+                label: 'NIK Terlapor',
+                controller: _nikTerlapor,
+                keyboardType: TextInputType.number,
+                icon: Icons.credit_card,
+                themeColor: Colors.deepOrange,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(16),
+                ],
+              ),
+              _buildEnhancedTextField(
+                label: 'Nama Terlapor',
+                controller: _namaTerlapor,
+                keyboardType: TextInputType.name,
+                icon: Icons.person_outline,
+                themeColor: Colors.deepOrange,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+                  LengthLimitingTextInputFormatter(100),
+                ],
+              ),
+              _buildEnhancedTextField(
+                label: 'Umur',
+                controller: _umurTerlapor,
+                keyboardType: TextInputType.number,
+                icon: Icons.cake_outlined,
+                themeColor: Colors.deepOrange,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(3),
+                ],
+              ),
+              _buildEnhancedTextField(
+                label: 'Alamat',
+                controller: _alamatTerlapor,
+                icon: Icons.home_outlined,
+                themeColor: Colors.deepOrange,
+                maxLines: 2,
+                inputFormatters: [LengthLimitingTextInputFormatter(255)],
+              ),
+              _buildDropdownField(
+                label: 'Jenis Kelamin',
+                icon: Icons.wc_outlined,
+                themeColor: Colors.deepOrange,
+                value: _jenisKelaminTerlapor,
+                items: const ['Laki-laki', 'Perempuan'],
+                onChanged: (value) {
+                  setState(() => _jenisKelaminTerlapor = value);
+                },
+              ),
+              _buildEnhancedTextField(
+                label: 'Hubungan dengan Korban',
+                controller: _hubunganTerlapor,
+                icon: Icons.people_alt_outlined,
+                themeColor: Colors.deepOrange,
+                textCapitalization: TextCapitalization.words,
+                inputFormatters: [LengthLimitingTextInputFormatter(100)],
+              ),
+              _buildEnhancedTextField(
+                label: 'Informasi Tambahan',
+                controller: _infoTambahanTerlapor,
+                icon: Icons.notes_outlined,
+                themeColor: Colors.deepOrange,
+                maxLines: 3,
+                inputFormatters: [LengthLimitingTextInputFormatter(255)],
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAnakSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildToggleCard(
+          title: 'Informasi Anak (opsional)',
+          subtitle:
+              _sertakanAnak
+                  ? 'Tambahkan data anak yang terlibat'
+                  : 'Aktifkan jika kasus melibatkan anak',
+          icon: Icons.child_care_outlined,
+          color: Colors.purple,
+          value: _sertakanAnak,
+          onChanged: (value) {
+            setState(() => _sertakanAnak = value);
+          },
+        ),
+        if (_sertakanAnak) ...[
+          if (_anakList.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.purple.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 18,
+                    color: Colors.purple.shade400,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Belum ada data anak. Tekan "Tambah Anak" jika diperlukan.',
+                      style: TextStyle(
+                        fontFamily: 'Mulish',
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ...List.generate(_anakList.length, _buildAnakCard),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _addAnak,
+              icon: const Icon(Icons.add_circle_outline, size: 18),
+              label: const Text('Tambah Anak'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.purple,
+                side: BorderSide(color: Colors.purple.withOpacity(0.4)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                textStyle: const TextStyle(
+                  fontFamily: 'Mulish',
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ] else if (_anakList.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 4),
+            child: Text(
+              '${_anakList.length} data anak tersimpan namun tidak akan dikirim.',
+              style: TextStyle(
+                fontFamily: 'Mulish',
+                fontSize: 11.5,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildAnakCard(int index) {
+    final anak = _anakList[index];
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.purple.withOpacity(0.25)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.child_care,
+                  size: 18,
+                  color: Colors.purple,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Anak ke-${index + 1}',
+                  style: const TextStyle(
+                    fontFamily: 'Mulish',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: Colors.purple,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Hapus data anak',
+                onPressed: () => _removeAnak(index),
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: Colors.red.shade400,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildEnhancedTextField(
+            label: 'Nama Anak',
+            controller: anak.nama,
+            icon: Icons.person_outline,
+            themeColor: Colors.purple,
+            textCapitalization: TextCapitalization.words,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z\s]')),
+              LengthLimitingTextInputFormatter(100),
+            ],
+          ),
+          _buildDateField(
+            label: 'Tanggal Lahir',
+            controller: anak.tanggalLahir,
+            themeColor: Colors.purple,
+          ),
+          _buildEnhancedTextField(
+            label: 'Umur',
+            controller: anak.umur,
+            keyboardType: TextInputType.number,
+            icon: Icons.cake_outlined,
+            themeColor: Colors.purple,
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(3),
+            ],
+          ),
+          _buildDropdownField(
+            label: 'Jenis Kelamin',
+            icon: Icons.wc_outlined,
+            themeColor: Colors.purple,
+            value: anak.jenisKelamin,
+            items: const ['Laki-laki', 'Perempuan'],
+            onChanged: (value) {
+              setState(() => anak.jenisKelamin = value);
+            },
+          ),
+          _buildDropdownField(
+            label: 'Pendidikan',
+            icon: Icons.school_outlined,
+            themeColor: Colors.purple,
+            value: anak.pendidikan,
+            items: const [
+              'Tidak Sekolah',
+              'PAUD',
+              'TK',
+              'SD',
+              'SMP',
+              'SMA',
+              'Lainnya',
+            ],
+            onChanged: (value) {
+              setState(() => anak.pendidikan = value);
+            },
+          ),
+          _buildDropdownField(
+            label: 'Agama',
+            icon: Icons.menu_book_outlined,
+            themeColor: Colors.purple,
+            value: anak.agama,
+            items: const [
+              'Islam',
+              'Kristen',
+              'Katolik',
+              'Hindu',
+              'Buddha',
+              'Konghucu',
+              'Lainnya',
+            ],
+            onChanged: (value) {
+              setState(() => anak.agama = value);
+            },
+          ),
+          _buildDropdownField(
+            label: 'Status Anak',
+            icon: Icons.family_restroom_outlined,
+            themeColor: Colors.purple,
+            value: anak.status,
+            items: const ['Anak Kandung', 'Anak Angkat'],
+            onChanged: (value) {
+              setState(() => anak.status = value);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _addAnak() {
+    if (_anakList.length >= 10) {
+      CustomSnackbar.show(
+        'Maksimal 10 data anak dalam satu laporan',
+        warna: Colors.orange,
+      );
+      return;
+    }
+    setState(() => _anakList.add(_AnakFormData()));
+  }
+
+  void _removeAnak(int index) {
+    final removed = _anakList.removeAt(index);
+    setState(() {});
+    WidgetsBinding.instance.addPostFrameCallback((_) => removed.dispose());
+  }
+
+  Widget _buildToggleCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.22)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: color.withOpacity(0.9),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 11.5,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: value,
+            activeThumbColor: color,
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPartyFields({
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Column(children: children),
+    );
+  }
+
+  Widget _buildIdentitySummary({
+    required String title,
+    required Map<String, String> rows,
+  }) {
+    final entries =
+        rows.entries.where((entry) => entry.value.trim().isNotEmpty).toList();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.indigo.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.indigo.withOpacity(0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.link, size: 16, color: Colors.indigo),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.indigo,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (entries.isEmpty)
+            Text(
+              'Lengkapi data pelapor di atas.',
+              style: TextStyle(
+                fontFamily: 'Mulish',
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+                color: Colors.grey.shade600,
+              ),
+            )
+          else
+            ...entries.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 96,
+                      child: Text(
+                        '${entry.key}:',
+                        style: TextStyle(
+                          fontFamily: 'Mulish',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        entry.value,
+                        style: const TextStyle(
+                          fontFamily: 'Mulish',
+                          fontSize: 12,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String label,
+    required IconData icon,
+    required Color themeColor,
+    required String? value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Mulish',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Row(
+              children: [
+                Icon(icon, color: themeColor, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: value,
+                      isExpanded: true,
+                      hint: Text(
+                        'Pilih $label',
+                        style: TextStyle(
+                          fontFamily: 'Mulish',
+                          fontSize: 14,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontFamily: 'Mulish',
+                        fontSize: 14,
+                        color: Colors.grey[800],
+                      ),
+                      items:
+                          items
+                              .map(
+                                (item) => DropdownMenuItem<String>(
+                                  value: item,
+                                  child: Text(item),
+                                ),
+                              )
+                              .toList(),
+                      onChanged: onChanged,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateField({
+    required String label,
+    required TextEditingController controller,
+    required Color themeColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Mulish',
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: controller,
+            readOnly: true,
+            onTap: () => _pickDate(controller: controller),
+            style: TextStyle(
+              fontFamily: 'Mulish',
+              fontSize: 16,
+              color: Colors.grey[800],
+            ),
+            decoration: InputDecoration(
+              hintText: 'Pilih tanggal',
+              hintStyle: TextStyle(
+                fontFamily: 'Mulish',
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+              filled: true,
+              fillColor: Colors.grey[50],
+              prefixIcon: Icon(
+                Icons.calendar_month_outlined,
+                color: themeColor,
+                size: 20,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: themeColor, width: 2),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 16,
+                horizontal: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickDate({required TextEditingController controller}) async {
+    final now = DateTime.now();
+    final parsed = DateTime.tryParse(controller.text);
+    final initialDate =
+        parsed != null && !parsed.isAfter(now) ? parsed : now;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+    if (picked != null) {
+      setState(() => controller.text = _formatDateForApi(picked));
+    }
   }
 
   Widget _buildFormulir2() {
