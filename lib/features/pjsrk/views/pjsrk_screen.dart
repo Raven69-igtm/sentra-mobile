@@ -10,7 +10,7 @@ import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
-import 'package:sentra/features/report/views/history_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_riwayat.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
 /// Sesuai dengan desain referensi kedua (pixel-accurate & responsif)
@@ -89,7 +89,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     );
   }
 
-  /// Navigasi ke halaman Lihat Laporan Saya (HistoryPage)
+  /// Navigasi ke halaman Lihat Laporan Saya (LaporanSayaScreen)
   void _onLihatLaporanTap() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final userId = userProvider.idAkun;
@@ -97,7 +97,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     if (userId != null && userId > 0) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const PjsrkHistoryScreen()),
+        MaterialPageRoute(builder: (_) => const HistoryPage()),
       );
     } else {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
