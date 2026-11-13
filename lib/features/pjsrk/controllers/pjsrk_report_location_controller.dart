@@ -48,7 +48,7 @@ class PjsrkReportLocationController extends ChangeNotifier {
     patokan: patokanCtrl.text.trim(),
     latitude: latitude,
     longitude: longitude,
-    foto: foto.map((e) => e.path).toList(),
+    foto: List<XFile>.of(foto),
     kontak: kontakCtrl.text.trim(),
   );
 
