@@ -4,38 +4,41 @@ import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/dashboard/views/beranda_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_report_event_screen.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_history_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
+import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
-import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
 
 Widget createTestWidget(Widget child) {
   final userProvider = UserProvider();
-  userProvider.setUser(UserModel(
-    id: 1,
-    nama: 'Rafi',
-    notelp: '081234567890',
-    email: 'rafi@test.com',
-    role: 'masyarakat',
-    alamat: 'Nganjuk',
-    jeniskelamin: 'Laki-laki',
-  ));
+  userProvider.setUser(
+    UserModel(
+      id: 1,
+      nama: 'Rafi',
+      notelp: '081234567890',
+      email: 'rafi@test.com',
+      role: 'masyarakat',
+      alamat: 'Nganjuk',
+      jeniskelamin: 'Laki-laki',
+    ),
+  );
 
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<UserProvider>.value(value: userProvider),
     ],
-    child: MaterialApp(
-      home: child,
-    ),
+    child: MaterialApp(home: child),
   );
 }
 
 void main() {
   group('PJSRK Screen & Components Test', () {
-    testWidgets('PjsrkScreen renders all key components properly',
-        (WidgetTester tester) async {
+    testWidgets('PjsrkScreen renders all key components properly', (
+      WidgetTester tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -43,8 +46,11 @@ void main() {
       await tester.pumpAndSettle();
 
       // 1. Header & Back button
-      expect(find.text('PJSRK'), findsNWidgets(2)); // in Header and in Info Card
-      expect(find.byIcon(Icons.chevron_left_rounded), findsWidgets);
+      expect(
+        find.text('PJSRK'),
+        findsNWidgets(2),
+      ); // in Header and in Info Card
+      expect(find.byIcon(Icons.arrow_back), findsOneWidget);
 
       // 2. Info Card
       expect(find.byType(PjsrkInfoCard), findsOneWidget);
@@ -74,50 +80,130 @@ void main() {
       );
       expect(find.text('Permasalahan Sosial'), findsOneWidget);
       expect(
-        find.text('Form pengaduan permasalahan sosial di lingkungan masyarakat'),
+        find.text(
+          'Form pengaduan permasalahan sosial di lingkungan masyarakat',
+        ),
         findsOneWidget,
       );
 
-      // 5. Report Card
-      expect(find.byType(PjsrkReportCard), findsOneWidget);
-      expect(find.text('Lihat laporan saya'), findsOneWidget);
-      expect(find.text('Pantau status semua pengaduan Anda'), findsOneWidget);
+      // 5. Report Card (Sudah dihapus dari tampilan PJSRK sesuai permintaan)
+      expect(find.text('Lihat laporan saya'), findsNothing);
+      expect(find.text('Pantau status semua pengaduan Anda'), findsNothing);
 
       // 6. Bottom Navigation
       expect(find.byType(PjsrkBottomNav), findsOneWidget);
       expect(find.text('Beranda'), findsOneWidget);
       expect(find.text('Laporan'), findsOneWidget);
-      expect(find.text('Notifikasi'), findsOneWidget);
-      expect(find.text('Profil'), findsOneWidget);
+      expect(find.text('Riwayat'), findsOneWidget);
+      expect(find.text('Notifikasi'), findsNothing);
+      expect(find.text('Profil'), findsNothing);
     });
 
-    testWidgets('Tapping feature cards shows notice snackbar',
-        (WidgetTester tester) async {
+    testWidgets('PJSRK history opens its own history page', (
+      WidgetTester tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(createTestWidget(const PjsrkScreen()));
       await tester.pumpAndSettle();
 
-      // Tap Rehabilitasi Sosial
-      await tester.tap(find.text('Rehabilitasi Sosial'));
+      await tester.tap(find.text('Riwayat'));
       await tester.pumpAndSettle();
-      expect(
-        find.text('Layanan Rehabilitasi Sosial sedang dalam pengembangan'),
-        findsOneWidget,
-      );
 
-      // Tap Pengaduan Bencana
-      await tester.tap(find.text('Pengaduan Bencana'));
+      expect(find.byType(PjsrkHistoryScreen), findsOneWidget);
+      expect(find.text('Riwayat PJSRK'), findsOneWidget);
+      expect(find.text('Data riwayat belum tersedia.'), findsOneWidget);
+      expect(find.text('Riwayat Laporan'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
       await tester.pumpAndSettle();
-      expect(
-        find.text('Layanan Pengaduan Bencana sedang dalam pengembangan'),
-        findsOneWidget,
-      );
+      expect(find.byType(PjsrkScreen), findsOneWidget);
     });
 
-    testWidgets('Navigation from BerandaScreen to PjsrkScreen works',
-        (WidgetTester tester) async {
+    testWidgets(
+      'Tapping Pengaduan Bencana navigates to PjsrkReportEventScreen',
+      (WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(400, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(createTestWidget(const PjsrkScreen()));
+        await tester.pumpAndSettle();
+
+        // Tap Permasalahan Sosial shows development notice
+        await tester.tap(find.text('Permasalahan Sosial'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text('Layanan Permasalahan Sosial sedang dalam pengembangan'),
+          findsOneWidget,
+        );
+
+        // Tap Pengaduan Bencana navigates to PjsrkReportEventScreen
+        await tester.tap(find.text('Pengaduan Bencana'));
+        await tester.pumpAndSettle();
+        expect(find.byType(PjsrkReportEventScreen), findsOneWidget);
+
+        // Header title
+        expect(find.text('Pengaduan Bencana'), findsOneWidget);
+
+        // Stepper
+        expect(find.text('Kejadian'), findsOneWidget);
+        expect(find.text('Lokasi'), findsOneWidget);
+        expect(find.text('Kirim'), findsOneWidget);
+
+        // Labels and Chips
+        expect(find.text('Jenis bencana'), findsOneWidget);
+        expect(find.text('Banjir'), findsOneWidget);
+        expect(find.text('Tanah longsor'), findsOneWidget);
+        expect(find.text('Kebakaran'), findsOneWidget);
+        expect(find.text('Angin kencang'), findsOneWidget);
+        expect(find.text('Gempa bumi'), findsOneWidget);
+        expect(find.text('Lainnya'), findsOneWidget);
+
+        // Date and Time
+        expect(find.text('Tanggal kejadian'), findsOneWidget);
+        expect(find.text('Jam'), findsOneWidget);
+
+        // Impact level
+        expect(find.text('Tingkat dampak'), findsOneWidget);
+        expect(find.text('Ringan'), findsOneWidget);
+        expect(find.text('Sedang'), findsOneWidget);
+        expect(find.text('Berat'), findsOneWidget);
+
+        // Number boxes
+        expect(find.text('Jiwa terdampak'), findsOneWidget);
+        expect(find.text('Rumah rusak'), findsOneWidget);
+
+        // Keterangan
+        expect(find.text('Keterangan bencana'), findsOneWidget);
+
+        // Kebutuhan mendesak
+        expect(find.text('Kebutuhan mendesak'), findsOneWidget);
+        expect(find.text('Evakuasi'), findsOneWidget);
+        expect(find.text('Makanan'), findsOneWidget);
+        expect(find.text('Air bersih'), findsOneWidget);
+
+        // Button
+        expect(find.text('Lanjut'), findsOneWidget);
+
+        // Tap back button returns to PjsrkScreen
+        final backButton = find.byIcon(Icons.arrow_back).first;
+        await tester.tap(backButton);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PjsrkScreen), findsOneWidget);
+        expect(find.byType(PjsrkReportEventScreen), findsNothing);
+
+        // Tap Rehabilitasi Sosial navigates to RehabilitasiSosialFormScreen
+        await tester.tap(find.text('Rehabilitasi Sosial'));
+        await tester.pumpAndSettle();
+        expect(find.byType(RehabilitasiSosialFormScreen), findsOneWidget);
+      },
+    );
+
+    testWidgets('Navigation from BerandaScreen to PjsrkScreen works', (
+      WidgetTester tester,
+    ) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -137,7 +223,7 @@ void main() {
       expect(find.text('Fitur PJSRK'), findsOneWidget);
 
       // Tap back button
-      final backButton = find.byIcon(Icons.chevron_left_rounded).first;
+      final backButton = find.byIcon(Icons.arrow_back).first;
       await tester.tap(backButton);
       await tester.pumpAndSettle();
 

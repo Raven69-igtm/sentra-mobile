@@ -1,88 +1,31 @@
-import 'package:dio/dio.dart';
-import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/auth/models/user_model.dart';
+import 'package:sentra/features/auth/preferences/account_prefs.dart';
 import 'package:sentra/core/network/endpoints.dart';
 
 class LoginRepository {
-  Future<UserModel?> login(String notelp, String password) async {
-    try {
-      Response response = await ApiClient.postRequest(Endpoints.login, {
-        'notelp': notelp,
-        'password': password,
-      });
+  Future<UserModel> login(String notelp, String password) async {
+    final response = await ApiClient.postRequest(Endpoints.login, {
+      'notelp': notelp.trim(),
+      'password': password,
+    });
 
-      if (response.statusCode == 200) {
-        if (response.data['user'] != null) {
-          print(response.data['user']);
-          return UserModel.fromJson(response.data['user']);
-        } else {
-          throw Exception('User data not found');
-        }
-      } else {
-        throw Exception(response.data['message']);
+    final data = response.data;
+    if (data is Map && data['user'] is Map) {
+      final token = data['token'];
+      if (token is String && token.isNotEmpty) {
+        await AkunPrefs.simpanToken(token);
+        ApiClient.setAuthToken(token);
       }
-    } catch (e) {
-      print(e);
-      throw Exception("Login gagal: $e");
-    }
-  }
-
-  Future<Map<String, dynamic>> checkPhone(String notelp) async {
-    try {
-      final response = await ApiClient.getRequest(
-        '/auth/checkphone',
-        params: {'notelp': notelp},
-      );
-
-      return response.data; 
-    } on DioException catch (e) {
-      throw Exception(
-        e.response?.data['message'] ?? 'Gagal mengecek nomor telepon',
+      return UserModel.fromJson(
+        Map<String, dynamic>.from(data['user'] as Map),
       );
     }
-  }
 
-  Future<UserModel?> Biometic(String notelp) async {
-    try {
-      Response response = await ApiClient.postRequest(Endpoints.biometric, {
-        'notelp': notelp,
-      });
-
-      if (response.statusCode == 200) {
-        if (response.data['user'] != null) {
-          print(response.data['user']);
-          return UserModel.fromJson(response.data['user']);
-        } else {
-          throw Exception('User data not found');
-        }
-      } else {
-        throw Exception(response.data['message']);
-      }
-    } catch (e) {
-      print(e);
-      throw Exception("Login gagal: $e");
-    }
-  }
-
-  Future<UserModel?> LoginEmail(String email) async {
-    try {
-      Response response = await ApiClient.postRequest(Endpoints.email, {
-        'email': email,
-      });
-
-      if (response.statusCode == 200) {
-        if (response.data['user'] != null) {
-          print(response.data['user']);
-          return UserModel.fromJson(response.data['user']);
-        } else {
-          throw Exception('User data not found');
-        }
-      } else {
-        throw Exception(response.data['message']);
-      }
-    } catch (e) {
-      print(e);
-      throw Exception("Login gagal: $e");
-    }
+    throw ApiException(
+      message: 'Respons login dari server tidak valid.',
+      statusCode: response.statusCode,
+    );
   }
 }

@@ -6,6 +6,7 @@ import 'package:sentra/features/report/services/search_service.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:sentra/core/utils/app_colors.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
@@ -31,7 +32,19 @@ class _HistoryPageState extends State<HistoryPage> {
   void initState() {
     super.initState();
     userId = Provider.of<UserProvider>(context, listen: false).idAkun;
-    laporanController.getUserReports(userId!);
+    if (userId != null) {
+      laporanController.getUserReports(userId!);
+    }
+  }
+
+  void _reload() {
+    final int? id = userId;
+    if (id == null) return;
+    if (selectedFilter == 'all') {
+      laporanController.getUserReports(id);
+    } else {
+      laporanController.getUserReportsByCategory(id, selectedFilter);
+    }
   }
 
   @override
@@ -49,24 +62,57 @@ class _HistoryPageState extends State<HistoryPage> {
           return _buildShimmerEffect();
         }
 
+        final String listError =
+            errorMessage.isNotEmpty
+                ? errorMessage
+                : (userId == null
+                    ? 'Sesi akun tidak ditemukan. Silakan login ulang.'
+                    : laporanController.errorMessage.value);
+
         return Column(
           children: [
             buildFilterTabs(),
             const SizedBox(height: 8),
             buildSearchField(),
             const SizedBox(height: 8),
-            if (errorMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  errorMessage,
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontFamily: "Mulish",
+            if (listError.isNotEmpty)
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.cloud_off_rounded,
+                          size: 42,
+                          color: Colors.redAccent,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          listError,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontFamily: "Mulish",
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (userId != null)
+                          OutlinedButton.icon(
+                            onPressed: _reload,
+                            icon: const Icon(Icons.refresh_rounded),
+                            label: const Text(
+                              'Coba Lagi',
+                              style: TextStyle(fontFamily: "Mulish"),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            if (errorMessage.isEmpty)
+            if (listError.isEmpty)
               Expanded(
                 child:
                     laporanList.isEmpty
@@ -110,6 +156,20 @@ class _HistoryPageState extends State<HistoryPage> {
             end: Alignment.bottomCenter,
           ),
         ),
+      ),
+      leading: IconButton(
+        tooltip: 'Kembali',
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          final navigator = Navigator.of(context);
+          if (navigator.canPop()) {
+            navigator.pop();
+          } else {
+            navigator.pushReplacement(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
+        },
       ),
       title: Row(
         children: [
@@ -188,11 +248,7 @@ class _HistoryPageState extends State<HistoryPage> {
       selectedFilter = kategori;
       errorMessage = '';
     });
-    if (kategori == "all") {
-      laporanController.getUserReports(userId!);
-    } else {
-      laporanController.getUserReportsByCategory(userId!, kategori);
-    }
+    _reload();
   }
 
   Widget buildSearchField() {
@@ -239,12 +295,17 @@ class _HistoryPageState extends State<HistoryPage> {
               isLoading = true;
               errorMessage = '';
             });
-            final results = await _searchService.fetchSearchResults(
-              value,
-              userId,
-            );
-            if (results != null && results.isNotEmpty) {
-              try {
+            try {
+              if (value.trim().isEmpty) {
+                laporanController.clearSearchResults();
+                _reload();
+                return;
+              }
+              final results = await _searchService.fetchSearchResults(
+                value,
+                userId,
+              );
+              if (results.isNotEmpty) {
                 final transformedResults =
                     results.map((json) {
                       final transformedJson = Map<String, dynamic>.from(json);
@@ -257,21 +318,24 @@ class _HistoryPageState extends State<HistoryPage> {
                       return LaporanModel.fromJson(transformedJson);
                     }).toList();
                 laporanController.updateSearchResults(transformedResults);
-              } catch (e) {
+              } else {
+                laporanController.clearSearchResults();
                 setState(() {
-                  errorMessage = 'Failed to process data: $e';
+                  errorMessage = 'No results for "$value"';
                 });
               }
-            } else {
+            } catch (e) {
               laporanController.clearSearchResults();
               setState(() {
-                errorMessage =
-                    value.isNotEmpty ? 'No results for "$value"' : '';
+                errorMessage = e.toString();
               });
+            } finally {
+              if (mounted) {
+                setState(() {
+                  isLoading = false;
+                });
+              }
             }
-            setState(() {
-              isLoading = false;
-            });
           });
         },
       ),
@@ -441,8 +505,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 if (data['laporan'] != null &&
                     data['laporan'] is Map<String, dynamic>) {
                   laporanData = data['laporan'] as Map<String, dynamic>;
-                }
-                else if (data.containsKey('id_laporan') ||
+                } else if (data.containsKey('id_laporan') ||
                     data.containsKey('detail_pelapor') ||
                     data.containsKey('kategori') ||
                     data.containsKey('status')) {
@@ -786,6 +849,7 @@ class _HistoryPageState extends State<HistoryPage> {
           data: laporan['detail_kasus'],
           fields: [
             {'key': 'tanggal', 'label': 'Tanggal Kejadian'},
+            {'key': 'waktu_kejadian', 'label': 'Waktu Kejadian'},
             {'key': 'tempat_kejadian', 'label': 'Tempat Kejadian'},
             {'key': 'kronologi', 'label': 'Kronologi', 'multiline': 'true'},
           ],
@@ -795,6 +859,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
     return sections;
   }
+
   Widget _buildSectionAnakCard({
     required String title,
     required IconData icon,
@@ -1203,9 +1268,13 @@ class _HistoryPageState extends State<HistoryPage> {
               child: Column(
                 children:
                     fields.map((field) {
-                      final value = data[field['key']]?.toString();
+                      var value = data[field['key']]?.toString();
                       if (value == null || value.isEmpty || value == 'null') {
                         return const SizedBox.shrink();
+                      }
+                      if (field['key'] == 'waktu_kejadian' &&
+                          value.length >= 5) {
+                        value = value.substring(0, 5);
                       }
 
                       return Padding(

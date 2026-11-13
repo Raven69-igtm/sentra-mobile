@@ -16,7 +16,11 @@ class MyApp extends StatelessWidget {
 }
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  /// Saat false, splash hanya menampilkan animasi dan tidak berpindah
+  /// halaman sendiri (dipakai saat memulihkan sesi).
+  final bool autoNavigate;
+
+  const SplashScreen({super.key, this.autoNavigate = true});
 
   @override
   _SplashScreenState createState() => _SplashScreenState();
@@ -60,6 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     Future.delayed(Duration(seconds: 1), () {
+      if (!widget.autoNavigate) return;
       _controller.forward().whenComplete(() {
         Navigator.pushReplacement(
           context,

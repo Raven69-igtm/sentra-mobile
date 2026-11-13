@@ -12,22 +12,27 @@ class NotificationRepository {
     ),
   );
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final List<Map<String, dynamic>> _notifications = [];
+  final List<Map<String, dynamic>> _localNotifications = [];
 
   NotificationRepository() {
     _initializeFCM();
   }
 
   Future<void> _initializeFCM() async {
-    await _fcm.requestPermission();
+    try {
+      await _fcm.requestPermission();
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _handleNotification(message);
-    });
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _handleNotification(message);
+      });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      _handleNotification(message);
-    });
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        _handleNotification(message);
+      });
+    } catch (e) {
+      // FCM init gagal — tidak fatal, abaikan saja
+      print('FCM init error (non-fatal): $e');
+    }
   }
 
   Future<void> updateFCMToken(int? userId, String? fcmToken) async {
@@ -37,7 +42,7 @@ class NotificationRepository {
         data: {'user_id': userId, 'fcm_token': fcmToken ?? ''},
       );
     } catch (e) {
-      print('Error updating FCM token: $e');
+      print('Error updating FCM token (non-fatal): $e');
     }
   }
 
@@ -48,36 +53,90 @@ class NotificationRepository {
         'message': message.notification!.body ?? 'Pesan baru diterima',
         'date': DateTime.now().toIso8601String(),
         'id_laporan': message.data['id_laporan']?.toString() ?? '',
-        'is_read': false,
+        'source':
+            message.data['source'] ??
+            message.data['module'] ??
+            message.data['sumber'] ??
+            '',
+        'category': message.data['category'] ?? message.data['kategori'] ?? '',
+        'type': message.data['type'] ?? message.data['tipe'] ?? '',
+        'status': false,
       };
-      _notifications.insert(0, notification);
+      _localNotifications.insert(0, notification);
     }
   }
 
-  Stream<List<Map<String, dynamic>>> getNotifications(String userId) {
-    return Stream.periodic(Duration(seconds: 5), (_) async {
+  /// Mengambil notifikasi secara berkala.
+  /// Error koneksi akan di-handle secara graceful — mengembalikan list kosong
+  /// agar UI tidak crash, bukan melempar Exception ke stream.
+  Stream<List<Map<String, dynamic>>> getNotifications(String userId) async* {
+    // Pertama: yield data dari local notifications jika ada
+    if (_localNotifications.isNotEmpty) {
+      yield List.from(_localNotifications);
+    }
+
+    // Poll API setiap 10 detik (bukan 5 detik — lebih ringan)
+    while (true) {
+      await Future.delayed(const Duration(seconds: 10));
+
       try {
-        final response = await _dio.get('/notifications', queryParameters: {
-          'user_id': userId,
-        });
+        final response = await _dio.get(
+          '/notifications',
+          queryParameters: {'user_id': userId},
+        );
+
         if (response.statusCode == 200) {
-          final List<dynamic> data = response.data;
-          return data.map((item) => {
-                'id': item['id_notif'].toString(),
-                'title': item['judul'],
-                'message': item['pesan'],
-                'type': item['tipe'],
-                'status': item['status'] == 'terkirim' ? false : true,
-                'date': item['created_at'],
-                'id_akun': item['id_akun'].toString(),
-              }).toList();
-        } else {
-          throw Exception('Gagal memuat notifikasi: ${response.statusCode} - ${response.data}');
+          final List<dynamic> data =
+              response.data is List
+                  ? response.data
+                  : (response.data['data'] ?? []);
+
+          final List<Map<String, dynamic>> apiNotifications =
+              data
+                  .map<Map<String, dynamic>>(
+                    (item) => {
+                      'id': item['id_notif']?.toString() ?? '',
+                      'title': item['judul'] ?? '',
+                      'message': item['pesan'] ?? '',
+                      'type': item['tipe'] ?? '',
+                      'source':
+                          item['source'] ??
+                          item['sumber'] ??
+                          item['module'] ??
+                          item['modul'] ??
+                          '',
+                      'category':
+                          item['category'] ??
+                          item['kategori'] ??
+                          item['tipe'] ??
+                          '',
+                      'status': item['status'] == 'terkirim' ? false : true,
+                      'date': item['created_at'] ?? '',
+                      'id_akun': item['id_akun']?.toString() ?? '',
+                    },
+                  )
+                  .toList();
+
+          // Gabungkan dengan local notifications
+          final merged = [..._localNotifications, ...apiNotifications];
+          yield merged;
         }
+        // Jika status code bukan 200, tidak emit apapun (bukan throw)
+      } on DioException catch (e) {
+        // Connection error — ini wajar jika server tidak tersedia
+        // Log saja, jangan throw ke stream agar UI tidak crash
+        print('Notification fetch error (non-fatal): ${e.message}');
+        // Tetap emit local notifications jika ada
+        if (_localNotifications.isNotEmpty) {
+          yield List.from(_localNotifications);
+        }
+        // Tunggu lebih lama sebelum retry jika ada error
+        await Future.delayed(const Duration(seconds: 20));
       } catch (e) {
-        throw Exception('Gagal memuat notifikasi: $e');
+        print('Unexpected notification error (non-fatal): $e');
+        await Future.delayed(const Duration(seconds: 20));
       }
-    }).asyncExpand((event) => Stream.fromFuture(event));
+    }
   }
 
   Future<void> sendMessage(
@@ -126,7 +185,7 @@ class NotificationRepository {
           'judul': notification['title'],
           'pesan': notification['message'],
           'tipe': notification['type'],
-          'status': notification['status'] ? 'dibaca' : 'terkirim',
+          'status': notification['status'] == true ? 'dibaca' : 'terkirim',
         },
       );
       if (response.statusCode != 200) {

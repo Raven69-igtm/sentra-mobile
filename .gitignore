@@ -56,3 +56,8 @@ lib/firebase_options.dart
 *.jks
 *.keystore
 key.properties
+# Widget Preview related
+.widget_preview/
+
+# Backup lokal sementara (bukan bagian project)
+.local-backup/
