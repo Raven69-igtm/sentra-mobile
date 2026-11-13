@@ -9,8 +9,6 @@ import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
-import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
-import 'package:sentra/features/pjsrk/views/pjsrk_riwayat.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
 /// Sesuai dengan desain referensi kedua (pixel-accurate & responsif)
@@ -73,7 +71,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     );
   }
 
-  /// Navigasi ke halaman Lihat Laporan Saya (LaporanSayaScreen)
   /// Navigasi ke form Rehabilitasi Sosial
   void _onRehabilitasiSosialTap() {
     Navigator.push(
