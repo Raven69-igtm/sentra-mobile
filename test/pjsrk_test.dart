@@ -86,7 +86,7 @@ void main() {
         findsOneWidget,
       );
 
-      // The standalone report-history card is intentionally removed.
+      // 5. Report Card (Sudah dihapus dari tampilan PJSRK sesuai permintaan)
       expect(find.text('Lihat laporan saya'), findsNothing);
       expect(find.text('Pantau status semua pengaduan Anda'), findsNothing);
 

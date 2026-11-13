@@ -5,7 +5,9 @@ import '../models/pjsrk_report_location_model.dart';
 /// CONTROLLER langkah 2 (Lokasi).
 class PjsrkReportLocationController extends ChangeNotifier {
   static const maksFoto = 4;
+  final ImagePicker _picker = ImagePicker();
 
+  // Titik peta.
   double latitude = -7.6051;
   double longitude = 111.9046;
 
@@ -18,6 +20,45 @@ class PjsrkReportLocationController extends ChangeNotifier {
   // Foto bukti dari kamera / galeri (maks 4).
   final List<XFile> foto = [];
 
+  /// Mengambil foto baru langsung dari kamera.
+  Future<void> ambilFoto() async {
+    if (foto.length >= maksFoto) return;
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+      if (file != null) {
+        foto.add(file);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error ambilFoto: $e');
+    }
+  }
+
+  /// Memilih foto dari galeri ponsel.
+  Future<void> pilihDariGaleri() async {
+    if (foto.length >= maksFoto) return;
+    try {
+      final XFile? file = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+      if (file != null) {
+        foto.add(file);
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('Error pilihDariGaleri: $e');
+    }
+  }
+
+  /// Menambah foto yang sudah dipilih dari luar controller.
   void tambahFoto(XFile file) {
     if (foto.length >= maksFoto) return;
     foto.add(file);
@@ -25,8 +66,10 @@ class PjsrkReportLocationController extends ChangeNotifier {
   }
 
   void hapusFoto(int index) {
-    foto.removeAt(index);
-    notifyListeners();
+    if (index >= 0 && index < foto.length) {
+      foto.removeAt(index);
+      notifyListeners();
+    }
   }
 
   /// Mengembalikan pesan error, atau null jika semua benar.
