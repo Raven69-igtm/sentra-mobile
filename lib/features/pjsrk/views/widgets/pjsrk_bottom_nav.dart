@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Bottom Navigation Bar khusus untuk halaman PJSRK
-/// Memiliki 4 tab: Beranda (aktif/hijau), Laporan, Notifikasi, Profil
+/// Bottom Navigation Bar khusus untuk halaman PJSRK.
 class PjsrkBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTabSelected;
@@ -20,10 +19,7 @@ class PjsrkBottomNav extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         border: const Border(
-          top: BorderSide(
-            color: Color(0xFFEEEEEE),
-            width: 1,
-          ),
+          top: BorderSide(color: Color(0xFFEEEEEE), width: 1),
         ),
         boxShadow: [
           BoxShadow(
@@ -42,27 +38,21 @@ class PjsrkBottomNav extends StatelessWidget {
         children: [
           _buildNavItem(
             index: 0,
+            icon: Icons.history_rounded,
+            activeIcon: Icons.history_rounded,
+            label: 'Riwayat',
+          ),
+          _buildNavItem(
+            index: 1,
             icon: Icons.home_outlined,
             activeIcon: Icons.home_rounded,
             label: 'Beranda',
           ),
           _buildNavItem(
-            index: 1,
+            index: 2,
             icon: Icons.description_outlined,
             activeIcon: Icons.description_rounded,
             label: 'Laporan',
-          ),
-          _buildNavItem(
-            index: 2,
-            icon: Icons.notifications_none_rounded,
-            activeIcon: Icons.notifications_rounded,
-            label: 'Notifikasi',
-          ),
-          _buildNavItem(
-            index: 3,
-            icon: Icons.person_outline_rounded,
-            activeIcon: Icons.person_rounded,
-            label: 'Profil',
           ),
         ],
       ),
@@ -114,4 +104,3 @@ class PjsrkBottomNav extends StatelessWidget {
     );
   }
 }
-

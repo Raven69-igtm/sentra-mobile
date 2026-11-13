@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:sentra/core/constants/app_constants.dart';
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/features/chat/models/chat_model.dart';
 import 'package:sentra/features/chat/repositories/chat_repository.dart';
@@ -11,6 +10,8 @@ class ChatController extends ChangeNotifier {
   final ChatRepository _repository = ChatRepository();
   List<Chat> _chats = [];
   WebSocketChannel? _channel;
+  bool _wsReady = false;
+  bool _shouldReconnect = true;
   final Map<int, bool> _typingStatusMap = {};
   Chat? _repliedToChat;
 
@@ -53,10 +54,21 @@ class ChatController extends ChangeNotifier {
   }
 
   void connectToChat(int userId) {
+    _shouldReconnect = true;
     try {
       print('Attempting to connect to WebSocket: ${ApiClient.wsUrl} for userId: $userId');
       _channel = WebSocketChannel.connect(Uri.parse(ApiClient.wsUrl));
-      print('WebSocket connected for userId: $userId');
+      _wsReady = false;
+      _channel!.ready.then(
+        (_) {
+          _wsReady = true;
+          print('WebSocket connected for userId: $userId');
+        },
+        onError: (error) {
+          _wsReady = false;
+          print('WebSocket connection failed for userId $userId: $error');
+        },
+      );
       _channel!.sink.add(
         jsonEncode({
           'type': 'register',
@@ -70,17 +82,26 @@ class ChatController extends ChangeNotifier {
           _onNewMessage(message);
         },
         onError: (error) {
+          _wsReady = false;
           print('WebSocket error for userId $userId: $error');
-          Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+          if (_shouldReconnect) {
+            Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+          }
         },
         onDone: () {
+          _wsReady = false;
           print('WebSocket connection closed for userId $userId');
-          Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+          if (_shouldReconnect) {
+            Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+          }
         },
       );
     } catch (e) {
+      _wsReady = false;
       print('Error connecting to WebSocket for userId $userId: $e');
-      Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+      if (_shouldReconnect) {
+        Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
+      }
     }
   }
 
@@ -217,91 +238,58 @@ class ChatController extends ChangeNotifier {
       );
       _chats.add(localChat);
       notifyListeners();
-      final chat = {
-        'type': 'send_message',
-        'sender_id': senderId,
-        'receiver_id': receiverId,
-        'message': message,
-        'replied_to_id': repliedToId,
-      };
-      print('Sending message to WebSocket: $chat');
-      if (_channel == null) {
-        print('Warning: WebSocket channel is null, falling back to HTTP POST');
-        _fallbackSendMessageHttp(senderId, receiverId, message);
-        return;
-      }
-      try {
-        _channel!.sink.add(jsonEncode(chat));
-        print('Message sent successfully to WebSocket');
-      } catch (e) {
-        print('Error sending message to WebSocket: $e, falling back to HTTP POST');
-        _fallbackSendMessageHttp(senderId, receiverId, message);
-      }
+      // Pesan selalu dikirim lewat REST API agar backend memakai identitas
+      // dari token, bukan sender_id yang dikirim aplikasi.
+      _sendMessageHttp(senderId, receiverId, message, repliedToId);
     } else {
       print('Message is empty, not sending');
     }
   }
 
-  Future<void> _fallbackSendMessageHttp(int senderId, int receiverId, String message) async {
+  Future<void> _sendMessageHttp(
+    int senderId,
+    int receiverId,
+    String message,
+    int? repliedToId,
+  ) async {
     try {
-      final dio = ApiClient.dio;
-      await dio.post('/chats', data: {
-        'sender_id': senderId,
-        'receiver_id': receiverId,
-        'message': message,
-      });
-      print('Fallback HTTP POST chat berhasil');
+      await _repository.sendMessage(
+        receiverId: receiverId,
+        message: message,
+        repliedToId: repliedToId,
+      );
+      print('HTTP POST chat berhasil');
+      // Sinkronkan dengan server agar pesan sementara mendapat id_chat asli.
+      await fetchChats(senderId);
     } catch (e) {
-      print('Fallback HTTP POST chat gagal: $e');
+      print('HTTP POST chat gagal: $e');
     }
   }
 
-  void editMessage(
+  Future<void> editMessage(
     int chatId,
     String newMessage,
     int senderId,
     int receiverId,
-  ) {
-    if (newMessage.isNotEmpty) {
-      final chatData = {
-        'type': 'edit_message',
-        'id_chat': chatId,
-        'new_message': newMessage,
-        // 'senderId': senderId,
-        // 'receiverId': receiverId,
-      };
-      print('Sending edit message to WebSocket: $chatData');
-      if (_channel == null) {
-        print('Error: WebSocket channel is null');
-        return;
-      }
-      try {
-        _channel!.sink.add(jsonEncode(chatData));
-        print('Edit message sent successfully to WebSocket');
-      } catch (e) {
-        print('Error sending edit message to WebSocket: $e');
-      }
-    } else {
+  ) async {
+    if (newMessage.isEmpty) {
       print('Edited message is empty, not sending');
-    }
-  }
-
-  void deleteMessage(int chatId, int senderId) {
-    final chatData = {
-      'type': 'delete_message',
-      'id_chat': chatId,
-      // 'sender_id': senderId,
-    };
-    print('Sending delete message to WebSocket: $chatData');
-    if (_channel == null) {
-      print('Error: WebSocket channel is null');
       return;
     }
     try {
-      _channel!.sink.add(jsonEncode(chatData));
-      print('Delete message sent successfully to WebSocket');
+      await _repository.editMessage(chatId, newMessage);
+      await fetchChats(senderId);
     } catch (e) {
-      print('Error sending delete message to WebSocket: $e');
+      print('Gagal mengubah pesan: $e');
+    }
+  }
+
+  Future<void> deleteMessage(int chatId, int senderId) async {
+    try {
+      await _repository.deleteMessage(chatId);
+      await fetchChats(senderId);
+    } catch (e) {
+      print('Gagal menghapus pesan: $e');
     }
   }
 
@@ -317,6 +305,18 @@ class ChatController extends ChangeNotifier {
   }
 
   void closeConnection() {
+    _shouldReconnect = false;
+    _wsReady = false;
     _channel?.sink.close();
+    _channel = null;
+  }
+
+  /// Membersihkan state chat saat logout / ganti akun.
+  void reset() {
+    closeConnection();
+    _chats = [];
+    _typingStatusMap.clear();
+    _repliedToChat = null;
+    notifyListeners();
   }
 }

@@ -1,18 +1,23 @@
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sentra/features/auth/controllers/profile_controller.dart';
-import 'package:sentra/features/auth/preferences/account_prefs.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/repositories/profile_repository.dart';
+import 'package:sentra/features/auth/services/auth_session.dart';
+import 'package:sentra/features/chat/controllers/chat_controller.dart';
+import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/core/utils/address_field.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:sentra/features/report/controllers/report_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  final VoidCallback? onBack;
+
+  const ProfileScreen({super.key, this.onBack});
 
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
@@ -31,11 +36,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     user = Provider.of<UserProvider>(context, listen: false).user;
-    namaController.text = user?.nama ?? '';
-    jeniskelaminController.text = user?.jeniskelamin ?? '';
-    noHpController.text = user?.notelp ?? '';
-    emailController.text = user?.email ?? '';
-    alamatController.text = user?.alamat ?? '';
+    _fillControllers(user);
+    _refreshFromServer();
+  }
+
+  void _fillControllers(UserModel? data) {
+    namaController.text = data?.nama ?? '';
+    jeniskelaminController.text = data?.jeniskelamin ?? '';
+    noHpController.text = data?.notelp ?? '';
+    emailController.text = data?.email ?? '';
+    alamatController.text = data?.alamat ?? '';
+  }
+
+  Future<void> _refreshFromServer() async {
+    final notelp = user?.notelp ?? '';
+    if (notelp.isEmpty) return;
+
+    try {
+      final fresh = await AuthSession.refreshProfile(notelp);
+      if (!mounted) return;
+
+      if (fresh == null) {
+        await _logout(showMessage: 'Sesi tidak ditemukan. Silakan login kembali.');
+        return;
+      }
+
+      Provider.of<UserProvider>(context, listen: false).setUser(fresh);
+      await AuthSession.persist(fresh);
+      if (!mounted) return;
+      setState(() {
+        user = fresh;
+        _fillControllers(fresh);
+      });
+    } catch (_) {
+      // Offline/gagal jaringan: tetap tampilkan data sesi tersimpan.
+    }
+  }
+
+  Future<void> _logout({String? showMessage}) async {
+    final userProvider = Provider.of<UserProvider>(context, listen: false);
+    final chatController = Provider.of<ChatController>(context, listen: false);
+    userProvider.clearUser();
+    chatController.reset();
+    Get.delete<LaporanController>(force: true);
+    await AuthSession.clear();
+    if (!mounted) return;
+    if (showMessage != null) {
+      CustomSnackbar.show(showMessage, warna: Colors.orange, tinggi: 100);
+    }
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+      (route) => false,
+    );
   }
 
   @override
@@ -43,11 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.didChangeDependencies();
     if (user == null) {
       user = Provider.of<UserProvider>(context, listen: false).user;
-      namaController.text = user?.nama ?? '';
-      jeniskelaminController.text = user?.jeniskelamin ?? '';
-      noHpController.text = user?.notelp ?? '';
-      emailController.text = user?.email ?? '';
-      alamatController.text = user?.alamat ?? '';
+      _fillControllers(user);
     }
   }
 
@@ -138,6 +187,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             Row(
               children: [
+                IconButton(
+                  tooltip: 'Kembali',
+                  onPressed: () {
+                    if (widget.onBack != null) {
+                      widget.onBack!();
+                    } else {
+                      Navigator.maybePop(context);
+                    }
+                  },
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
+                ),
                 Row(
                   children: [
                     Image.asset("assets/logo/Image.png", width: 36, height: 36),
@@ -198,23 +258,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       },
                     );
                     if (confirmLogout == true) {
-                      final userProvider = Provider.of<UserProvider>(
-                        context,
-                        listen: false,
-                      );
-                      userProvider.clearUser();
-                      await Future.delayed(const Duration(milliseconds: 100));
-                      if (mounted) {
-                        GoogleSignIn().signOut();
-                        AkunPrefs.hapusAkun();
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LoginPage(),
-                          ),
-                          (route) => false,
-                        );
-                      }
+                      await _logout();
                     }
                   },
                   icon: const Icon(Icons.logout, color: Colors.white),
@@ -671,20 +715,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
               role: user?.role ?? 'user',
             );
 
-            user = updatedUser;
+            if (updatedUser.id == null) {
+              CustomSnackbar.show(
+                'Sesi tidak valid. Silakan login kembali.',
+                warna: Colors.red,
+              );
+              return;
+            }
+
             final akunController = ProfileController(ProfileRepository());
 
             try {
-              await akunController.updateAkun(user!.id.toString(), updatedUser);
+              await akunController.updateAkun(
+                updatedUser.id.toString(),
+                updatedUser,
+              );
+              if (!mounted) return;
               Provider.of<UserProvider>(
                 context,
                 listen: false,
               ).setUser(updatedUser);
-              CustomSnackbar.show('Berhasil mengupdate profil');
-            } catch (e) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Gagal update: $e')));
+              await AuthSession.persist(updatedUser);
+              if (!mounted) return;
+              setState(() {
+                user = updatedUser;
+              });
+              CustomSnackbar.show(
+                akunController.message ?? 'Berhasil mengupdate profil',
+              );
+            } on ApiException catch (e) {
+              CustomSnackbar.show(e.message, warna: Colors.red);
+              return;
+            } catch (_) {
+              CustomSnackbar.show(
+                akunController.message ?? 'Gagal mengupdate profil',
+                warna: Colors.red,
+              );
               return;
             }
           }

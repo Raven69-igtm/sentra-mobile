@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/notification/controllers/notif_controller.dart';
 import 'package:sentra/core/utils/app_colors.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:intl/intl.dart';
 
 class NotificationPage extends StatefulWidget {
@@ -111,7 +112,7 @@ class _NotificationPageState extends State<NotificationPage>
   }
 
   Widget _buildFilterTabs() {
-    final tabs = ['Semua', 'Notif Pesan', 'Notif Laporan'];
+    final tabs = ['Semua', 'PPA', 'PJSRK', 'Pesan', 'Laporan', 'Lainnya'];
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(25),
@@ -130,13 +131,13 @@ class _NotificationPageState extends State<NotificationPage>
               ),
             ],
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children:
-                tabs.map((tab) {
-                  final isSelected = _selectedFilter == tab;
-                  return Expanded(
-                    child: InkWell(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children:
+                  tabs.map((tab) {
+                    final isSelected = _selectedFilter == tab;
+                    return InkWell(
                       onTap: () {
                         setState(() {
                           _selectedFilter = tab;
@@ -145,7 +146,10 @@ class _NotificationPageState extends State<NotificationPage>
                       },
                       borderRadius: BorderRadius.circular(25),
                       child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
                           color:
                               isSelected
@@ -153,31 +157,53 @@ class _NotificationPageState extends State<NotificationPage>
                                   : Colors.transparent,
                           borderRadius: BorderRadius.circular(25),
                         ),
-                        child: Center(
-                          child: Text(
-                            tab,
-                            style: TextStyle(
-                              fontFamily: 'Mulish',
-                              fontSize: 14,
-                              fontWeight:
-                                  isSelected
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                              color:
-                                  isSelected
-                                      ? Warna.backgroundIjo
-                                      : Colors.grey[600],
-                            ),
+                        child: Text(
+                          tab,
+                          style: TextStyle(
+                            fontFamily: 'Mulish',
+                            fontSize: 13,
+                            fontWeight:
+                                isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color:
+                                isSelected
+                                    ? Warna.backgroundIjo
+                                    : Colors.grey[600],
                           ),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+            ),
           ),
         ),
       ),
     );
+  }
+
+  String _getNotificationCategory(Map<String, dynamic> notification) {
+    final sourceMetadata =
+        [
+          notification['source'],
+          notification['category'],
+          notification['type'],
+          notification['title'],
+          notification['message'],
+          notification['id_laporan'],
+        ].whereType<Object>().join(' ').toLowerCase();
+
+    if (sourceMetadata.contains('pjsrk')) return 'PJSRK';
+    if (sourceMetadata.contains('pppa') ||
+        RegExp(r'\bppa\b').hasMatch(sourceMetadata)) {
+      return 'PPA';
+    }
+
+    final title = notification['title']?.toString().toLowerCase() ?? '';
+    if (title == 'pesan baru' || title.contains('pesan')) return 'Pesan';
+    if (title.contains('laporan') ||
+        notification['id_laporan']?.toString().isNotEmpty == true) {
+      return 'Laporan';
+    }
+    return 'Lainnya';
   }
 
   Color _getIconBackgroundColor(String? title) {
@@ -350,25 +376,13 @@ class _NotificationPageState extends State<NotificationPage>
                     }
 
                     _notifications = List.from(snapshot.data!);
-                    // Apply filter based on _selectedFilter
-                    if (_selectedFilter == 'Notif Pesan') {
+                    if (_selectedFilter != 'Semua') {
                       _notifications =
                           _notifications
                               .where(
                                 (notif) =>
-                                    notif['title']?.toLowerCase() ==
-                                    'pesan baru',
-                              )
-                              .toList();
-                    } else if (_selectedFilter == 'Notif Laporan') {
-                      _notifications =
-                          _notifications
-                              .where(
-                                (notif) =>
-                                    notif['title']?.toLowerCase().contains(
-                                      'laporan',
-                                    ) ??
-                                    false,
+                                    _getNotificationCategory(notif) ==
+                                    _selectedFilter,
                               )
                               .toList();
                     }
@@ -461,7 +475,6 @@ class _NotificationPageState extends State<NotificationPage>
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      automaticallyImplyLeading: false,
       elevation: 0,
       backgroundColor: Colors.transparent,
       flexibleSpace: Container(
@@ -472,6 +485,20 @@ class _NotificationPageState extends State<NotificationPage>
             end: Alignment.bottomCenter,
           ),
         ),
+      ),
+      leading: IconButton(
+        tooltip: 'Kembali',
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () {
+          final navigator = Navigator.of(context);
+          if (navigator.canPop()) {
+            navigator.pop();
+          } else {
+            navigator.pushReplacement(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+            );
+          }
+        },
       ),
       title: Row(
         children: [
@@ -708,100 +735,116 @@ class _NotificationPageState extends State<NotificationPage>
       onDismissed: (direction) => _handleNotificationDismiss(notif),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: isUnread ? () => _markAsReadOptimistic(notif) : null,
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isUnread ? Colors.blue[50] : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isUnread ? Colors.blue[200]! : Colors.grey[200]!,
-                  width: isUnread ? 2 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+        child: GestureDetector(
+          onTap: isUnread ? () => _markAsReadOptimistic(notif) : null,
+          child: Container(
+            decoration: BoxDecoration(
+              color: isUnread ? Colors.blue[50] : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isUnread ? Colors.blue[200]! : Colors.grey[200]!,
+                width: isUnread ? 2 : 1,
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Icon container
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: iconBgColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, color: titleColor, size: 24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Icon container
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: iconBgColor,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 16),
+                    child: Icon(icon, color: titleColor, size: 24),
+                  ),
+                  const SizedBox(width: 16),
 
-                    // Content
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  notif['title'] ?? 'Notifikasi',
-                                  style: TextStyle(
-                                    fontFamily: 'Mulish',
-                                    fontSize: 16,
-                                    fontWeight:
-                                        isUnread
-                                            ? FontWeight.w700
-                                            : FontWeight.w600,
-                                    color: titleColor,
-                                  ),
+                  // Content
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                notif['title'] ?? 'Notifikasi',
+                                style: TextStyle(
+                                  fontFamily: 'Mulish',
+                                  fontSize: 16,
+                                  fontWeight:
+                                      isUnread
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
+                                  color: titleColor,
                                 ),
                               ),
-                              if (isUnread)
-                                Container(
-                                  width: 10,
-                                  height: 10,
-                                  decoration: BoxDecoration(
-                                    color: Colors.red[500],
-                                    shape: BoxShape.circle,
-                                  ),
+                            ),
+                            if (isUnread)
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: Colors.red[500],
+                                  shape: BoxShape.circle,
                                 ),
-                            ],
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatDate(notif['date'] ?? ''),
+                          style: TextStyle(
+                            fontFamily: 'Mulish',
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatDate(notif['date'] ?? ''),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: titleColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            _getNotificationCategory(notif),
                             style: TextStyle(
                               fontFamily: 'Mulish',
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w500,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: titleColor,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            notif['message'] ?? '',
-                            style: TextStyle(
-                              fontFamily: 'Mulish',
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                              height: 1.4,
-                            ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          notif['message'] ?? '',
+                          style: TextStyle(
+                            fontFamily: 'Mulish',
+                            fontSize: 14,
+                            color: Colors.grey[700],
+                            height: 1.4,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),

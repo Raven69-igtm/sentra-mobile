@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
-import 'package:sentra/features/notification/views/notification_screen.dart';
+import 'package:sentra/features/dashboard/views/pppa_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
+import 'package:sentra/features/notification/views/notification_screen.dart';
 
 /// Model data untuk Menu Layanan
 class LayananItem {
@@ -106,12 +107,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
         break;
 
       case 'pppa':
-        // =====================================================================
-        // 👉 3. SAMBUNGKAN KE HALAMAN PPPA:
-        // Contoh:
-        // Navigator.push(context, MaterialPageRoute(builder: (_) => HalamanPPPA()));
-        // =====================================================================
-        _showInteractiveBottomSheet(context, item, null);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const PppaScreen()),
+        );
         break;
 
       default:
@@ -134,6 +133,13 @@ class _BerandaScreenState extends State<BerandaScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const PjsrkScreen()),
+      );
+      return;
+    }
+    if (item.id == 'pppa') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const PppaScreen()),
       );
       return;
     }
@@ -487,7 +493,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 // 👉 Arahkan ke Halaman Notifikasi
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => NotificationPage()),
+                  MaterialPageRoute(builder: (_) => const NotificationPage()),
                 );
               },
               child: Container(

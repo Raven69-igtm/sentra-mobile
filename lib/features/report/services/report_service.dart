@@ -1,47 +1,28 @@
-import 'package:dio/dio.dart';
 import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/api_exception.dart';
 
 class ReportService {
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: '${ApiClient.protocol}://${ApiClient.baseUrl}',
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {'Content-Type': 'application/json'},
-    ),
-  );
-
-  Future<Map<String, Map<String, int>>?> fetchReportStatistics() async {
-    try {
-      final response = await _dio.get('/api/report-statistics');
-      print('Raw response data: ${response.data}');
-      if (response.statusCode == 200) {
-        final jsonData = response.data as Map<String, dynamic>;
-        final data = jsonData['data'] as Map<String, dynamic>;
-        return data.map(
-          (month, stats) => MapEntry(
-            month,
-            (stats as Map<String, dynamic>).map((category, value) {
-              final int count =
-                  value is int
-                      ? value
-                      : (value is double
-                          ? value.toInt()
-                          : int.parse(value.toString()));
-              print(
-                'Parsing month: $month, category: $category, value: $value, type: ${value.runtimeType}, converted: $count',
-              );
-              return MapEntry(category, count);
-            }),
-          ),
-        );
-      } else {
-        print('Failed to fetch statistics: ${response.statusCode}');
-        return null;
-      }
-    } catch (e) {
-      print('Error fetching statistics: $e');
-      return null;
+  Future<Map<String, Map<String, int>>> fetchReportStatistics() async {
+    final response = await ApiClient.getRequest('/report-statistics');
+    final dynamic body = response.data;
+    if (body is! Map || body['data'] is! Map) {
+      throw ApiException(message: 'Respons statistik tidak valid.');
     }
+
+    final Map<String, Map<String, int>> statistics = {};
+    (body['data'] as Map).forEach((month, stats) {
+      if (stats is! Map) return;
+      statistics[month.toString()] = {
+        for (final entry in stats.entries)
+          entry.key.toString(): _toInt(entry.value),
+      };
+    });
+    return statistics;
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

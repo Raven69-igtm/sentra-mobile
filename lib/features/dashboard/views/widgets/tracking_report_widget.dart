@@ -247,10 +247,12 @@ class _TrackingLaporanState extends State<TrackingLaporan> {
           }
         }
       } else if (laporanController.errorMessage.value.isNotEmpty) {
-        CustomSnackbar.show("ID Laporan Tidak Ditemukan", warna: Colors.red);
-        if (Get.overlayContext != null) {
-          Get.snackbar('Error', laporanController.errorMessage.value);
-        }
+        CustomSnackbar.show(
+          laporanController.errorMessage.value,
+          warna: Colors.red,
+          tinggi: 100,
+          icon: Icons.error_outline_rounded,
+        );
       }
     } finally {
       setState(() {
