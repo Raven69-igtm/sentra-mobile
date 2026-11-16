@@ -1,9 +1,11 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:sentra/core/utils/address_field.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
+import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/report/services/quick_report_service.dart';
 import 'package:sentra/features/report/views/widgets/pppa/pppa_success_dialog.dart';
 import 'package:sentra/features/report/views/widgets/pppa/pppa_text_field.dart';
@@ -183,6 +185,10 @@ class _PppaQuickReportScreenState extends State<PppaQuickReportScreen>
       return;
     }
 
+    // Boleh tanpa login: bila user sedang login, laporan tetap tercatat
+    // atas akunnya; bila tidak, backend memakai akun pelapor anonim.
+    final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -190,7 +196,7 @@ class _PppaQuickReportScreenState extends State<PppaQuickReportScreen>
 
     try {
       final result = await _service.kirimLaporanCepat(
-        idAkun: 3,
+        idAkun: idAkun,
         nik: nikController.text,
         nama: namaController.text,
         noTelp: telpController.text,
@@ -246,7 +252,7 @@ class _PppaQuickReportScreenState extends State<PppaQuickReportScreen>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF266E4E), Color(0xFF1E563D)],
+                colors: [Color.fromARGB(255, 45, 138, 96), Color(0xFF1E563D)],
               ),
             ),
           ),

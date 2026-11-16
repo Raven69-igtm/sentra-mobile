@@ -182,7 +182,7 @@ class _CardPjsrkState extends State<CardPjsrk> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          "Buat laporan cepat meliputi permasalahan sosial dan bencana alam.",
+                          "Buat laporan cepat meliputi permasalahan sosial, rehabilitasi sosial dan bencana alam.",
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey.shade600,
@@ -204,6 +204,11 @@ class _CardPjsrkState extends State<CardPjsrk> {
                             ),
                             TagChip(
                               label: "Permasalahan Sosial",
+                              bgColor: Color(0xFFFDF0E6),
+                              textColor: Color(0xFFD36829),
+                            ),
+                            TagChip(
+                              label: "Rehabilitasi Sosial",
                               bgColor: Color(0xFFFDF0E6),
                               textColor: Color(0xFFD36829),
                             ),
@@ -280,43 +285,34 @@ class _CardPjsrkState extends State<CardPjsrk> {
 
                   const SizedBox(height: 4),
 
-                  // Sub-tombol 1: Permasalahan Sosial
+                  // Sub-tombol 1: Permasalahan Sosial (Warna orens cerah polos tanpa gradasi)
                   _buildSubCategoryButton(
                     title: "Permasalahan Sosial",
-                    subtitle: "Gepeng, ODGJ, lansia terlantar, dll.",
+                    subtitle: "ODGJ, lansia terlantar, dll.",
                     icon: Icons.groups_outlined,
-                    gradientColors: const [
-                      Color(0xFFE58742),
-                      Color(0xFFD46927),
-                    ],
+                    backgroundColor: Color(0xFFDE7434),
                     onTap: _openPermasalahanSosial,
                   ),
 
                   const SizedBox(height: 10),
 
-                  // Sub-tombol 2: Rehabilitasi Sosial
+                  // Sub-tombol 2: Rehabilitasi Sosial (Warna orens cerah polos tanpa gradasi)
                   _buildSubCategoryButton(
                     title: "Rehabilitasi Sosial",
                     subtitle: "Tunawisma dan Anak Terlantar",
                     icon: Icons.accessibility_new_rounded,
-                    gradientColors: const [
-                      Color(0xFFDF7434),
-                      Color(0xFFCA5D1F),
-                    ],
+                    backgroundColor:  Color(0xFFDE7434),
                     onTap: _openRehabilitasiSosial,
                   ),
 
                   const SizedBox(height: 10),
 
-                  // Sub-tombol 3: Bencana Alam
+                  // Sub-tombol 3: Bencana Alam (Warna orens cerah polos tanpa gradasi)
                   _buildSubCategoryButton(
                     title: "Bencana Alam",
                     subtitle: "Banjir, longsor, kebakaran, gempa.",
                     icon: Icons.tsunami_rounded,
-                    gradientColors: const [
-                      Color(0xFFD7583F),
-                      Color(0xFFBD4229),
-                    ],
+                    backgroundColor:  Color(0xFFDE7434),
                     onTap: _openBencanaAlam,
                   ),
                 ],
@@ -333,25 +329,21 @@ class _CardPjsrkState extends State<CardPjsrk> {
     );
   }
 
-  /// Helper untuk membangun tombol gradien sub-kategori
+  /// Helper untuk membangun tombol sub-kategori berwarna orens cerah polos tanpa gradasi
   Widget _buildSubCategoryButton({
     required String title,
     required String subtitle,
     required IconData icon,
-    required List<Color> gradientColors,
+    required Color backgroundColor,
     required VoidCallback onTap,
   }) {
     return Container(
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors,
-        ),
+        color: backgroundColor, // Warna orens cerah polos tanpa gradasi
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: gradientColors.last.withOpacity(0.35),
+            color: backgroundColor.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
