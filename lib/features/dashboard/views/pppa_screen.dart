@@ -78,7 +78,9 @@ class _PppaScreenState extends State<PppaScreen> {
   void _openReport() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const LaporanPage()),
+      MaterialPageRoute(
+        builder: (_) => const LaporanPage(openedFromPpa: true),
+      ),
     );
   }
 
