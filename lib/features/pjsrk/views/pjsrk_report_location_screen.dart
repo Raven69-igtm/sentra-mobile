@@ -7,12 +7,12 @@ import 'widgets/pjrsk_font_scope.dart';
 import 'widgets/pjsrk_colors.dart';
 import 'widgets/pjsrk_form_label.dart';
 import 'widgets/pjsrk_gradient_button.dart';
-import 'widgets/pjsrk_map_preview.dart';
 import 'widgets/pjsrk_notice_box.dart';
 import 'widgets/pjsrk_photo_picker.dart';
 import 'widgets/pjsrk_report_app_bar.dart';
 import 'widgets/pjsrk_stepper.dart';
 import 'widgets/pjsrk_text_box.dart';
+import 'widgets/rehab_form_fields.dart';
 
 /// VIEW langkah 2 (Lokasi) pengaduan bencana PJSRK.
 class PjsrkReportLocationScreen extends StatefulWidget {
@@ -44,6 +44,132 @@ class _PjsrkReportLocationScreenState extends State<PjsrkReportLocationScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
+  }
+
+  void _pilihMedia() {
+    if (_c.foto.length >= PjsrkReportLocationController.maksFoto) {
+      _snack('Maksimal ${PjsrkReportLocationController.maksFoto} foto');
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                const Text(
+                  'Unggah Foto Kejadian',
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF252525),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Pilih sumber foto bencana (maksimal 4 foto)',
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 12,
+                    color: Color(0xFF8D9299),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF0E4),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: Color(0xFFD8782E),
+                    ),
+                  ),
+                  title: const Text(
+                    'Ambil Foto',
+                    style: TextStyle(
+                      fontFamily: 'Mulish',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Gunakan kamera untuk mengambil foto bencana',
+                    style: TextStyle(
+                      fontFamily: 'Mulish',
+                      fontSize: 11,
+                      color: Color(0xFF8D9299),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _c.ambilFoto();
+                  },
+                ),
+                const SizedBox(height: 6),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE7F2FF),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.photo_library_rounded,
+                      color: Color(0xFF379AE6),
+                    ),
+                  ),
+                  title: const Text(
+                    'Pilih dari Galeri',
+                    style: TextStyle(
+                      fontFamily: 'Mulish',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Pilih foto dari galeri ponsel',
+                    style: TextStyle(
+                      fontFamily: 'Mulish',
+                      fontSize: 11,
+                      color: Color(0xFF8D9299),
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _c.pilihDariGaleri();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   void _lanjut() {
@@ -87,10 +213,11 @@ class _PjsrkReportLocationScreenState extends State<PjsrkReportLocationScreen> {
                             const SizedBox(height: 14),
 
                             const PjsrkLabel('Titik lokasi bencana'),
-                            PjsrkMapPreview(
-                              addressController: _c.alamatCtrl,
-                              kelurahanController: _c.kelurahanCtrl,
-                              kecamatanController: _c.kecamatanCtrl,
+                            // Peta disamakan dengan form Permasalahan Sosial
+                            // dan Rehabilitasi Sosial (RehabMapField):
+                            // peta OSM + pin + tombol "Lokasi saya".
+                            RehabMapField(
+                              controller: _c.alamatCtrl,
                               onLocationChanged: (lat, lng) {
                                 _c.latitude = lat;
                                 _c.longitude = lng;
@@ -128,11 +255,13 @@ class _PjsrkReportLocationScreenState extends State<PjsrkReportLocationScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            const PjsrkLabel('Foto / video kejadian (maks 4)'),
+                            // Judul & cara ambil foto disamakan dengan
+                            // form Permasalahan Sosial.
+                            const PjsrkLabel('Foto bukti (maks 4)'),
                             PjsrkPhotoPicker(
                               items: _c.foto,
                               max: PjsrkReportLocationController.maksFoto,
-                              onAdd: _c.tambahFoto,
+                              onAdd: _pilihMedia,
                               onRemove: _c.hapusFoto,
                             ),
                             const SizedBox(height: 16),

@@ -1,6 +1,7 @@
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
+import 'package:sentra/features/auth/preferences/account_prefs.dart';
 import 'package:sentra/core/network/endpoints.dart';
 
 class LoginRepository {
@@ -12,6 +13,11 @@ class LoginRepository {
 
     final data = response.data;
     if (data is Map && data['user'] is Map) {
+      final token = data['token'];
+      if (token is String && token.isNotEmpty) {
+        await AkunPrefs.simpanToken(token);
+        ApiClient.setAuthToken(token);
+      }
       return UserModel.fromJson(
         Map<String, dynamic>.from(data['user'] as Map),
       );

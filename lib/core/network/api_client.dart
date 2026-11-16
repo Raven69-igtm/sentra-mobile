@@ -42,6 +42,20 @@ class ApiClient {
     ),
   );
 
+  static String? _authToken;
+
+  /// Menyimpan token Sanctum agar setiap request API membawa header Bearer.
+  static void setAuthToken(String? token) {
+    _authToken = token;
+    if (token == null || token.isEmpty) {
+      dio.options.headers.remove('Authorization');
+    } else {
+      dio.options.headers['Authorization'] = 'Bearer $token';
+    }
+  }
+
+  static String? get authToken => _authToken;
+
   static Future<Response> getRequest(
     String url, {
     Map<String, dynamic>? params,
@@ -62,7 +76,7 @@ class ApiClient {
 
   static Future<Response> postRequest(
     String url,
-    Map<String, dynamic> data, {
+    dynamic data, {
     Options? options,
   }) {
     return _guard(() => dio.post(url, data: data, options: options));

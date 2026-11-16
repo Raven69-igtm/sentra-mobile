@@ -6,8 +6,9 @@ import 'package:sentra/features/auth/preferences/account_prefs.dart';
 
 /// Pengelola sesi aplikasi.
 ///
-/// Backend SENTRA Mobile belum menerbitkan token (Sanctum belum dipakai pada
-/// endpoint mobile), sehingga identitas sesi adalah data akun yang tersimpan.
+/// Login mobile menerbitkan token Sanctum. Token disimpan di preferensi dan
+/// dipasang ke [ApiClient] agar endpoint terproteksi (mis. chat) mengenali
+/// identitas pengguna dari backend, bukan dari payload frontend.
 /// Validasi sesi memakai endpoint yang sudah ada: POST /auth/biometric.
 class AuthSession {
   static const Duration _validateTimeout = Duration(seconds: 5);
@@ -17,6 +18,8 @@ class AuthSession {
     final id = int.tryParse(data['id_akun'] ?? '') ?? 0;
     final notelp = data['notelp'] ?? '';
     if (id <= 0 || notelp.isEmpty) return null;
+
+    ApiClient.setAuthToken(await AkunPrefs.getToken());
 
     return UserModel(
       id: id,
@@ -73,6 +76,11 @@ class AuthSession {
 
       final data = response.data;
       if (data is Map && data['user'] is Map) {
+        final token = data['token'];
+        if (token is String && token.isNotEmpty) {
+          await AkunPrefs.simpanToken(token);
+          ApiClient.setAuthToken(token);
+        }
         return UserModel.fromJson(
           Map<String, dynamic>.from(data['user'] as Map),
         );
@@ -99,5 +107,8 @@ class AuthSession {
     );
   }
 
-  static Future<void> clear() => AkunPrefs.hapusAkun();
+  static Future<void> clear() async {
+    ApiClient.setAuthToken(null);
+    await AkunPrefs.hapusAkun();
+  }
 }
