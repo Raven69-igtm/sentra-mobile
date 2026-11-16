@@ -16,31 +16,10 @@ class HeaderPelaporanCepat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    // Konten utama App Bar dan Teks Hero (Hijau tua polos tanpa gradasi)
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Dekorasi visual lingkaran gradien lembut di pojok kanan atas
-        Positioned(
-          top: -60,
-          right: -40,
-          child: Container(
-            width: 220,
-            height: 220,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  Colors.white.withOpacity(0.12),
-                  Colors.white.withOpacity(0.0),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        // Konten utama App Bar dan Teks Hero
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
             // -----------------------------------------------------------------
             // 1. TOP APP BAR (Tombol Kembali, Judul, Tombol Notifikasi)
             // -----------------------------------------------------------------
@@ -137,9 +116,7 @@ class HeaderPelaporanCepat extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ],
-    );
+        );
   }
 }
 
