@@ -7,12 +7,12 @@ import 'widgets/pjrsk_font_scope.dart';
 import 'widgets/pjsrk_colors.dart';
 import 'widgets/pjsrk_form_label.dart';
 import 'widgets/pjsrk_gradient_button.dart';
-import 'widgets/pjsrk_map_preview.dart';
 import 'widgets/pjsrk_notice_box.dart';
 import 'widgets/pjsrk_photo_picker.dart';
 import 'widgets/pjsrk_report_app_bar.dart';
 import 'widgets/pjsrk_stepper.dart';
 import 'widgets/pjsrk_text_box.dart';
+import 'widgets/rehab_form_fields.dart';
 
 /// VIEW langkah 2 (Lokasi) pengaduan bencana PJSRK.
 class PjsrkReportLocationScreen extends StatefulWidget {
@@ -87,10 +87,11 @@ class _PjsrkReportLocationScreenState extends State<PjsrkReportLocationScreen> {
                             const SizedBox(height: 14),
 
                             const PjsrkLabel('Titik lokasi bencana'),
-                            PjsrkMapPreview(
-                              addressController: _c.alamatCtrl,
-                              kelurahanController: _c.kelurahanCtrl,
-                              kecamatanController: _c.kecamatanCtrl,
+                            // Peta disamakan dengan form Permasalahan Sosial
+                            // dan Rehabilitasi Sosial (RehabMapField):
+                            // peta OSM + pin + tombol "Lokasi saya".
+                            RehabMapField(
+                              controller: _c.alamatCtrl,
                               onLocationChanged: (lat, lng) {
                                 _c.latitude = lat;
                                 _c.longitude = lng;
@@ -128,7 +129,9 @@ class _PjsrkReportLocationScreenState extends State<PjsrkReportLocationScreen> {
                             ),
                             const SizedBox(height: 16),
 
-                            const PjsrkLabel('Foto / video kejadian (maks 4)'),
+                            // Judul & cara ambil foto disamakan dengan
+                            // form Permasalahan Sosial.
+                            const PjsrkLabel('Foto bukti (maks 4)'),
                             PjsrkPhotoPicker(
                               items: _c.foto,
                               max: PjsrkReportLocationController.maksFoto,
