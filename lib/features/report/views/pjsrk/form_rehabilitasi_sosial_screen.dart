@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/pjsrk/repositories/pjsrk_report_repository.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/lokasi_autocomplete_field.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_form_header.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_submit_button.dart';
@@ -69,21 +73,47 @@ class _FormRehabilitasiSosialScreenState
       _isLoading = true;
     });
 
-    // 2. Simulasi proses pengiriman data rehabilitasi sosial ke server
-    await Future.delayed(const Duration(milliseconds: 1000));
+    // 2. Kirim ke backend lewat POST /api/pjsrk/cepat. Boleh tanpa login:
+    //    bila user sudah login, idAkun otomatis ikut terkirim.
+    final int? idAkun =
+        Provider.of<UserProvider>(context, listen: false).idAkun;
 
-    if (!mounted) return;
+    try {
+      final String idLaporan =
+          await PjsrkReportRepository().kirimCepat(
+        idAkun: idAkun,
+        layanan: 'rehabilitasi_sosial',
+        nama: _namaController.text.trim(),
+        telepon: _teleponController.text.trim(),
+        lokasi: _lokasiController.text.trim(),
+        jenis: _jenisController.text.trim(),
+        deskripsi: _deskripsiController.text.trim(),
+      );
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
 
-    // 3. Tampilkan dialog sukses
-    _showSuccessDialog();
+      // 3. Dialog sukses membawa nomor tiket dari server (dibuat trigger DB).
+      _showSuccessDialog(idLaporan);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   /// Dialog konfirmasi bahwa laporan rehabilitasi sosial berhasil terkirim
-  void _showSuccessDialog() {
+  void _showSuccessDialog(String idLaporan) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -127,6 +157,27 @@ class _FormRehabilitasiSosialScreenState
                   color: Colors.grey.shade600,
                   fontFamily: 'Mulish',
                   height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Nomor tiket dari server (RKN...) supaya pelapor bisa melacak.
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F8F0),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBFE7D6)),
+                ),
+                child: Text(
+                  "ID Laporan: $idLaporan",
+                  style: const TextStyle(
+                    color: Color(0xFF2E7D5B),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Mulish',
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
