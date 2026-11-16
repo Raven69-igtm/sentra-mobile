@@ -1,3 +1,5 @@
+import 'package:image_picker/image_picker.dart';
+
 /// MODEL: data langkah 2 (Lokasi) pada pengaduan bencana PJSRK.
 class PjsrkReportLocationModel {
   final String alamat;
@@ -6,7 +8,9 @@ class PjsrkReportLocationModel {
   final String patokan;
   final double latitude;
   final double longitude;
-  final List<String> foto;
+
+  /// Foto bukti hasil kamera / galeri (maks 4).
+  final List<XFile> foto;
   final String kontak;
 
   const PjsrkReportLocationModel({
@@ -27,7 +31,7 @@ class PjsrkReportLocationModel {
         'patokan_lokasi': patokan,
         'latitude': latitude,
         'longitude': longitude,
-        'foto': foto,
+        'foto': foto.map((e) => e.name).toList(),
         'kontak': kontak,
       };
 }

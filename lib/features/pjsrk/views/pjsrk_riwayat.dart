@@ -8,7 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/views/profile_screen.dart';
 import 'package:sentra/features/notification/views/notification_screen.dart';
-import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
+import 'package:sentra/features/pjsrk/views/widgets/laporan_saya_bottom_nav.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/report/models/report_model.dart';
 import 'package:sentra/features/report/services/search_service.dart';
@@ -240,7 +241,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
               ),
 
               // ===== Bottom Navigation =====
-              PjsrkBottomNav(
+              LaporanSayaBottomNav(
                 selectedIndex: 1,
                 onTabSelected: _onBottomNavTapped,
               ),
@@ -396,9 +397,9 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
     final statusInfo = _resolveStatus(laporan.status);
     final dateStr =
         DateFormat('d MMM yyyy', 'id_ID').format(laporan.createdAt);
-    final ticketId = laporan.id.toString().startsWith('SP-')
-        ? laporan.id.toString()
-        : 'SP-${laporan.id}';
+    // Nomor tiket asli dari server (contoh: RKN...). Prefix SP- buatan
+    // aplikasi dihapus agar sama dengan nomor tiket di admin Dinsos.
+    final ticketId = laporan.id.toString();
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
@@ -473,6 +474,54 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
                         height: 1.4,
                       ),
                     ),
+                    if (laporan.lokasi.isNotEmpty ||
+                        laporan.fotoUrls.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          if (laporan.lokasi.isNotEmpty) ...[
+                            const Icon(
+                              Icons.place_outlined,
+                              size: 13,
+                              color: _textGrey,
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                laporan.lokasi,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: _textGrey,
+                                  fontSize: 11,
+                                  fontFamily: 'Mulish',
+                                  fontWeight: FontWeight.w400,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                          if (laporan.fotoUrls.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.image_outlined,
+                              size: 13,
+                              color: _textGrey,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              '${laporan.fotoUrls.length}',
+                              style: const TextStyle(
+                                color: _textGrey,
+                                fontSize: 11,
+                                fontFamily: 'Mulish',
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -572,20 +621,14 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                'Fitur Lapor sedang dikembangkan',
-                style: TextStyle(fontFamily: 'Mulish'),
-              ),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: const Color(0xFF2C3E50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            ),
-          );
+          final navigator = Navigator.of(context);
+          if (navigator.canPop()) {
+            navigator.pop();
+          } else {
+            navigator.pushReplacement(
+              MaterialPageRoute(builder: (_) => const PjsrkScreen()),
+            );
+          }
         },
         borderRadius: BorderRadius.circular(14),
         child: Container(

@@ -23,10 +23,27 @@ class PjsrkReportEventController extends ChangeNotifier {
     'Tenda',
   ];
 
-  // ---------- State (nilai awal sesuai desain Figma) ----------
+  // ---------- State (nilai awal mengikuti waktu saat form dibuka) ----------
   String jenisBencana = 'Banjir';
-  DateTime tanggal = DateTime(2026, 10, 28);
-  TimeOfDay jam = const TimeOfDay(hour: 9, minute: 30);
+
+  /// Waktu sekarang dalam zona WIB (UTC+7) — acuan jam nyata, tidak lagi
+  /// memakai tanggal/jam tetap seperti desain awal.
+  /// Dikembalikan sebagai DateTime lokal berisi angka jam WIB agar
+  /// date/time picker menampilkan nilai yang sama.
+  static DateTime sekarangWib() {
+    final wib = DateTime.now().toUtc().add(const Duration(hours: 7));
+    return DateTime(
+      wib.year,
+      wib.month,
+      wib.day,
+      wib.hour,
+      wib.minute,
+      wib.second,
+    );
+  }
+
+  DateTime tanggal = sekarangWib();
+  TimeOfDay jam = TimeOfDay.fromDateTime(sekarangWib());
   String tingkatDampak = 'Sedang';
   final Set<String> kebutuhan = {'Evakuasi', 'Makanan'};
 

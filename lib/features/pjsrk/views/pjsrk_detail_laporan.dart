@@ -61,8 +61,9 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   }
 
   String get _ticketId {
-    final id = widget.laporan.id.toString();
-    return id.startsWith('SP-') ? id : 'SP-$id';
+    // Nomor tiket apa adanya dari server, sama seperti di admin Dinsos.
+    final id = widget.laporan.id.toString().trim();
+    return id.isEmpty ? '-' : id;
   }
 
   String get _title {
@@ -73,12 +74,43 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   }
 
   String get _location {
+    // Utamakan alamat pada detail_pjsrk agar sama dengan tampilan admin.
+    final pjsrk = _detail?['detail_pjsrk'];
+    if (pjsrk is Map) {
+      final alamat = pjsrk['alamat']?.toString().trim() ?? '';
+      if (alamat.isNotEmpty) return alamat;
+
+      final wilayah = <String>[
+        pjsrk['kelurahan']?.toString().trim() ?? '',
+        pjsrk['kecamatan']?.toString().trim() ?? '',
+      ].where((e) => e.isNotEmpty).join(', ');
+      if (wilayah.isNotEmpty) return wilayah;
+    }
+
+    final kasus = _detail?['detail_kasus'];
+    if (kasus is Map) {
+      final tempat = kasus['tempat_kejadian']?.toString().trim() ?? '';
+      if (tempat.isNotEmpty) return tempat;
+    }
+
     final loc = _detail?['lokasi'] ??
         _detail?['alamat'] ??
-        _detail?['kelurahan'] ??
+        _detail?['kecamatan'] ??
         _detail?['detail_penerima_manfaat']?['alamat'];
     if (loc is String && loc.isNotEmpty) return loc;
     return 'Lokasi belum tersedia';
+  }
+
+  /// Foto lampiran PJSRK: server sudah mengirim URL lengkap pada foto_urls.
+  List<String> get _fotoUrls {
+    final pjsrk = _detail?['detail_pjsrk'];
+    if (pjsrk is! Map) return const [];
+    final urls = pjsrk['foto_urls'];
+    if (urls is! List) return const [];
+    return urls
+        .map((e) => e?.toString() ?? '')
+        .where((e) => e.isNotEmpty)
+        .toList();
   }
 
   _StatusVisual get _statusVisual {
@@ -514,7 +546,10 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   }
 
   Widget _buildPhotoPlaceholders() {
-    final fotos = _detail?['foto'] ?? _detail?['gambar'] ?? _detail?['images'];
+    final urls = _fotoUrls;
+    final fotos = urls.isNotEmpty
+        ? urls
+        : (_detail?['foto'] ?? _detail?['gambar'] ?? _detail?['images']);
     if (fotos is List && fotos.isNotEmpty) {
       return SizedBox(
         height: 72,

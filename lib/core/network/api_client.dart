@@ -76,7 +76,7 @@ class ApiClient {
 
   static Future<Response> postRequest(
     String url,
-    Map<String, dynamic> data, {
+    dynamic data, {
     Options? options,
   }) {
     return _guard(() => dio.post(url, data: data, options: options));
