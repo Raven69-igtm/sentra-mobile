@@ -191,14 +191,21 @@ class _NotificationPageState extends State<NotificationPage>
           notification['id_laporan'],
         ].whereType<Object>().join(' ').toLowerCase();
 
+    final title = notification['title']?.toString().toLowerCase() ?? '';
+
+    // Chat selalu kategori "Pesan", meskipun isi pesannya menyebut PPA/PJSRK.
+    if (notification['source']?.toString().toLowerCase() == 'pesan' ||
+        title == 'pesan baru' ||
+        title.contains('pesan')) {
+      return 'Pesan';
+    }
+
     if (sourceMetadata.contains('pjsrk')) return 'PJSRK';
     if (sourceMetadata.contains('pppa') ||
         RegExp(r'\bppa\b').hasMatch(sourceMetadata)) {
       return 'PPA';
     }
 
-    final title = notification['title']?.toString().toLowerCase() ?? '';
-    if (title == 'pesan baru' || title.contains('pesan')) return 'Pesan';
     if (title.contains('laporan') ||
         notification['id_laporan']?.toString().isNotEmpty == true) {
       return 'Laporan';
@@ -378,13 +385,16 @@ class _NotificationPageState extends State<NotificationPage>
                     _notifications = List.from(snapshot.data!);
                     if (_selectedFilter != 'Semua') {
                       _notifications =
-                          _notifications
-                              .where(
-                                (notif) =>
-                                    _getNotificationCategory(notif) ==
-                                    _selectedFilter,
-                              )
-                              .toList();
+                          _notifications.where((notif) {
+                            final category = _getNotificationCategory(notif);
+                            // "Laporan" = gabungan notifikasi laporan PPA & PJSRK.
+                            if (_selectedFilter == 'Laporan') {
+                              return category == 'PPA' ||
+                                  category == 'PJSRK' ||
+                                  category == 'Laporan';
+                            }
+                            return category == _selectedFilter;
+                          }).toList();
                     }
 
                     _notifications.sort((a, b) {
