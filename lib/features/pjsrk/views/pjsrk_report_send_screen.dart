@@ -47,15 +47,14 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
 
     final error = _c.validasi();
     if (error != null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text(
-            error,
-            style: const TextStyle(fontFamily: 'Mulish'),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ));
+      _snack(error);
+      return;
+    }
+
+    // Kirim atas nama akun yang sedang login (kolom id_akun di API).
+    final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
+    if (idAkun == null || idAkun <= 0) {
+      _snack('Silakan login terlebih dahulu untuk mengirim laporan');
       return;
     }
 
@@ -77,8 +76,12 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
       final nomor = await _c.kirim(idAkun: idAkun);
       if (!mounted) return;
       await _tampilSukses(nomor);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      _snack(e.message, error: true);
     } catch (e) {
       if (!mounted) return;
+<<<<<<< HEAD
       final String message =
           e is ApiException ? e.message : 'Gagal mengirim laporan: $e';
       ScaffoldMessenger.of(context)
@@ -93,7 +96,23 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
             backgroundColor: Colors.red.shade700,
           ),
         );
+=======
+      _snack('Gagal mengirim laporan: $e', error: true);
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
     }
+  }
+
+  /// Snackbar ringkas untuk info maupun pesan gagal.
+  void _snack(String pesan, {bool error = false}) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(pesan, style: const TextStyle(fontFamily: 'Mulish')),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: error ? Colors.red.shade700 : null,
+        ),
+      );
   }
 
   Future<void> _tampilSukses(String nomor) async {

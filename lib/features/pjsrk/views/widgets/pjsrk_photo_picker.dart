@@ -1,11 +1,15 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'pjsrk_colors.dart';
 
-/// Baris [max] kotak foto: yang terisi tampil gambar, sisanya "Tambah".
+/// Baris [max] kotak foto pada Pengaduan Bencana.
+///
+/// Ketuk kotak kosong -> [onAdd] dipanggil (layar pemanggil yang menampilkan
+/// pilihan Kamera / Galeri Foto). Ketuk ikon silang untuk menghapus.
 class PjsrkPhotoPicker extends StatelessWidget {
-  final List<String> items;
+  final List<XFile> items;
   final int max;
   final VoidCallback onAdd;
   final void Function(int index) onRemove;
@@ -21,18 +25,17 @@ class PjsrkPhotoPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(children: [
         for (int i = 0; i < max; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
+          if (i > 0) const SizedBox(width: 12),
           Expanded(
             child: AspectRatio(
               aspectRatio: 1,
               child: i < items.length
                   ? _FilledTile(
-                      index: i,
-                      path: items[i],
+                      file: items[i],
                       onRemove: () => onRemove(i),
                     )
                   : _AddTile(
-                      isFirst: i == 0,
+                      denganKamera: i == 0,
                       onTap: onAdd,
                     ),
             ),
@@ -41,180 +44,96 @@ class PjsrkPhotoPicker extends StatelessWidget {
       ]);
 }
 
-/// Kotak media terisi (menampilkan preview foto asli atau ikon video)
+/// Kotak foto terisi: pratinjau gambar asli hasil kamera / galeri.
 class _FilledTile extends StatelessWidget {
-  final int index;
-  final String path;
+  final XFile file;
   final VoidCallback onRemove;
 
-  const _FilledTile({
-    required this.index,
-    required this.path,
-    required this.onRemove,
-  });
-
-  bool get _isVideo {
-    final lower = path.toLowerCase();
-    return lower.endsWith('.mp4') ||
-        lower.endsWith('.mov') ||
-        lower.endsWith('.avi') ||
-        lower.endsWith('.mkv') ||
-        lower.endsWith('.3gp') ||
-        lower.contains('video');
-  }
-
-  Widget _buildPreview() {
-    if (_isVideo) {
-      return Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF2C3E50), Color(0xFF1A252F)],
-          ),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            const Icon(
-              Icons.play_circle_fill_rounded,
-              size: 32,
-              color: Colors.white,
-            ),
-            Positioned(
-              bottom: 6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.videocam_rounded, size: 10, color: Colors.white),
-                    SizedBox(width: 3),
-                    Text(
-                      'Video',
-                      style: TextStyle(
-                        fontFamily: 'Mulish',
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (kIsWeb) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.network(
-          path,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _fallbackPlaceholder(),
-        ),
-      );
-    }
-
-    final file = File(path);
-    if (file.existsSync()) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Image.file(
-          file,
-          fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _fallbackPlaceholder(),
-        ),
-      );
-    }
-
-    return _fallbackPlaceholder();
-  }
-
-  Widget _fallbackPlaceholder() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        color: const Color(0xFFE2E8F0),
-      ),
-      child: const Center(
-        child: Icon(Icons.photo_camera_outlined, size: 28, color: Color(0xFF64748B)),
-      ),
-    );
-  }
+  const _FilledTile({required this.file, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(child: _buildPreview()),
-        Positioned(
-          top: 4,
-          right: 4,
-          child: GestureDetector(
-            onTap: onRemove,
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              width: 22,
-              height: 22,
-              decoration: const BoxDecoration(
-                color: Colors.black54,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
-            ),
+    return Stack(children: [
+      Positioned.fill(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: FutureBuilder<Uint8List>(
+            future: file.readAsBytes(),
+            builder: (context, snap) {
+              if (snap.hasData) {
+                return Image.memory(
+                  snap.data!,
+                  fit: BoxFit.cover,
+                  gaplessPlayback: true,
+                );
+              }
+              return Container(
+                color: const Color(0xFFE9EEF3),
+                child: const Center(
+                  child: Icon(
+                    Icons.image_outlined,
+                    size: 26,
+                    color: PjsrkColors.muted,
+                  ),
+                ),
+              );
+            },
           ),
         ),
-      ],
-    );
+      ),
+      Positioned(
+        top: 4,
+        right: 4,
+        child: GestureDetector(
+          onTap: onRemove,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: const BoxDecoration(
+              color: Colors.black45,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.close, size: 14, color: Colors.white),
+          ),
+        ),
+      ),
+    ]);
   }
 }
 
-/// Kotak "Tambah" berbingkai putus-putus.
+/// Kotak kosong berbingkai putus-putus.
+/// Slot pertama memakai ikon kamera, slot berikutnya tulisan "Tambah".
 class _AddTile extends StatelessWidget {
-  final bool isFirst;
+  final bool denganKamera;
   final VoidCallback onTap;
 
-  const _AddTile({
-    this.isFirst = false,
-    required this.onTap,
-  });
+  const _AddTile({required this.denganKamera, required this.onTap});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
-        behavior: HitTestBehavior.opaque,
         child: CustomPaint(
           painter: _DashedBorderPainter(),
           child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isFirst ? Icons.photo_camera_outlined : Icons.add_rounded,
-                  size: 26,
-                  color: PjsrkColors.muted,
-                ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(
+                denganKamera ? Icons.photo_camera_outlined : Icons.add,
+                size: 28,
+                color: PjsrkColors.muted,
+              ),
+              if (!denganKamera) ...[
                 const SizedBox(height: 2),
-                Text(
-                  isFirst ? 'Foto' : 'Tambah',
-                  style: const TextStyle(
+                const Text(
+                  'Tambah',
+                  style: TextStyle(
                     fontFamily: 'Mulish',
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: PjsrkColors.muted,
                   ),
                 ),
               ],
-            ),
+            ]),
           ),
         ),
       );

@@ -17,10 +17,10 @@ class PjsrkReportLocationController extends ChangeNotifier {
   final patokanCtrl = TextEditingController();
   final kontakCtrl = TextEditingController(text: '0812 3456 7890');
 
-  // Daftar file foto yang dipilih pengguna (dimulai dari kosong)
-  final List<String> foto = [];
+  // Foto bukti dari kamera / galeri (maks 4).
+  final List<XFile> foto = [];
 
-  /// Mengambil foto baru langsung dari kamera
+  /// Mengambil foto baru langsung dari kamera.
   Future<void> ambilFoto() async {
     if (foto.length >= maksFoto) return;
     try {
@@ -31,7 +31,7 @@ class PjsrkReportLocationController extends ChangeNotifier {
         imageQuality: 85,
       );
       if (file != null) {
-        foto.add(file.path);
+        foto.add(file);
         notifyListeners();
       }
     } catch (e) {
@@ -39,7 +39,7 @@ class PjsrkReportLocationController extends ChangeNotifier {
     }
   }
 
-  /// Memilih foto dari galeri ponsel
+  /// Memilih foto dari galeri ponsel.
   Future<void> pilihDariGaleri() async {
     if (foto.length >= maksFoto) return;
     try {
@@ -50,7 +50,7 @@ class PjsrkReportLocationController extends ChangeNotifier {
         imageQuality: 85,
       );
       if (file != null) {
-        foto.add(file.path);
+        foto.add(file);
         notifyListeners();
       }
     } catch (e) {
@@ -58,10 +58,10 @@ class PjsrkReportLocationController extends ChangeNotifier {
     }
   }
 
-  /// Menambah foto (kompatibilitas pengujian/testing)
-  void tambahFoto([String? path]) {
+  /// Menambah foto yang sudah dipilih dari luar controller.
+  void tambahFoto(XFile file) {
     if (foto.length >= maksFoto) return;
-    foto.add(path ?? 'contoh_${foto.length + 1}');
+    foto.add(file);
     notifyListeners();
   }
 
@@ -91,7 +91,7 @@ class PjsrkReportLocationController extends ChangeNotifier {
     patokan: patokanCtrl.text.trim(),
     latitude: latitude,
     longitude: longitude,
-    foto: List.of(foto),
+    foto: List<XFile>.of(foto),
     kontak: kontakCtrl.text.trim(),
   );
 

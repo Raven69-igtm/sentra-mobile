@@ -185,22 +185,16 @@ class _PppaQuickReportScreenState extends State<PppaQuickReportScreen>
       return;
     }
 
+    // Boleh tanpa login: bila user sedang login, laporan tetap tercatat
+    // atas akunnya; bila tidak, backend memakai akun pelapor anonim.
+    final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
-      final idAkun =
-          Provider.of<UserProvider>(context, listen: false).idAkun;
-      if (idAkun == null) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = 'Silakan login terlebih dahulu untuk mengirim laporan';
-        });
-        return;
-      }
-
       final result = await _service.kirimLaporanCepat(
         idAkun: idAkun,
         nik: nikController.text,
@@ -258,7 +252,7 @@ class _PppaQuickReportScreenState extends State<PppaQuickReportScreen>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF266E4E), Color(0xFF1E563D)],
+                colors: [Color.fromARGB(255, 45, 138, 96), Color(0xFF1E563D)],
               ),
             ),
           ),

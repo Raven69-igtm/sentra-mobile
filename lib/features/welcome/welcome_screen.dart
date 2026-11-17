@@ -30,8 +30,6 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
   late Animation<double> _logoScaleAnimation;
   late Animation<Offset> _logoPositionAnimation;
   late Animation<double> _fadeAnimationTitle;
-  late Animation<double> _fadeAnimationSubtitle;
-  late Animation<double> _fadeAnimationAuthor;
   late Animation<double> _fadeAnimationQuickReport;
   late Animation<double> _fadeAnimationGetStarted;
   late Animation<double> _floatAnimation;
@@ -135,18 +133,6 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
         curve: const Interval(0.7, 0.85, curve: Curves.easeOutCubic),
       ),
     );
-    _fadeAnimationSubtitle = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.75, 0.9, curve: Curves.easeOutCubic),
-      ),
-    );
-    _fadeAnimationAuthor = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.8, 0.95, curve: Curves.easeOutCubic),
-      ),
-    );
 
     // Fade-in tombol
     _fadeAnimationQuickReport = Tween<double>(begin: 0, end: 1).animate(
@@ -247,33 +233,6 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
                               fontFamily: 'Mulish',
                               fontSize: screenWidth * 0.08,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: screenWidth * 0.02),
-                        FadeTransition(
-                          opacity: _fadeAnimationSubtitle,
-                          child: Text(
-                            "(Sistem Entitas Pelaporan dan Tanggap Respons Aksi)",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Mulish',
-                              fontWeight: FontWeight.bold,
-                              fontSize: screenWidth * 0.030,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: screenWidth * 0.02),
-                        FadeTransition(
-                          opacity: _fadeAnimationAuthor,
-                          child: Text(
-                            "By. P3A Nganjuk",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: screenWidth * 0.035,
-                              fontFamily: "Mulish",
                               color: Colors.white,
                             ),
                           ),

@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+<<<<<<< HEAD
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/pjsrk/models/pjsrk_rehab_model.dart';
 import 'package:sentra/features/pjsrk/repositories/pjsrk_rehab_repository.dart';
+=======
+import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/dashboard/views/home_screen.dart';
+import 'package:sentra/features/pjsrk/views/laporan_sukses_screen.dart';
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_chips.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_fields.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_foto.dart';
@@ -44,6 +53,9 @@ class _RehabilitasiSosialFormScreenState
   String kondisi = 'Sakit';
   bool rahasia = true;
 
+  // true saat laporan sedang dikirim ke API (menahan tap ganda)
+  bool _sending = false;
+
   // Koordinat yang dipilih di peta (null = belum dipilih)
   double? lat;
   double? lng;
@@ -80,14 +92,25 @@ class _RehabilitasiSosialFormScreenState
   }
 
   Future<void> _submit() async {
+<<<<<<< HEAD
     if (_isLoading) return;
+=======
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
     if (lokasiC.text.trim().isEmpty && lat == null) {
-      return _snack('Lokasi wajib diisi (ketuk peta atau "Lokasi saya")');
+      _snack('Lokasi wajib diisi (ketuk peta atau "Lokasi saya")');
+      return;
     }
-    if (ciriC.text.trim().isEmpty) return _snack('Ciri-ciri wajib diisi');
-    if (kontakC.text.trim().isEmpty) return _snack('Kontak wajib diisi');
+    if (ciriC.text.trim().isEmpty) {
+      _snack('Ciri-ciri wajib diisi');
+      return;
+    }
+    if (kontakC.text.trim().isEmpty) {
+      _snack('Kontak wajib diisi');
+      return;
+    }
 
     final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
+<<<<<<< HEAD
     if (idAkun == null) return _snack('Silakan login terlebih dahulu');
 
     final data = PjsrkRehabModel(
@@ -172,6 +195,112 @@ class _RehabilitasiSosialFormScreenState
 
     if (!mounted) return;
     Navigator.of(context).pop();
+=======
+    if (idAkun == null || idAkun <= 0) {
+      _snack('Silakan login terlebih dahulu untuk mengirim laporan');
+      return;
+    }
+
+    FocusScope.of(context).unfocus();
+    setState(() => _sending = true);
+
+    try {
+      // Form multipart disusun manual. FormData.fromMap mengirim daftar berkas
+      // dengan nama kunci yang sama ("foto"), sehingga PHP hanya menyisakan
+      // satu berkas dan API menolak dengan "The foto field must be an array".
+      // Kunci "foto[]" membuat PHP membentuk array berkas sesuai validasi API.
+      final FormData form = FormData();
+      form.fields.addAll(<MapEntry<String, String>>[
+        MapEntry('id_akun', idAkun.toString()),
+        MapEntry('jenis_rehabilitasi', jenis),
+        MapEntry('jumlah_penerima', jumlah.toString()),
+        MapEntry('jenis_kelamin', gender),
+        MapEntry('kelompok_usia', usia),
+        MapEntry('kondisi_saat_ditemukan', kondisi),
+        MapEntry('ciri_ciri', ciriC.text.trim()),
+        MapEntry('rahasia', rahasia ? '1' : '0'),
+        MapEntry('alamat', lokasiC.text.trim()),
+        MapEntry('kontak', kontakC.text.trim()),
+      ]);
+
+      if (lat != null && lng != null) {
+        form.fields.add(MapEntry('latitude', lat.toString()));
+        form.fields.add(MapEntry('longitude', lng.toString()));
+      }
+
+      final foto = <MultipartFile>[];
+      for (final photo in photos) {
+        if (photo == null) continue;
+        final nama = _namaFileFoto(photo.name);
+        final file = MultipartFile.fromBytes(
+          await photo.readAsBytes(),
+          filename: nama,
+          contentType: _tipeFoto(nama),
+        );
+        foto.add(file);
+        form.files.add(MapEntry('foto[]', file));
+      }
+
+      final response = await ApiClient.postRequest(
+        '/pjsrk/rehabilitasi',
+        form,
+      );
+
+      final idLaporan = _bacaIdLaporan(response.data);
+      if (!mounted) return;
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => LaporanSuksesScreen(
+            reportData: {
+              'id_laporan': idLaporan,
+              'nomor_tiket': idLaporan,
+              'jenis_rehabilitasi': jenis,
+              'alamat': lokasiC.text.trim(),
+              'jumlah_foto': foto.length,
+            },
+            nomorTiket: idLaporan.isEmpty ? null : idLaporan,
+            tanggalWaktu: DateTime.now(),
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      if (mounted) _snack(e.message);
+    } catch (_) {
+      if (mounted) _snack('Gagal mengirim laporan. Silakan coba lagi.');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  /// Nomor tiket asli dibuat trigger database (contoh: RKN...), bukan lagi
+  /// dibuat di aplikasi supaya sama dengan nomor tiket admin Dinsos.
+  String _bacaIdLaporan(dynamic body) {
+    if (body is Map && body['data'] is Map) {
+      return (body['data'] as Map)['id_laporan']?.toString() ?? '';
+    }
+    return '';
+  }
+
+  /// Pastikan nama berkas punya ekstensi gambar agar server menyimpannya
+  /// dengan ekstensi yang benar.
+  String _namaFileFoto(String name) {
+    final lower = name.toLowerCase();
+    final valid = lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp');
+    if (valid) return name;
+    return 'foto-${DateTime.now().millisecondsSinceEpoch}.jpg';
+  }
+
+  /// Tipe konten berkas agar header multipart sesuai ekstensi gambarnya.
+  DioMediaType _tipeFoto(String nama) {
+    final lower = nama.toLowerCase();
+    if (lower.endsWith('.png')) return DioMediaType('image', 'png');
+    if (lower.endsWith('.webp')) return DioMediaType('image', 'webp');
+    return DioMediaType('image', 'jpeg');
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
   }
 
   @override
@@ -310,7 +439,11 @@ class _RehabilitasiSosialFormScreenState
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
+<<<<<<< HEAD
                         onPressed: _isLoading ? null : _submit,
+=======
+                        onPressed: _sending ? null : _submit,
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _orange,
                           foregroundColor: Colors.white,
@@ -319,7 +452,11 @@ class _RehabilitasiSosialFormScreenState
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
+<<<<<<< HEAD
                         child: _isLoading
+=======
+                        child: _sending
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
                             ? const SizedBox(
                                 width: 22,
                                 height: 22,

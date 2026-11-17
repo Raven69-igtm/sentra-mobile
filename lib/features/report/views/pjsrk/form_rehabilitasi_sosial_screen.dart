@@ -3,7 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
+<<<<<<< HEAD
 import 'package:sentra/features/pjsrk/repositories/pjsrk_quick_report_repository.dart';
+=======
+import 'package:sentra/features/pjsrk/repositories/pjsrk_report_repository.dart';
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
 import 'package:sentra/features/report/views/pjsrk/widgets/lokasi_autocomplete_field.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_form_header.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_submit_button.dart';
@@ -94,6 +98,7 @@ class _FormRehabilitasiSosialScreenState
       _isLoading = true;
     });
 
+<<<<<<< HEAD
     // 3. Kirim laporan rehabilitasi sosial ke server SENTRA
     try {
       final nomor = await _repository.kirim(
@@ -108,10 +113,31 @@ class _FormRehabilitasiSosialScreenState
 
       if (!mounted) return;
 
+=======
+    // 2. Kirim ke backend lewat POST /api/pjsrk/cepat. Boleh tanpa login:
+    //    bila user sudah login, idAkun otomatis ikut terkirim.
+    final int? idAkun =
+        Provider.of<UserProvider>(context, listen: false).idAkun;
+
+    try {
+      final String idLaporan =
+          await PjsrkReportRepository().kirimCepat(
+        idAkun: idAkun,
+        layanan: 'rehabilitasi_sosial',
+        nama: _namaController.text.trim(),
+        telepon: _teleponController.text.trim(),
+        lokasi: _lokasiController.text.trim(),
+        jenis: _jenisController.text.trim(),
+        deskripsi: _deskripsiController.text.trim(),
+      );
+
+      if (!mounted) return;
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
       setState(() {
         _isLoading = false;
       });
 
+<<<<<<< HEAD
       // 4. Tampilkan dialog sukses beserta nomor laporan
       _showSuccessDialog(nomor);
     } catch (error) {
@@ -129,6 +155,18 @@ class _FormRehabilitasiSosialScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(pesan),
+=======
+      // 3. Dialog sukses membawa nomor tiket dari server (dibuat trigger DB).
+      _showSuccessDialog(idLaporan);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
           backgroundColor: Colors.redAccent,
           duration: const Duration(seconds: 3),
         ),
@@ -137,7 +175,11 @@ class _FormRehabilitasiSosialScreenState
   }
 
   /// Dialog konfirmasi bahwa laporan rehabilitasi sosial berhasil terkirim
+<<<<<<< HEAD
   void _showSuccessDialog(String nomor) {
+=======
+  void _showSuccessDialog(String idLaporan) {
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -183,6 +225,7 @@ class _FormRehabilitasiSosialScreenState
                   height: 1.4,
                 ),
               ),
+<<<<<<< HEAD
               if (nomor.trim().isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Container(
@@ -219,6 +262,29 @@ class _FormRehabilitasiSosialScreenState
                   ),
                 ),
               ],
+=======
+              const SizedBox(height: 12),
+
+              // Nomor tiket dari server (RKN...) supaya pelapor bisa melacak.
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F8F0),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBFE7D6)),
+                ),
+                child: Text(
+                  "ID Laporan: $idLaporan",
+                  style: const TextStyle(
+                    color: Color(0xFF2E7D5B),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'Mulish',
+                  ),
+                ),
+              ),
+>>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,

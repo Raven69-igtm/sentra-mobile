@@ -1,8 +1,8 @@
-import 'package:sentra/core/network/api_client.dart';
+import 'package:dio/dio.dart';
+import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/report/models/report_model.dart';
 import 'package:sentra/features/report/models/statistic_model.dart';
 import 'package:sentra/features/report/repositories/report_repository.dart';
-import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:sentra/features/report/services/detail_service.dart';
 
@@ -26,33 +26,11 @@ class LaporanController extends GetxController {
   var isLoading = false.obs;
   var errorMessage = ''.obs;
 
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: '${ApiClient.protocol}://${ApiClient.baseUrl}',
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {'Content-Type': 'application/json'},
-    ),
-  );
-
   Future<void> getUserReports(int userId) async {
     try {
       isLoading.value = true;
-      final response = await _dio.get(
-        '/api/user-reports/$userId'
-      );
-      if (response.statusCode == 200) {
-        final List<dynamic> data =
-            response.data is List ? response.data : response.data['laporan'] ?? [];
-        laporanList.value =
-            data.map((json) => LaporanModel.fromJson(json)).toList();
-      } else {
-        laporanList.clear();
-      }
+      laporanList.value = await _laporanRepo.getUserReports(userId);
     } catch (e) {
-      if (e is DioException) {
-        print('Reports fetch error: ${e.type}, status: ${e.response?.statusCode}');
-      }
       laporanList.clear();
     } finally {
       isLoading.value = false;
@@ -62,33 +40,23 @@ class LaporanController extends GetxController {
   Future<void> getUserReportsByCategory(int userId, String category) async {
     try {
       isLoading.value = true;
-      final response = await _dio.get(
-        '/api/user-reports-by-category/$userId/$category',
+      laporanByCategoryList.value = await _laporanRepo.getUserReportsByCategory(
+        userId,
+        category,
       );
-      if (response.statusCode == 200) {
-        final List<dynamic> data =
-            response.data is List ? response.data : response.data['laporan'] ?? [];
-        laporanByCategoryList.value =
-            data.map((json) => LaporanModel.fromJson(json)).toList();
-      } else {
-        laporanByCategoryList.clear();
-      }
     } catch (e) {
-      if (e is DioException) {
-        print('Reports fetch error: ${e.type}, status: ${e.response?.statusCode}');
-      }
       laporanByCategoryList.clear();
     } finally {
       isLoading.value = false;
     }
   }
-   final RxBool detailLoading = false.obs;
+
+  final RxBool detailLoading = false.obs;
   final RxString detailError = ''.obs;
   final Rxn<Map<String, dynamic>> selectedReportDetail =
       Rxn<Map<String, dynamic>>();
 
-  final ReportDetailService _detailService = ReportDetailService(
-  );
+  final ReportDetailService _detailService = ReportDetailService();
 
   Future<Map<String, dynamic>?> getReportDetailById(
     String idLaporan, {
@@ -97,9 +65,7 @@ class LaporanController extends GetxController {
     try {
       detailLoading.value = true;
       detailError.value = '';
-      final result = await _detailService.fetchReportDetailById(
-        idLaporan,
-      );
+      final result = await _detailService.fetchReportDetailById(idLaporan);
       selectedReportDetail.value = result;
       return result;
     } catch (e) {
@@ -120,8 +86,7 @@ class LaporanController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
       final hasil = await _laporanRepo.postReport(laporanData);
-      final bool terkonfirmasi =
-          hasil is Map && hasil['success'] == true;
+      final bool terkonfirmasi = hasil is Map && hasil['success'] == true;
       if (!terkonfirmasi) {
         // Respons 2xx tetapi isi ambigu — jangan menyatakan laporan tersimpan.
         throw LaporanException(
@@ -131,6 +96,10 @@ class LaporanController extends GetxController {
       return hasil;
     } on LaporanException {
       rethrow;
+    } on ApiException catch (e) {
+      final pesan = _pesanErrorDariApi(e);
+      errorMessage.value = pesan;
+      throw LaporanException(pesan);
     } on DioException catch (e) {
       final pesan = _pesanErrorDariDio(e);
       errorMessage.value = pesan;
@@ -140,6 +109,33 @@ class LaporanController extends GetxController {
       throw LaporanException('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  String _pesanErrorDariApi(ApiException e) {
+    if (e.statusCode == 422 && e.errors != null && e.errors!.isNotEmpty) {
+      final first = e.errors!.values.first;
+      final detail =
+          first is List && first.isNotEmpty
+              ? first.first.toString()
+              : first.toString();
+      return 'Data belum sesuai: $detail';
+    }
+
+    switch (e.statusCode) {
+      case 401:
+      case 403:
+        return 'Sesi Anda telah berakhir. Silakan login kembali.';
+      case 404:
+        return 'Layanan pengaduan tidak ditemukan. Silakan coba lagi.';
+      case 422:
+        return 'Data laporan belum lengkap. Periksa kembali isian Anda.';
+      case 500:
+      case 502:
+      case 503:
+        return 'Terjadi kesalahan pada server. Silakan coba beberapa saat lagi.';
+      default:
+        return e.message;
     }
   }
 
@@ -166,9 +162,10 @@ class LaporanController extends GetxController {
           final errors = data['errors'] as Map;
           if (errors.isNotEmpty) {
             final first = errors.values.first;
-            final pesan = (first is List && first.isNotEmpty)
-                ? first.first.toString()
-                : first.toString();
+            final pesan =
+                (first is List && first.isNotEmpty)
+                    ? first.first.toString()
+                    : first.toString();
             return 'Data belum sesuai: $pesan';
           }
         }
@@ -190,14 +187,13 @@ class LaporanController extends GetxController {
         return 'Gagal mengirim laporan${statusCode != null ? ' (kode $statusCode)' : ''}. Silakan coba lagi.';
     }
   }
+
   void updateSearchResults(List<LaporanModel> results) {
-    laporanList.assignAll(
-      results,
-    );
+    laporanList.assignAll(results);
   }
 
   void clearSearchResults() {
-    laporanList.clear(); 
+    laporanList.clear();
   }
 
   Future<void> trackingReport(String trackingCode) async {
