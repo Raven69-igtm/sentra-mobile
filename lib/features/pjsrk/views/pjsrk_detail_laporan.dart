@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:sentra/core/utils/pjsrk_photo_urls.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/report/models/report_model.dart';
 
@@ -25,7 +26,6 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   static const Color _textDark = Color(0xFF2A2A2A);
   static const Color _textGrey = Color(0xFF7A7F85);
   static const Color _green = Color(0xFF58A97B);
-  static const Color _greenDark = Color(0xFF3F8F63);
 
   final LaporanController _controller = Get.put(LaporanController());
 
@@ -50,7 +50,8 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
           _loading = false;
         });
       }
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Gagal memuat detail laporan PJSRK: $error');
       if (mounted) {
         setState(() {
           _detail = null;
@@ -101,16 +102,16 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
     return 'Lokasi belum tersedia';
   }
 
-  /// Foto lampiran PJSRK: server sudah mengirim URL lengkap pada foto_urls.
+  /// Foto lampiran PJSRK mengikuti format API: `detail_pjsrk.foto_urls`
+  /// (URL absolut), dengan fallback `detail_pjsrk.foto` (nama berkas).
+  /// Bila detail gagal dimuat, pakai foto yang sudah dibawa dari daftar.
   List<String> get _fotoUrls {
-    final pjsrk = _detail?['detail_pjsrk'];
-    if (pjsrk is! Map) return const [];
-    final urls = pjsrk['foto_urls'];
-    if (urls is! List) return const [];
-    return urls
-        .map((e) => e?.toString() ?? '')
-        .where((e) => e.isNotEmpty)
-        .toList();
+    final urls = PjsrkPhotoUrls.resolve(
+      _detail?['detail_pjsrk'],
+      idLaporan: widget.laporan.id,
+    );
+    if (urls.isNotEmpty) return urls;
+    return widget.laporan.fotoUrls;
   }
 
   _StatusVisual get _statusVisual {
@@ -226,43 +227,6 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
     ];
   }
 
-  void _onHubungi() {
-    final phone = _detail?['no_telp_petugas'] ??
-        _detail?['telepon'] ??
-        _detail?['kontak'];
-    final number = (phone is String && phone.isNotEmpty) ? phone : null;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          number != null
-              ? 'Menghubungi $number...'
-              : 'Nomor kontak petugas belum tersedia',
-          style: const TextStyle(fontFamily: 'Mulish'),
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF2C3E50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      ),
-    );
-  }
-
-  void _onTambahInfo() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'Fitur Tambah Info sedang dikembangkan',
-          style: TextStyle(fontFamily: 'Mulish'),
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF2C3E50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -306,7 +270,6 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
                             const SizedBox(height: 18),
                             _buildPhotoPlaceholders(),
                             const SizedBox(height: 28),
-                            _buildActionButtons(),
                           ],
                         ),
                       ),
@@ -546,43 +509,118 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   }
 
   Widget _buildPhotoPlaceholders() {
-    final urls = _fotoUrls;
-    final fotos = urls.isNotEmpty
-        ? urls
-        : (_detail?['foto'] ?? _detail?['gambar'] ?? _detail?['images']);
-    if (fotos is List && fotos.isNotEmpty) {
-      return SizedBox(
-        height: 72,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: fotos.length.clamp(0, 5),
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
-          itemBuilder: (context, i) {
-            final url = fotos[i]?.toString() ?? '';
-            return ClipRRect(
+    final List<String> urls = _fotoUrls;
+
+    if (urls.isEmpty) {
+      return Row(
+        children: [
+          _placeholderBox(const Color(0xFFD7E4EE), const Color(0xFFB6C9D8)),
+          const SizedBox(width: 8),
+          _placeholderBox(const Color(0xFFC8D8C0), const Color(0xFF9DB892)),
+        ],
+      );
+    }
+
+    return SizedBox(
+      height: 72,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: urls.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final String url = urls[i];
+          return GestureDetector(
+            onTap: () => _showPhoto(url),
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: Image.network(
                 url,
                 width: 72,
                 height: 72,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _placeholderBox(
-                  const Color(0xFFD7E4EE),
-                  const Color(0xFFB6C9D8),
-                ),
+                // File /uploads tidak membawa header CORS, sehingga fetch
+                // CanvasKit gagal di Flutter web. Fallback ke elemen <img>
+                // agar foto tetap tampil.
+                webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                loadingBuilder: (context, child, progress) =>
+                    progress == null ? child : _photoLoadingBox(),
+                errorBuilder: (_, error, __) {
+                  debugPrint('Gagal memuat foto PJSRK: $url ($error)');
+                  return _photoErrorBox();
+                },
               ),
-            );
-          },
-        ),
-      );
-    }
+            ),
+          );
+        },
+      ),
+    );
+  }
 
-    return Row(
-      children: [
-        _placeholderBox(const Color(0xFFD7E4EE), const Color(0xFFB6C9D8)),
-        const SizedBox(width: 8),
-        _placeholderBox(const Color(0xFFC8D8C0), const Color(0xFF9DB892)),
-      ],
+  void _showPhoto(String url) {
+    showDialog<void>(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          alignment: Alignment.topRight,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                url,
+                fit: BoxFit.contain,
+                webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
+                loadingBuilder: (context, child, progress) =>
+                    progress == null ? child : _photoLoadingBox(),
+                errorBuilder: (_, error, __) {
+                  debugPrint('Gagal memuat foto PJSRK: $url ($error)');
+                  return _photoErrorBox();
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(4),
+              child: IconButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                icon: const Icon(Icons.close_rounded, color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _photoLoadingBox() {
+    return Container(
+      width: 72,
+      height: 72,
+      color: const Color(0xFFF2F4F6),
+      alignment: Alignment.center,
+      child: const SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          color: _primaryOrange,
+        ),
+      ),
+    );
+  }
+
+  Widget _photoErrorBox() {
+    return Container(
+      width: 72,
+      height: 72,
+      color: const Color(0xFFFDE8EA),
+      alignment: Alignment.center,
+      child: const Icon(
+        Icons.broken_image_outlined,
+        size: 22,
+        color: Color(0xFFC7283A),
+      ),
     );
   }
 
@@ -601,79 +639,6 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: SizedBox(
-            height: 46,
-            child: OutlinedButton.icon(
-              onPressed: _onTambahInfo,
-              icon: const Icon(Icons.mail_outline_rounded, size: 18),
-              label: const Text(
-                'Tambah Info',
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _greenDark,
-                side: const BorderSide(color: _green, width: 1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: SizedBox(
-            height: 46,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  begin: Alignment(-0.6, -0.8),
-                  end: Alignment(0.8, 1.2),
-                  colors: [_green, _greenDark],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: _greenDark.withOpacity(0.28),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: _onHubungi,
-                icon: const Icon(Icons.phone_rounded, size: 18),
-                label: const Text(
-                  'Hubungi',
-                  style: TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 class _StatusVisual {
