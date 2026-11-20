@@ -42,12 +42,20 @@ class _MiniStepperState extends State<MiniStepperTracking> {
     }
   }
 
+  /// -1 berarti belum ada laporan yang dilacak: tidak ada langkah aktif.
   int _mapStatusToStep(String status) {
     final String normalized = status.trim().toLowerCase();
+    if (normalized.isEmpty) {
+      return -1;
+    }
+    // 'dirujuk' adalah status akhir: laporan sudah diteruskan ke instansi lain.
+    if (normalized == 'dirujuk') {
+      return _stepLabels.length - 1;
+    }
     final int stepIndex = _stepLabels.indexWhere(
       (label) => label.toLowerCase() == normalized,
     );
-    return stepIndex < 0 ? 0 : stepIndex;
+    return stepIndex < 0 ? -1 : stepIndex;
   }
 
   @override

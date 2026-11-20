@@ -5,6 +5,7 @@ import '../../../core/network/api_exception.dart';
 import '../controllers/pjsrk_report_send_controller.dart';
 import '../models/pjsrk_report_event_model.dart';
 import '../models/pjsrk_report_location_model.dart';
+import 'laporan_sukses_screen.dart';
 import 'widgets/pjrsk_font_scope.dart';
 import 'widgets/pjsrk_check_row.dart';
 import 'widgets/pjsrk_colors.dart';
@@ -61,7 +62,14 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
     try {
       final nomor = await _c.kirim(idAkun: idAkun);
       if (!mounted) return;
-      await _tampilSukses(nomor);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => LaporanSuksesScreen(
+            nomorTiket: nomor.isNotEmpty ? nomor : null,
+            tanggalWaktu: DateTime.now(),
+          ),
+        ),
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
       _snack(e.message, error: true);
@@ -82,79 +90,6 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
           backgroundColor: error ? Colors.red.shade700 : null,
         ),
       );
-  }
-
-  Future<void> _tampilSukses(String nomor) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => PjsrkFontScope(
-        child: Dialog(
-          backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(
-                width: 64,
-                height: 64,
-                decoration: const BoxDecoration(
-                    color: PjsrkColors.primaryLight, shape: BoxShape.circle),
-                child: const Icon(Icons.check_rounded,
-                    size: 36, color: PjsrkColors.primary),
-              ),
-              const SizedBox(height: 16),
-              const Text('Laporan terkirim',
-                  style: TextStyle(
-                      fontFamily: 'Mulish',
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(height: 8),
-              const Text(
-                'Petugas jaga dan BPBD terkait akan menindaklanjuti laporanmu.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 14,
-                    height: 1.4,
-                    color: PjsrkColors.muted),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: PjsrkColors.graySoft,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(children: [
-                  const Text('Nomor laporan',
-                      style: TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 12,
-                          color: PjsrkColors.muted)),
-                  const SizedBox(height: 2),
-                  Text(nomor,
-                      style: const TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800)),
-                ]),
-              ),
-              const SizedBox(height: 20),
-              PjsrkGradientButton(
-                  text: 'Selesai', onTap: () => Navigator.pop(ctx)),
-            ]),
-          ),
-        ),
-      ),
-    );
-
-    if (!mounted) return;
-    // Tutup 3 layar form (Kirim, Lokasi, Kejadian) -> kembali ke layar asal.
-    int dipop = 0;
-    Navigator.of(context).popUntil((_) => dipop++ >= 3);
   }
 
   @override

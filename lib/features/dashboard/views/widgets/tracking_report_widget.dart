@@ -20,6 +20,16 @@ class _TrackingLaporanState extends State<TrackingLaporan> {
 
   bool _isSearching = false;
 
+  @override
+  void initState() {
+    super.initState();
+    // Controller dipakai bersama halaman lain (GetX singleton), sehingga
+    // status pencarian lama bisa tertinggal. Kosongkan agar stepper selalu
+    // mulai dari keadaan "belum ada laporan yang dilacak".
+    laporanController.trackingStatus.value = '';
+    trackingCodeController.clear();
+  }
+
   Future<void> cariLaporan() async {
     final String kode = trackingCodeController.text.trim();
     if (kode.isEmpty) {
@@ -537,11 +547,11 @@ class _TrackingLaporanState extends State<TrackingLaporan> {
                       ),
                       SizedBox(height: screenHeight * 0.015),
                       Obx(() {
-                        final String currentStatus =
-                            laporanController.trackingStatus.value.isEmpty
-                                ? 'dikirim'
-                                : laporanController.trackingStatus.value;
-                        return MiniStepperTracking(status: currentStatus);
+                        // Status kosong = belum ada laporan yang dilacak,
+                        // stepper menampilkan keadaan netral (tanpa langkah aktif).
+                        return MiniStepperTracking(
+                          status: laporanController.trackingStatus.value,
+                        );
                       }),
                       SizedBox(height: screenHeight * 0.012),
                       Text(

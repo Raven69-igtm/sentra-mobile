@@ -11,6 +11,8 @@ import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
 import 'package:sentra/features/pjsrk/views/permasalahan_sosial_screen.dart';
+import 'package:sentra/features/pjsrk/views/widgets/pjsrk_tracking_widget.dart';
+import 'package:sentra/features/pjsrk/views/widgets/pjsrk_statistik_widget.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
 /// Sesuai dengan desain referensi kedua (pixel-accurate & responsif)
@@ -174,6 +176,15 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                               'Pilih jenis laporan yang ingin Anda sampaikan. Petugas akan menindaklanjuti dalam 2 hari kerja.',
                         ),
                         const SizedBox(height: 20),
+
+                        // === Tracking Laporan ===
+                        const PjsrkTrackingWidget(),
+                        const SizedBox(height: 20),
+
+                        // === Statistik Laporan ===
+                        const PjsrkStatistikWidget(),
+                        const SizedBox(height: 20),
+
                         const Text(
                           'Fitur PJSRK',
                           style: TextStyle(
