@@ -3,16 +3,15 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'pjsrk_colors.dart';
-import 'pjsrk_foto_source_sheet.dart';
 
 /// Baris [max] kotak foto pada Pengaduan Bencana.
 ///
-/// Ketuk kotak kosong -> bottom sheet "Ambil Foto Bukti" (Kamera / Galeri Foto)
-/// yang sama dengan form Permasalahan Sosial. Ketuk ikon silang untuk menghapus.
+/// Ketuk kotak kosong -> [onAdd] dipanggil (layar pemanggil yang menampilkan
+/// pilihan Kamera / Galeri Foto). Ketuk ikon silang untuk menghapus.
 class PjsrkPhotoPicker extends StatelessWidget {
   final List<XFile> items;
   final int max;
-  final void Function(XFile file) onAdd;
+  final VoidCallback onAdd;
   final void Function(int index) onRemove;
 
   const PjsrkPhotoPicker({
@@ -22,36 +21,6 @@ class PjsrkPhotoPicker extends StatelessWidget {
     required this.onAdd,
     required this.onRemove,
   });
-
-  Future<void> _pick(BuildContext context) async {
-    final choice = await showPjsrkFotoSourceSheet(context);
-    if (choice == null || !context.mounted) return;
-    if (choice == PjsrkFotoSource.hapus) return;
-
-    try {
-      final XFile? file = await ImagePicker().pickImage(
-        source: choice == PjsrkFotoSource.kamera
-            ? ImageSource.camera
-            : ImageSource.gallery,
-        // Kompres ringan agar upload nanti tidak terlalu besar
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 85,
-      );
-      if (file != null) onAdd(file);
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Gagal memilih foto: $e',
-            style: const TextStyle(fontFamily: 'Mulish'),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) => Row(children: [
@@ -67,7 +36,7 @@ class PjsrkPhotoPicker extends StatelessWidget {
                     )
                   : _AddTile(
                       denganKamera: i == 0,
-                      onTap: () => _pick(context),
+                      onTap: onAdd,
                     ),
             ),
           ),

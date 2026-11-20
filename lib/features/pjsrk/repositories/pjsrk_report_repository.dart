@@ -59,6 +59,39 @@ class PjsrkReportRepository {
     return _bacaIdLaporan(response.data);
   }
 
+  /// Kirim form ringkas "Laporan Cepat" PJSRK.
+  ///
+  /// Dipakai tiga form cepat (rehabilitasi sosial, bencana alam, permasalahan
+  /// sosial) yang hanya meminta nama, telepon, lokasi, jenis, dan deskripsi.
+  /// [idAkun] boleh null: menu Laporan Cepat bisa dibuka sebelum login, dan
+  /// backend mencatat kiriman anonim pada akun pelapor guest.
+  ///
+  /// [layanan] harus salah satu nilai enum backend:
+  /// pengaduan_bencana | rehabilitasi_sosial | permasalahan_sosial.
+  Future<String> kirimCepat({
+    int? idAkun,
+    required String layanan,
+    required String nama,
+    required String telepon,
+    required String lokasi,
+    required String jenis,
+    required String deskripsi,
+  }) async {
+    final Map<String, dynamic> payload = <String, dynamic>{
+      // Hanya dikirim bila user sedang login.
+      if (idAkun != null && idAkun > 0) 'id_akun': idAkun,
+      'layanan': layanan,
+      'nama': nama,
+      'telepon': telepon,
+      'lokasi': lokasi,
+      'jenis': jenis,
+      'deskripsi': deskripsi,
+    };
+
+    final response = await ApiClient.postRequest('/pjsrk/cepat', payload);
+    return _bacaIdLaporan(response.data);
+  }
+
   /// Tanggal + jam kejadian dalam format ISO dengan offset WIB (+07:00),
   /// supaya jam yang tampil di admin tetap sesuai jam perangkat.
   String _waktuKejadian(PjsrkReportEventModel event) {

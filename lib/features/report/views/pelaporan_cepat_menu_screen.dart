@@ -41,7 +41,7 @@ class PelaporanCepatMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2C7451), // Warna hijau emerald tema Sentra
+      backgroundColor: const Color.fromARGB(255, 46, 132, 93), // Warna hijau tua polos tanpa gradasi tema Sentra
       body: SafeArea(
         bottom: false,
         child: Column(

@@ -1,8 +1,8 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sentra/features/pjsrk/views/pjsrk_riwayat.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
-import 'package:sentra/features/report/views/history_screen.dart';
 
 /// Halaman Konfirmasi Sukses Pengiriman Laporan (PJSRK / Sentra)
 /// Dibuat sesuai referensi desain Figma "9 Sukses" (pixel-accurate & responsif)
@@ -102,10 +102,10 @@ class LaporanSuksesScreen extends StatelessWidget {
       return;
     }
 
-    // Default: Buka halaman riwayat laporan (HistoryPage)
+    // Default: buka riwayat laporan PJSRK (LaporanSayaScreen), bukan riwayat PPA
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const HistoryPage()),
+      MaterialPageRoute(builder: (_) => const LaporanSayaScreen()),
     );
   }
 

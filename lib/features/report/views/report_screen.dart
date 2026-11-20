@@ -1,13 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
-import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/core/utils/address_field.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/report/views/widgets/stepper_widget.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
+import 'package:sentra/core/utils/custom_spinner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -40,7 +42,6 @@ class _AnakFormData {
 class _LaporanPageState extends State<LaporanPage> {
   int _currentStep = 1;
   final LaporanController laporanController = LaporanController();
-  bool _isSubmitting = false;
 
   // Form 1 - Data Diri Pelapor
   final TextEditingController _nikform1 = TextEditingController();
@@ -48,6 +49,17 @@ class _LaporanPageState extends State<LaporanPage> {
   final TextEditingController _telpform1 = TextEditingController();
   final TextEditingController _alamatform1 = TextEditingController();
   final TextEditingController _hubunganform1 = TextEditingController();
+
+  // Hubungan pelapor dengan korban (kolom string di backend).
+  static const List<String> daftarHubunganKorban = [
+    'Pelapor / Korban',
+    'Orang tua',
+    'Wali',
+    'Keluarga',
+    'Saudara',
+    'Teman',
+    'Lainnya',
+  ];
 
   // Form 1 - Penerima Manfaat
   bool _penerimaSamaDenganPelapor = true;
@@ -58,7 +70,8 @@ class _LaporanPageState extends State<LaporanPage> {
   final TextEditingController _umurPenerima = TextEditingController();
   final TextEditingController _pekerjaanPenerima = TextEditingController();
   final TextEditingController _alamatPenerima = TextEditingController();
-  final TextEditingController _hubunganTerlaporPenerima = TextEditingController();
+  final TextEditingController _hubunganTerlaporPenerima =
+      TextEditingController();
   final TextEditingController _telpPenerima = TextEditingController();
   final TextEditingController _infoTambahanPenerima = TextEditingController();
   String? _jenisKelaminPenerima;
@@ -370,6 +383,43 @@ class _LaporanPageState extends State<LaporanPage> {
     if (_alamatform1.text.trim().isEmpty) {
       CustomSnackbar.show("Mohon isi alamat lengkap", warna: Colors.red);
       return false;
+    }
+    if (_hubunganform1.text.trim().isEmpty) {
+      CustomSnackbar.show(
+        "Mohon pilih hubungan Anda dengan korban",
+        warna: Colors.red,
+      );
+      return false;
+    }
+    if (!_penerimaSamaDenganPelapor) {
+      if (_nikPenerima.text.trim().isEmpty) {
+        CustomSnackbar.show(
+          "Mohon isi NIK penerima manfaat",
+          warna: Colors.red,
+        );
+        return false;
+      }
+      if (_nikPenerima.text.trim().length != 16) {
+        CustomSnackbar.show(
+          "NIK penerima manfaat harus berjumlah 16 digit",
+          warna: Colors.red,
+        );
+        return false;
+      }
+      if (_namaPenerima.text.trim().isEmpty) {
+        CustomSnackbar.show(
+          "Mohon isi nama penerima manfaat",
+          warna: Colors.red,
+        );
+        return false;
+      }
+      if (_telpPenerima.text.trim().isEmpty) {
+        CustomSnackbar.show(
+          "Mohon isi nomor telepon penerima manfaat",
+          warna: Colors.red,
+        );
+        return false;
+      }
     }
     return true;
   }
@@ -709,101 +759,104 @@ class _LaporanPageState extends State<LaporanPage> {
     }
   }
 
-  /// Nilai opsional: string kosong dikirim sebagai null agar backend tidak
-  /// menyimpan placeholder palsu.
+  /// Nilai opsional: string kosong dikirim sebagai null agar tidak tersimpan
+  /// sebagai placeholder palsu.
   String? _optionalText(TextEditingController controller) {
     final value = controller.text.trim();
     return value.isEmpty ? null : value;
   }
 
-  /// Satu sumber pembentukan payload PPA: setiap bagian diambil dari state
-  /// pihaknya masing-masing, bukan disalin dari pelapor.
-  Map<String, dynamic> _buildLaporanPayload(int idAkun) {
+  /// Satu sumber pembentukan payload PPA: tiap pihak diambil dari state-nya
+  /// masing-masing dan hanya berisi kunci yang diterima backend.
+  Map<String, dynamic> _buildLaporanPayload(int? idAkun) {
     final pelaporNik = _nikform1.text.trim();
     final pelaporNama = _namaform1.text.trim();
     final pelaporTelepon = _telpform1.text.trim();
     final pelaporAlamat = _alamatform1.text.trim();
 
-    final pelapor = {
-      'nik': pelaporNik,
-      'nama': pelaporNama,
-      'alamat': pelaporAlamat,
-      'no_telp': pelaporTelepon,
-      'hubungan_dengan_korban': _optionalText(_hubunganform1),
-    };
-
-    // Penerima = pelapor: identitas yang sama, diturunkan dari satu sumber.
-    // Penerima berbeda: seluruh data berasal dari state penerima.
-    final penerima =
-        _penerimaSamaDenganPelapor
-            ? {
-              'nik': pelaporNik,
-              'nama': pelaporNama,
-              'alamat': pelaporAlamat,
-              'notelp': pelaporTelepon,
-            }
-            : {
-              'nik': _optionalText(_nikPenerima),
-              'nama': _optionalText(_namaPenerima),
-              'tempat_lahir': _optionalText(_tempatLahirPenerima),
-              'tanggal_lahir': _optionalText(_tanggalLahirPenerima),
-              'umur': _optionalText(_umurPenerima),
-              'jenis_kelamin': _jenisKelaminPenerima,
-              'pekerjaan': _optionalText(_pekerjaanPenerima),
-              'agama': _agamaPenerima,
-              'alamat': _optionalText(_alamatPenerima),
-              'pendidikan': _pendidikanPenerima,
-              'hubungan_dengan_terlapor': _optionalText(
-                _hubunganTerlaporPenerima,
-              ),
-              'notelp': _optionalText(_telpPenerima),
-              'informasi_tambahan': _optionalText(_infoTambahanPenerima),
-            };
-
-    final terlapor =
-        _sertakanTerlapor
-            ? {
-              'nik': _optionalText(_nikTerlapor),
-              'nama': _optionalText(_namaTerlapor),
-              'umur': _optionalText(_umurTerlapor),
-              'alamat': _optionalText(_alamatTerlapor),
-              'jenis_kelamin': _jenisKelaminTerlapor,
-              'hubungan_dengan_korban': _optionalText(_hubunganTerlapor),
-              'informasi_tambahan': _optionalText(_infoTambahanTerlapor),
-            }
-            : null;
-
-    final informasiAnak =
-        _sertakanAnak
-            ? _anakList
-                .map(
-                  (anak) => {
-                    'nama': _optionalText(anak.nama),
-                    'tanggal_lahir': _optionalText(anak.tanggalLahir),
-                    'umur': _optionalText(anak.umur),
-                    'jenis_kelamin': anak.jenisKelamin,
-                    'pendidikan': anak.pendidikan,
-                    'agama': anak.agama,
-                    'status': anak.status,
-                  },
-                )
-                .toList()
-            : <Map<String, dynamic>>[];
-
-    return {
+    final payload = <String, dynamic>{
       'id_akun': idAkun,
       'kategori': 'unset',
-      'detail_pelapor': pelapor,
-      'detail_penerima_manfaat': penerima,
-      'detail_terlapor': terlapor,
+      'status': 'diterima',
+      'detail_pelapor': {
+        'nik': pelaporNik,
+        'nama': pelaporNama,
+        'alamat': pelaporAlamat,
+        'hubungan_dengan_korban': _hubunganform1.text.trim(),
+        'no_telp': pelaporTelepon,
+      },
+      'detail_penerima_manfaat':
+          _penerimaSamaDenganPelapor
+              ? {
+                'nik': pelaporNik,
+                'nama': pelaporNama,
+                'Tempat_lahir': null,
+                'tanggal_lahir': null,
+                'umur': null,
+                'jenis_kelamin': null,
+                'pekerjaan': null,
+                'agama': null,
+                'alamat': pelaporAlamat,
+                'pendidikan': null,
+                'hubungan_dengan_terlapor': null,
+                'notelp': pelaporTelepon,
+                'informasi_tambahan': null,
+              }
+              : {
+                'nik': _nikPenerima.text.trim(),
+                'nama': _optionalText(_namaPenerima),
+                'Tempat_lahir': _optionalText(_tempatLahirPenerima),
+                'tanggal_lahir': _optionalText(_tanggalLahirPenerima),
+                'umur': _optionalText(_umurPenerima),
+                'jenis_kelamin': _jenisKelaminPenerima,
+                'pekerjaan': _optionalText(_pekerjaanPenerima),
+                'agama': _agamaPenerima,
+                'alamat': _optionalText(_alamatPenerima),
+                'pendidikan': _pendidikanPenerima,
+                'hubungan_dengan_terlapor': _optionalText(
+                  _hubunganTerlaporPenerima,
+                ),
+                'notelp': _telpPenerima.text.trim(),
+                'informasi_tambahan': _optionalText(_infoTambahanPenerima),
+              },
       'detail_kasus': {
         'tanggal': _tanggalController.text.trim(),
         'waktu_kejadian': (_waktuKejadian ?? DateTime.now()).toIso8601String(),
         'tempat_kejadian': _tempatkejadianform3.text.trim(),
         'kronologi': _kronologiform4.text.trim(),
       },
-      'informasi_anak': informasiAnak,
+      'informasi_anak':
+          _sertakanAnak
+              ? _anakList
+                  .where((anak) => anak.nama.text.trim().isNotEmpty)
+                  .map(
+                    (anak) => {
+                      'nama': anak.nama.text.trim(),
+                      'tanggal_lahir': _optionalText(anak.tanggalLahir),
+                      'umur': _optionalText(anak.umur),
+                      'jenis_kelamin': anak.jenisKelamin,
+                      'pendidikan': anak.pendidikan,
+                      'agama': anak.agama,
+                      'status': anak.status,
+                    },
+                  )
+                  .toList()
+              : <Map<String, dynamic>>[],
     };
+
+    if (_sertakanTerlapor) {
+      payload['detail_terlapor'] = {
+        'nik': _optionalText(_nikTerlapor),
+        'nama': _optionalText(_namaTerlapor),
+        'umur': _optionalText(_umurTerlapor),
+        'alamat': _optionalText(_alamatTerlapor),
+        'jenis_kelamin': _jenisKelaminTerlapor,
+        'hubungan_dengan_korban': _optionalText(_hubunganTerlapor),
+        'informasi_tambahan': _optionalText(_infoTambahanTerlapor),
+      };
+    }
+
+    return payload;
   }
 
   void _showPreviewDialog() async {
@@ -811,20 +864,11 @@ class _LaporanPageState extends State<LaporanPage> {
 
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final idAkun = userProvider.idAkun;
-    if (idAkun == null) {
-      CustomSnackbar.show(
-        "Silakan login terlebih dahulu untuk mengirim laporan",
-        warna: Colors.orange,
-        tinggi: 100,
-        icon: Icons.error_outline_rounded,
-      );
-      Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
-      return;
-    }
 
     Map<String, dynamic> laporanData = _buildLaporanPayload(idAkun);
+
+    // Mencegah tombol Kirim ditekan ganda selama request berjalan.
+    final sending = ValueNotifier<bool>(false);
 
     showDialog(
       context: context,
@@ -923,6 +967,8 @@ class _LaporanPageState extends State<LaporanPage> {
                             'nama': _namaform1.text.trim(),
                             'no_telepon': _telpform1.text.trim(),
                             'alamat': _alamatform1.text.trim(),
+                            'hubungan_dengan_korban':
+                                _hubunganform1.text.trim(),
                           },
                           Icons.person_outline,
                           Colors.blue,
@@ -988,163 +1034,119 @@ class _LaporanPageState extends State<LaporanPage> {
                         ),
                       ),
                       SizedBox(width: 12),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          if (_isSubmitting) return;
-                          _isSubmitting = true;
+                      ValueListenableBuilder<bool>(
+                        valueListenable: sending,
+                        builder: (buttonContext, isSending, _) {
+                          return ElevatedButton.icon(
+                            onPressed:
+                                isSending
+                                    ? null
+                                    : () async {
+                                      if (sending.value) return;
+                                      sending.value = true;
 
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            barrierColor: Colors.black54,
-                            builder:
-                                (context) => PopScope(
-                                  canPop: false,
-                                  child: Dialog(
-                                    backgroundColor: Colors.transparent,
-                                    insetPadding: const EdgeInsets.symmetric(
-                                      horizontal: 40,
-                                    ),
-                                    child: Container(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        28,
-                                        30,
-                                        28,
-                                        26,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withValues(
-                                              alpha: 0.14,
-                                            ),
-                                            blurRadius: 28,
-                                            offset: const Offset(0, 12),
-                                          ),
-                                        ],
-                                      ),
-                                      child: MediaQuery.withClampedTextScaling(
-                                        minScaleFactor: 1.0,
-                                        maxScaleFactor: 1.3,
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 64,
-                                              height: 64,
-                                              padding: const EdgeInsets.all(18),
+                                      BuildContext? loadingContext;
+                                      var loadingDismissed = false;
+
+                                      void dismissLoading() {
+                                        if (loadingDismissed) return;
+                                        loadingDismissed = true;
+                                        final ctx = loadingContext;
+                                        if (ctx != null && ctx.mounted) {
+                                          Navigator.of(ctx).pop();
+                                        }
+                                      }
+
+                                      showDialog(
+                                        context: buttonContext,
+                                        barrierDismissible: false,
+                                        builder: (loadingCtx) {
+                                          loadingContext = loadingCtx;
+                                          return Center(
+                                            child: Container(
+                                              padding: EdgeInsets.all(20),
                                               decoration: BoxDecoration(
-                                                color: Warna.backgroundIjo
-                                                    .withValues(alpha: 0.12),
-                                                shape: BoxShape.circle,
+                                                color: Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
                                               ),
-                                              child:
-                                                  const CircularProgressIndicator(
-                                                    strokeWidth: 3,
-                                                    color:
-                                                        Warna.backgroundIjo,
+                                              child: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  CircularProgressIndicator(),
+                                                  SizedBox(height: 16),
+                                                  Text(
+                                                    "Mengirim laporan...",
+                                                    style: TextStyle(
+                                                      fontFamily: "Mulish",
+                                                    ),
                                                   ),
-                                            ),
-                                            const SizedBox(height: 20),
-                                            const Text(
-                                              "Mengirim laporan...",
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                fontFamily: "Mulish",
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w700,
-                                                color: Color(0xFF1F2A37),
+                                                ],
                                               ),
                                             ),
-                                            const SizedBox(height: 8),
-                                            const Text(
-                                              "Mohon tunggu sebentar, jangan tutup aplikasi.",
-                                              textAlign: TextAlign.center,
-                                              style: TextStyle(
-                                                fontFamily: "Mulish",
-                                                fontSize: 12.5,
-                                                height: 1.4,
-                                                color: Color(0xFF6B7280),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                          );
+                                        },
+                                      );
+
+                                      try {
+                                        await laporanController
+                                            .createReport(laporanData)
+                                            .timeout(
+                                              const Duration(seconds: 30),
+                                            );
+
+                                        if (!buttonContext.mounted) return;
+
+                                        dismissLoading();
+                                        CustomSnackbar.show(
+                                          "Laporan berhasil dikirim",
+                                        );
+                                        _resetForm();
+                                        Navigator.of(buttonContext).pop();
+                                      } on TimeoutException {
+                                        if (!buttonContext.mounted) return;
+
+                                        dismissLoading();
+                                        CustomSnackbar.show(
+                                          "Server belum merespons. Periksa menu Riwayat sebelum mengirim ulang.",
+                                        );
+                                      } catch (e) {
+                                        if (!buttonContext.mounted) return;
+
+                                        dismissLoading();
+                                        CustomSnackbar.show(
+                                          "Gagal mengirim laporan",
+                                        );
+                                      } finally {
+                                        dismissLoading();
+                                        sending.value = false;
+                                      }
+                                    },
+                            icon: Icon(Icons.send_rounded, size: 18),
+                            label: Text(
+                              "Kirim Laporan",
+                              style: TextStyle(
+                                fontFamily: "Mulish",
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Warna().darken(
+                                Warna.backgroundIjo,
+                                0.1,
+                              ),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              elevation: 2,
+                            ),
                           );
-
-                          try {
-                            final created = await laporanController
-                                .createReport(laporanData);
-
-                            if (!context.mounted) return;
-
-                            Navigator.of(context).pop();
-                            Navigator.of(context).pop();
-
-                            final idLaporan =
-                                created?['id_laporan']?.toString() ?? '';
-                            CustomSnackbar.show(
-                              idLaporan.isEmpty
-                                  ? "Laporan berhasil dikirim"
-                                  : "Laporan berhasil dikirim. ID: $idLaporan",
-                              warna: Colors.green,
-                              tinggi: 110,
-                              icon: Icons.check_circle_outline_rounded,
-                            );
-
-                            _resetForm();
-                          } catch (e) {
-                            if (!context.mounted) return;
-
-                            Navigator.of(context).pop();
-
-                            final String message =
-                                e.toString().replaceFirst(
-                                  'ApiException: ',
-                                  '',
-                                );
-                            CustomSnackbar.show(
-                              message.isEmpty
-                                  ? "Gagal mengirim laporan"
-                                  : message,
-                              warna: Colors.red,
-                              tinggi: 110,
-                              icon: Icons.error_outline_rounded,
-                            );
-                          } finally {
-                            _isSubmitting = false;
-                          }
                         },
-                        icon: Icon(Icons.send_rounded, size: 18),
-                        label: Text(
-                          "Kirim Laporan",
-                          style: TextStyle(
-                            fontFamily: "Mulish",
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Warna().darken(
-                            Warna.backgroundIjo,
-                            0.1,
-                          ),
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 2,
-                        ),
                       ),
                     ],
                   ),
@@ -1154,7 +1156,7 @@ class _LaporanPageState extends State<LaporanPage> {
           ),
         );
       },
-    );
+    ).whenComplete(sending.dispose);
   }
 
   Widget _buildEnhancedPreviewSection(
@@ -1697,6 +1699,9 @@ class _LaporanPageState extends State<LaporanPage> {
                 controller: _alamatform1,
               ),
 
+              // Hubungan dengan Korban
+              _buildHubunganKorbanField(),
+
               SizedBox(height: 8),
               _buildPenerimaSection(),
 
@@ -1806,31 +1811,104 @@ class _LaporanPageState extends State<LaporanPage> {
     );
   }
 
-  InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      floatingLabelBehavior: FloatingLabelBehavior.auto,
-      filled: true,
-      fillColor: Colors.grey[50],
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+  Widget _buildHubunganKorbanField() {
+    final themeColor = Colors.blue[600]!;
+    final selected =
+        _hubunganform1.text.trim().isEmpty ? null : _hubunganform1.text.trim();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hubungan dengan Korban',
+            style: TextStyle(
+              fontFamily: "Mulish",
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: DropdownButtonFormField<String>(
+              value: selected,
+              isExpanded: true,
+              hint: Text(
+                'Pilih hubungan dengan korban',
+                style: TextStyle(
+                  fontFamily: "Mulish",
+                  fontSize: 16,
+                  color: Colors.grey[500],
+                ),
+              ),
+              items:
+                  daftarHubunganKorban
+                      .map(
+                        (item) => DropdownMenuItem<String>(
+                          value: item,
+                          child: Text(
+                            item,
+                            style: TextStyle(
+                              fontFamily: "Mulish",
+                              fontSize: 16,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+              onChanged: (value) {
+                setState(() {
+                  _hubunganform1.text = value ?? '';
+                });
+              },
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[50],
+                prefixIcon: Container(
+                  margin: EdgeInsets.all(12),
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: themeColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.family_restroom,
+                    color: themeColor,
+                    size: 20,
+                  ),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: themeColor, width: 2),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 8,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
-      ),
-      labelStyle: TextStyle(
-        fontFamily: 'Mulish',
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        color: Colors.grey[600],
-      ),
-      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
     );
   }
 
@@ -2413,11 +2491,7 @@ class _LaporanPageState extends State<LaporanPage> {
               ],
             ),
           ),
-          Switch(
-            value: value,
-            activeThumbColor: color,
-            onChanged: onChanged,
-          ),
+          Switch(value: value, activeThumbColor: color, onChanged: onChanged),
         ],
       ),
     );
@@ -2665,8 +2739,7 @@ class _LaporanPageState extends State<LaporanPage> {
   Future<void> _pickDate({required TextEditingController controller}) async {
     final now = DateTime.now();
     final parsed = DateTime.tryParse(controller.text);
-    final initialDate =
-        parsed != null && !parsed.isAfter(now) ? parsed : now;
+    final initialDate = parsed != null && !parsed.isAfter(now) ? parsed : now;
     final picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
@@ -2676,6 +2749,34 @@ class _LaporanPageState extends State<LaporanPage> {
     if (picked != null) {
       setState(() => controller.text = _formatDateForApi(picked));
     }
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      floatingLabelBehavior: FloatingLabelBehavior.auto,
+      filled: true,
+      fillColor: Colors.grey[50],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
+      ),
+      labelStyle: TextStyle(
+        fontFamily: 'Mulish',
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        color: Colors.grey[600],
+      ),
+      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+    );
   }
 
   Widget _buildFormulir2() {
