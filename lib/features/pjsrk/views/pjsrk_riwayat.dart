@@ -6,8 +6,11 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
+<<<<<<< HEAD
 import 'package:sentra/features/auth/views/profile_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/laporan_saya_bottom_nav.dart';
+=======
+>>>>>>> 33a7719223f761be29e609d63ad2cd2568c3a854
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/report/models/report_model.dart';
@@ -125,6 +128,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
     });
   }
 
+<<<<<<< HEAD
   void _onBottomNavTapped(int index) {
     switch (index) {
       case 0:
@@ -140,6 +144,8 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
         break;
     }
   }
+=======
+>>>>>>> 33a7719223f761be29e609d63ad2cd2568c3a854
 
   @override
   Widget build(BuildContext context) {
@@ -237,12 +243,6 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
                     ],
                   );
                 }),
-              ),
-
-              // ===== Bottom Navigation =====
-              LaporanSayaBottomNav(
-                selectedIndex: 1,
-                onTabSelected: _onBottomNavTapped,
               ),
             ],
           ),
