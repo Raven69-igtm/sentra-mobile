@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// Bottom Navigation 4 item untuk halaman Laporan Saya
-/// sesuai desain Figma: Beranda, Laporan, Notifikasi, Profil.
+/// Bottom Navigation 3 item untuk halaman Laporan Saya
+/// sesuai desain Figma: Beranda, Laporan, Profil.
+/// Item Notifikasi dihapus — notifikasi sudah diakses dari ikon lonceng di Beranda.
 class LaporanSayaBottomNav extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onTabSelected;
@@ -51,12 +52,6 @@ class LaporanSayaBottomNav extends StatelessWidget {
           ),
           _buildNavItem(
             index: 2,
-            icon: Icons.notifications_outlined,
-            activeIcon: Icons.notifications_rounded,
-            label: 'Notifikasi',
-          ),
-          _buildNavItem(
-            index: 3,
             icon: Icons.person_outline_rounded,
             activeIcon: Icons.person_rounded,
             label: 'Profil',

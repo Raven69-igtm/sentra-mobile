@@ -70,14 +70,8 @@ class NotificationRepository {
   /// Error koneksi akan di-handle secara graceful — mengembalikan list kosong
   /// agar UI tidak crash, bukan melempar Exception ke stream.
   Stream<List<Map<String, dynamic>>> getNotifications(String userId) async* {
-    // Pertama: yield data dari local notifications jika ada
-    if (_localNotifications.isNotEmpty) {
-      yield List.from(_localNotifications);
-    }
-
-    // Poll API setiap 10 detik (bukan 5 detik — lebih ringan)
     while (true) {
-      await Future.delayed(const Duration(seconds: 10));
+      bool failed = false;
 
       try {
         final response = await _dio.get(
@@ -120,22 +114,29 @@ class NotificationRepository {
           // Gabungkan dengan local notifications
           final merged = [..._localNotifications, ...apiNotifications];
           yield merged;
+        } else {
+          // Respons tidak valid: tampilkan daftar kosong, jangan menggantung.
+          yield const <Map<String, dynamic>>[];
         }
-        // Jika status code bukan 200, tidak emit apapun (bukan throw)
       } on DioException catch (e) {
         // Connection error — ini wajar jika server tidak tersedia
         // Log saja, jangan throw ke stream agar UI tidak crash
         print('Notification fetch error (non-fatal): ${e.message}');
-        // Tetap emit local notifications jika ada
-        if (_localNotifications.isNotEmpty) {
-          yield List.from(_localNotifications);
-        }
-        // Tunggu lebih lama sebelum retry jika ada error
-        await Future.delayed(const Duration(seconds: 20));
+        failed = true;
+        // Tetap emit local notifications jika ada; jika tidak, daftar kosong.
+        yield _localNotifications.isNotEmpty
+            ? List.from(_localNotifications)
+            : const <Map<String, dynamic>>[];
       } catch (e) {
         print('Unexpected notification error (non-fatal): $e');
-        await Future.delayed(const Duration(seconds: 20));
+        failed = true;
+        yield _localNotifications.isNotEmpty
+            ? List.from(_localNotifications)
+            : const <Map<String, dynamic>>[];
       }
+
+      // Tunggu lebih lama sebelum retry jika ada error.
+      await Future.delayed(Duration(seconds: failed ? 20 : 10));
     }
   }
 

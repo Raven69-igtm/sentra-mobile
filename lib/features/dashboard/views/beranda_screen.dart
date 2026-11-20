@@ -12,9 +12,13 @@ class LayananItem {
   final String title;
   final String description;
   final List<String> tags;
+
+  /// Warna identitas layanan (dipakai sebagai aksen, bukan gradient penuh).
   final List<Color> gradientColors;
   final IconData icon;
-  final IconData? decorativeIcon;
+
+  /// true untuk layanan yang belum tersedia (kartu PSK → Coming Soon).
+  final bool comingSoon;
 
   const LayananItem({
     required this.id,
@@ -23,7 +27,7 @@ class LayananItem {
     required this.tags,
     required this.gradientColors,
     required this.icon,
-    this.decorativeIcon,
+    this.comingSoon = false,
   });
 }
 
@@ -55,7 +59,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
       tags: ['Makam Pahlawan', 'Jadwal Kegiatan'],
       gradientColors: [Color(0xFF5B6BBF), Color(0xFF4856A6)],
       icon: Icons.outlined_flag_rounded,
-      decorativeIcon: Icons.explore_outlined,
+      comingSoon: true,
     ),
     LayananItem(
       id: 'pppa',
@@ -64,7 +68,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
           'Layanan Dinas Sosial Perlindungan Perempuan & Pemberdayaan Anak',
       tags: ['Pengaduan Kekerasan', 'Pemberdayaan Anak'],
       gradientColors: [Color(0xFF48B167), Color(0xFF389753)],
-      icon: Icons.outlined_flag_rounded,
+      icon: Icons.shield_outlined,
     ),
   ];
 
@@ -84,11 +88,15 @@ class _BerandaScreenState extends State<BerandaScreen> {
   }
 
   // ===========================================================================
-  // 🔗 NAVIGASI & AKSI INTERAKTIF (SAMBUNGKAN KE HALAMAN ANDA DI SINI)
+  // NAVIGASI & AKSI INTERAKTIF
   // ===========================================================================
 
   /// Aksi ketika kartu layanan ditekan
   void _onLayananTap(BuildContext context, LayananItem item) {
+    if (item.comingSoon) {
+      _showComingSoonDialog(context);
+      return;
+    }
     switch (item.id) {
       case 'pjsrk':
         Navigator.push(
@@ -96,39 +104,21 @@ class _BerandaScreenState extends State<BerandaScreen> {
           MaterialPageRoute(builder: (_) => const PjsrkScreen()),
         );
         break;
-
-      case 'psk':
-        // =====================================================================
-        // 👉 2. SAMBUNGKAN KE HALAMAN PSK:
-        // Contoh:
-        // Navigator.push(context, MaterialPageRoute(builder: (_) => HalamanPSK()));
-        // =====================================================================
-        _showInteractiveBottomSheet(context, item, null);
-        break;
-
       case 'pppa':
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const PppaScreen()),
         );
         break;
-
-      default:
-        _showInteractiveBottomSheet(context, item, null);
     }
   }
 
   /// Aksi ketika salah satu tag/fitur di dalam kartu ditekan
   void _onTagTap(BuildContext context, LayananItem item, String tag) {
-    // =========================================================================
-    // 👉 SAMBUNGKAN LANGSUNG KE SUB-FITUR SESUAI TAG:
-    // Contoh:
-    // if (tag == 'Pengaduan Kekerasan') {
-    //   Navigator.push(context, MaterialPageRoute(builder: (_) => FormPengaduanScreen()));
-    // } else if (tag == 'Makam Pahlawan') {
-    //   Navigator.push(context, MaterialPageRoute(builder: (_) => MakamPahlawanScreen()));
-    // }
-    // =========================================================================
+    if (item.comingSoon) {
+      _showComingSoonDialog(context);
+      return;
+    }
     if (item.id == 'pjsrk') {
       Navigator.push(
         context,
@@ -141,175 +131,110 @@ class _BerandaScreenState extends State<BerandaScreen> {
         context,
         MaterialPageRoute(builder: (_) => const PppaScreen()),
       );
-      return;
     }
-    _showInteractiveBottomSheet(context, item, tag);
   }
 
-  /// Menampilkan bottom sheet interaktif sebagai placeholder interaktif
-  void _showInteractiveBottomSheet(
-    BuildContext context,
-    LayananItem item,
-    String? specificTag,
-  ) {
-    showModalBottomSheet(
+  /// Dialog Coming Soon untuk kartu PSK — tanpa navigasi & tanpa request API.
+  void _showComingSoonDialog(BuildContext context) {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withAlpha(120),
       builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 48,
-                  height: 5,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFF5B6BBF).withAlpha(26),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Icon(
+                    Icons.rocket_launch_outlined,
+                    color: Color(0xFF5B6BBF),
+                    size: 30,
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: item.gradientColors),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(item.icon, color: Colors.white, size: 24),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 5,
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.title,
-                          style: const TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        if (specificTag != null)
-                          Text(
-                            'Fitur: $specificTag',
-                            style: TextStyle(
-                              fontFamily: 'Mulish',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: item.gradientColors.first,
-                            ),
-                          ),
-                      ],
-                    ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF5B6BBF).withAlpha(20),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                item.description,
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Fitur / Layanan yang tersedia:',
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children:
-                    item.tags.map((tag) {
-                      final isSelected = tag == specificTag;
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? item.gradientColors.first
-                                  : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color:
-                                isSelected
-                                    ? item.gradientColors.first
-                                    : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Text(
-                          tag,
-                          style: TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                      );
-                    }).toList(),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: item.gradientColors.first,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    // 👉 Panggil navigasi halaman tujuan di sini
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Membuka layanan ${item.title}${specificTag != null ? " ($specificTag)" : ""}...',
-                        ),
-                        backgroundColor: item.gradientColors.first,
-                        duration: const Duration(seconds: 2),
-                      ),
-                    );
-                  },
                   child: const Text(
-                    'Buka Halaman Layanan',
+                    'COMING SOON',
                     style: TextStyle(
                       fontFamily: 'Mulish',
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                      color: Color(0xFF5B6BBF),
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                const Text(
+                  'Layanan Segera Hadir',
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF252525),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Layanan PSK sedang dalam tahap pengembangan. '
+                  'Kami sedang mempersiapkan layanan ini agar dapat '
+                  'memberikan pengalaman terbaik untuk Anda.\n\n'
+                  'Mohon tunggu informasi selanjutnya.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 13,
+                    height: 1.5,
+                    color: Color(0xFF8D9299),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Warna.backgroundIjo,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text(
+                      'Mengerti',
+                      style: TextStyle(
+                        fontFamily: 'Mulish',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -318,9 +243,9 @@ class _BerandaScreenState extends State<BerandaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Ambil nama pengguna dari UserProvider atau gunakan fallback 'Rafi'
+    // Ambil nama pengguna dari UserProvider
     final userProvider = Provider.of<UserProvider>(context);
-    final String userName = userProvider.user?.nama ?? 'Rafi';
+    final String userName = userProvider.user?.nama ?? 'Pengguna';
 
     // Filter daftar layanan jika sedang melakukan pencarian
     final filteredLayanan =
@@ -336,17 +261,13 @@ class _BerandaScreenState extends State<BerandaScreen> {
         }).toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FA),
       body: Column(
         children: [
-          // ===================================================================
           // 1. TOP APP BAR / HEADER (HIJAU SESUAI DESAIN)
-          // ===================================================================
           _buildTopHeader(context),
 
-          // ===================================================================
           // 2. KONTEN BERANDA (SCROLLABLE)
-          // ===================================================================
           Expanded(
             child: SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
@@ -354,7 +275,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 left: 18,
                 right: 18,
                 top: 18,
-                // Beri ruang untuk CurvedNavigationBar di bagian bawah
+                // Beri ruang untuk bottom navigation di bagian bawah
                 bottom:
                     MediaQuery.of(context).padding.bottom +
                     kBottomNavigationBarHeight +
@@ -376,16 +297,19 @@ class _BerandaScreenState extends State<BerandaScreen> {
                   const SizedBox(height: 2),
                   Row(
                     children: [
-                      Text(
-                        userName,
-                        style: const TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                      Flexible(
+                        child: Text(
+                          userName,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Mulish',
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF252525),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 6),
                       const Text('👋', style: TextStyle(fontSize: 20)),
                     ],
                   ),
@@ -429,7 +353,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                   else
                     ...filteredLayanan.map((item) {
                       return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.only(bottom: 14),
                         child: _buildServiceCard(context, item),
                       );
                     }),
@@ -446,42 +370,57 @@ class _BerandaScreenState extends State<BerandaScreen> {
   // WIDGET COMPONENTS
   // ===========================================================================
 
-  /// Header bagian atas dengan warna hijau khas dan lonceng notifikasi
+  /// Header bagian atas: identitas SENTRA + tombol lonceng notifikasi.
+  /// Hijau khas SENTRA dengan rounded bottom, aman terhadap status bar.
   Widget _buildTopHeader(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.only(
-        top: statusBarHeight + 10,
-        bottom: 14,
-        left: 20,
-        right: 18,
-      ),
+      padding: EdgeInsets.fromLTRB(20, statusBarHeight + 12, 16, 16),
       decoration: const BoxDecoration(
         color: Warna.backgroundIjo,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(28)),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Spacer penyeimbang di kiri agar teks judul berada tepat di tengah
-          const SizedBox(width: 40),
-
-          // Judul Header
-          const Expanded(
-            child: Text(
-              'Dinas Sosial dan PPA',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'Mulish',
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: 0.2,
-              ),
+          // Logo / identitas layanan
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset(
+              'assets/logo/logo_sentra.png',
+              width: 38,
+              height: 38,
+              fit: BoxFit.cover,
             ),
           ),
+          const SizedBox(width: 10),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SENTRA',
+                style: TextStyle(
+                  fontFamily: 'Mulish',
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              Text(
+                'Dinas Sosial & PPA',
+                style: TextStyle(
+                  fontFamily: 'Mulish',
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
+          const Spacer(),
 
           // Lonceng Notifikasi di kanan atas
           Material(
@@ -490,7 +429,6 @@ class _BerandaScreenState extends State<BerandaScreen> {
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
               onTap: () {
-                // 👉 Arahkan ke Halaman Notifikasi
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const NotificationPage()),
@@ -516,20 +454,27 @@ class _BerandaScreenState extends State<BerandaScreen> {
   /// Badge Akun Terverifikasi
   Widget _buildVerifiedBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: const Color(0xFFE8F7ED),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFC7EBD2), width: 1),
       ),
-      child: const Text(
-        'Akun terverifikasi',
-        style: TextStyle(
-          fontFamily: 'Mulish',
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF2E8540),
-        ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_rounded, size: 13, color: Color(0xFF2E8540)),
+          SizedBox(width: 4),
+          Text(
+            'Akun terverifikasi',
+            style: TextStyle(
+              fontFamily: 'Mulish',
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF2E8540),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -599,13 +544,16 @@ class _BerandaScreenState extends State<BerandaScreen> {
     );
   }
 
-  /// Kartu Layanan Besar (PJSRK, PSK, PPPA)
+  /// Kartu Layanan (PJSRK, PSK, PPPA) — gradient warna khas tiap layanan
+  /// dengan aksen dekoratif halus. Kartu PSK tetap penuh warna, ditandai
+  /// badge COMING SOON sebagai indikator layanan belum tersedia.
   Widget _buildServiceCard(BuildContext context, LayananItem item) {
+    final bool isComingSoon = item.comingSoon;
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(22),
       clipBehavior: Clip.antiAlias,
-      elevation: 0,
       child: InkWell(
         onTap: () => _onLayananTap(context, item),
         child: Ink(
@@ -618,58 +566,42 @@ class _BerandaScreenState extends State<BerandaScreen> {
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: item.gradientColors.first.withAlpha(76),
-                blurRadius: 12,
-                offset: const Offset(0, 5),
+                color: item.gradientColors.last.withAlpha(90),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
           child: Stack(
             children: [
-              // Lingkaran dekoratif kanan bawah (efek kurva figma)
+              // Aksen lingkaran dekoratif (ring halus + titik lembut)
               Positioned(
-                right: -30,
-                bottom: -30,
+                right: -34,
+                top: -34,
                 child: Container(
-                  width: 140,
-                  height: 140,
+                  width: 130,
+                  height: 130,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withAlpha(20),
+                    border: Border.all(
+                      color: Colors.white.withAlpha(26),
+                      width: 14,
+                    ),
                   ),
                 ),
               ),
               Positioned(
-                right: 20,
-                bottom: -60,
+                right: 30,
+                bottom: -52,
                 child: Container(
-                  width: 160,
-                  height: 160,
+                  width: 120,
+                  height: 120,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.white.withAlpha(13),
+                    color: Colors.white.withAlpha(14),
                   ),
                 ),
               ),
-
-              // Ikon aksen tengah (misal lambang target/kompas pada kartu PSK)
-              if (item.decorativeIcon != null)
-                Positioned(
-                  right: 120,
-                  top: 40,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withAlpha(46),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      item.decorativeIcon,
-                      color: Colors.white.withAlpha(230),
-                      size: 20,
-                    ),
-                  ),
-                ),
 
               // Konten Utama Kartu
               Padding(
@@ -677,40 +609,58 @@ class _BerandaScreenState extends State<BerandaScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Baris Atas: Ikon di kiri, tombol panah di kanan
+                    // Baris Atas: Ikon di kiri, badge/panah di kanan
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Kotak Ikon
+                        // Kotak Ikon putih transparan
                         Container(
-                          width: 42,
-                          height: 42,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             color: Colors.white.withAlpha(56),
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(13),
                           ),
-                          child: Icon(
-                            item.icon,
-                            color: Colors.white,
-                            size: 22,
-                          ),
+                          child: Icon(item.icon, color: Colors.white, size: 22),
                         ),
-
-                        // Tombol Panah Bulat
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(64),
-                            shape: BoxShape.circle,
+                        const Spacer(),
+                        if (isComingSoon)
+                          Container(
+                            margin: const EdgeInsets.only(top: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(235),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              'COMING SOON',
+                              style: TextStyle(
+                                fontFamily: 'Mulish',
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                                color: item.gradientColors.last,
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            width: 30,
+                            height: 30,
+                            margin: const EdgeInsets.only(top: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(64),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.chevron_right_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.chevron_right_rounded,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                        ),
                       ],
                     ),
 
@@ -721,7 +671,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
                       item.title,
                       style: const TextStyle(
                         fontFamily: 'Mulish',
-                        fontSize: 20,
+                        fontSize: 19,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
                         letterSpacing: 0.5,
@@ -733,12 +683,14 @@ class _BerandaScreenState extends State<BerandaScreen> {
                     // Deskripsi Layanan
                     Text(
                       item.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontFamily: 'Mulish',
                         fontSize: 12,
                         fontWeight: FontWeight.w400,
                         color: Colors.white.withAlpha(230),
-                        height: 1.3,
+                        height: 1.35,
                       ),
                     ),
 
@@ -763,29 +715,34 @@ class _BerandaScreenState extends State<BerandaScreen> {
     );
   }
 
-  /// Tag / Chip di dalam kartu (Interaktif & bisa diklik per tag)
+  /// Tag / Chip di dalam kartu. Tag layanan aktif bisa diklik; tag kartu
+  /// Coming Soon (PSK) bersifat informasi saja.
   Widget _buildTagChip(BuildContext context, LayananItem item, String tag) {
+    final Widget chipLabel = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(56),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        tag,
+        style: const TextStyle(
+          fontFamily: 'Mulish',
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+    );
+
+    if (item.comingSoon) return chipLabel;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () => _onTagTap(context, item, tag),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white.withAlpha(64),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            tag,
-            style: const TextStyle(
-              fontFamily: 'Mulish',
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-            ),
-          ),
-        ),
+        child: chipLabel,
       ),
     );
   }

@@ -6,6 +6,8 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/auth/views/profile_screen.dart';
+import 'package:sentra/features/pjsrk/views/widgets/laporan_saya_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/report/models/report_model.dart';
@@ -13,7 +15,9 @@ import 'package:sentra/features/report/services/search_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_detail_laporan.dart';
 
-/// Halaman "Laporan Saya" khusus PJSRK
+/// Halaman riwayat laporan khusus PJSRK.
+/// Hanya menampilkan laporan ber-layanan PJSRK (kolom laporan_pjsrk terisi),
+/// sehingga tidak tercampur dengan riwayat laporan PPA.
 /// UI mengikuti desain Figma (header oranye, filter chip, kartu laporan, FAB Lapor)
 class LaporanSayaScreen extends StatefulWidget {
   const LaporanSayaScreen({super.key});
@@ -104,12 +108,12 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
       });
 
       try {
-        final results =
-            await _searchService.fetchSearchResults(query, userId);
+        final results = await _searchService.fetchSearchResults(query, userId);
         if (results != null && results.isNotEmpty) {
-          _laporanController.laporanList.value = results
-              .map((e) => LaporanModel.fromJson(e as Map<String, dynamic>))
-              .toList();
+          _laporanController.laporanList.value =
+              results
+                  .map((e) => LaporanModel.fromJson(e as Map<String, dynamic>))
+                  .toList();
         } else {
           _laporanController.laporanList.clear();
         }
@@ -121,6 +125,24 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
     });
   }
 
+<<<<<<< HEAD
+=======
+  void _onBottomNavTapped(int index) {
+    switch (index) {
+      case 0:
+        Navigator.of(context).pop();
+        break;
+      case 1:
+        break;
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        );
+        break;
+    }
+  }
+>>>>>>> 923b98c24f2210bc368e2bf61ffcd7c36b41c025
 
   @override
   Widget build(BuildContext context) {
@@ -145,9 +167,12 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
                   final isLoading =
                       _laporanController.isLoading.value || _isSearching;
 
-                  final List<LaporanModel> list = _selectedFilter == 'semua'
-                      ? _laporanController.laporanList
-                      : _laporanController.laporanByCategoryList;
+                  final List<LaporanModel> list =
+                      (_selectedFilter == 'semua'
+                              ? _laporanController.laporanList
+                              : _laporanController.laporanByCategoryList)
+                          .where((l) => l.layanan.isNotEmpty)
+                          .toList();
 
                   return Stack(
                     children: [
@@ -183,24 +208,25 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
 
                           // List Laporan
                           Expanded(
-                            child: isLoading
-                                ? _buildShimmer()
-                                : list.isEmpty
+                            child:
+                                isLoading
+                                    ? _buildShimmer()
+                                    : list.isEmpty
                                     ? _buildEmptyState()
                                     : ListView.separated(
-                                        padding: const EdgeInsets.fromLTRB(
-                                          18,
-                                          0,
-                                          18,
-                                          100,
-                                        ),
-                                        itemCount: list.length,
-                                        separatorBuilder: (_, __) =>
-                                            const SizedBox(height: 12),
-                                        itemBuilder: (context, index) {
-                                          return _buildReportCard(list[index]);
-                                        },
+                                      padding: const EdgeInsets.fromLTRB(
+                                        18,
+                                        0,
+                                        18,
+                                        100,
                                       ),
+                                      itemCount: list.length,
+                                      separatorBuilder:
+                                          (_, __) => const SizedBox(height: 12),
+                                      itemBuilder: (context, index) {
+                                        return _buildReportCard(list[index]);
+                                      },
+                                    ),
                           ),
                         ],
                       ),
@@ -246,7 +272,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
                 ),
                 const Expanded(
                   child: Text(
-                    'Laporan Saya',
+                    'Riwayat Laporan PJSRK',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: Colors.white,
@@ -324,38 +350,39 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: filters.map((item) {
-          final isSelected = _selectedFilter == item['key'];
-          return Padding(
-            padding: EdgeInsets.only(
-              right: item == filters.last ? 0 : 8,
-            ),
-            child: GestureDetector(
-              onTap: () => _onFilterSelected(item['key']!),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: isSelected ? _primaryOrange : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected ? _primaryOrange : _borderGrey,
+        children:
+            filters.map((item) {
+              final isSelected = _selectedFilter == item['key'];
+              return Padding(
+                padding: EdgeInsets.only(right: item == filters.last ? 0 : 8),
+                child: GestureDetector(
+                  onTap: () => _onFilterSelected(item['key']!),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected ? _primaryOrange : Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? _primaryOrange : _borderGrey,
+                      ),
+                    ),
+                    child: Text(
+                      item['label']!,
+                      style: TextStyle(
+                        color: isSelected ? Colors.white : _textGrey,
+                        fontSize: 12,
+                        fontFamily: 'Mulish',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
-                child: Text(
-                  item['label']!,
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : _textGrey,
-                    fontSize: 12,
-                    fontFamily: 'Mulish',
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-          );
-        }).toList(),
+              );
+            }).toList(),
       ),
     );
   }
@@ -365,8 +392,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
   // ---------------------------------------------------------------------------
   Widget _buildReportCard(LaporanModel laporan) {
     final statusInfo = _resolveStatus(laporan.status);
-    final dateStr =
-        DateFormat('d MMM yyyy', 'id_ID').format(laporan.createdAt);
+    final dateStr = DateFormat('d MMM yyyy', 'id_ID').format(laporan.createdAt);
     // Nomor tiket asli dari server (contoh: RKN...). Prefix SP- buatan
     // aplikasi dihapus agar sama dengan nomor tiket di admin Dinsos.
     final ticketId = laporan.id.toString();
@@ -433,6 +459,28 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
+                    if (laporan.layanan.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFBEFE3),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          laporan.layananLabel,
+                          style: const TextStyle(
+                            color: Color(0xFFB25A14),
+                            fontSize: 10,
+                            fontFamily: 'Mulish',
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 4),
                     Text(
                       '$ticketId · $dateStr',
@@ -537,9 +585,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
   _StatusVisual _resolveStatus(String raw) {
     final s = raw.toLowerCase().trim();
 
-    if (s.contains('menunggu') ||
-        s.contains('verifikasi') ||
-        s == 'dikirim') {
+    if (s.contains('menunggu') || s.contains('verifikasi') || s == 'dikirim') {
       return const _StatusVisual(
         label: 'Menunggu verifikasi',
         bgColor: Color(0xFFFDF1D8),
@@ -608,10 +654,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
             gradient: const LinearGradient(
               begin: Alignment(-0.8, -0.6),
               end: Alignment(0.8, 1.2),
-              colors: [
-                Color(0xFFE48F4B),
-                Color(0xFFC86921),
-              ],
+              colors: [Color(0xFFE48F4B), Color(0xFFC86921)],
             ),
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
@@ -654,7 +697,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
           Icon(Icons.description_outlined, size: 56, color: Colors.grey[350]),
           const SizedBox(height: 12),
           const Text(
-            'Belum ada laporan',
+            'Belum ada laporan PJSRK',
             style: TextStyle(
               fontFamily: 'Mulish',
               fontSize: 15,
@@ -664,7 +707,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Laporan yang Anda buat akan muncul di sini',
+            'Laporan PJSRK yang Anda buat akan muncul di sini',
             style: TextStyle(
               fontFamily: 'Mulish',
               fontSize: 12,

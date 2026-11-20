@@ -77,6 +77,7 @@ class _BottomNavBar extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         border: const Border(
           top: BorderSide(color: Color(0xFFEEEEEE), width: 1),
         ),
@@ -88,6 +89,7 @@ class _BottomNavBar extends StatelessWidget {
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: SafeArea(
         top: false,
         child: SizedBox(
