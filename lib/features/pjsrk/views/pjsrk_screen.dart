@@ -202,8 +202,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
           selectedIndex: 0,
           onTabSelected: _onBottomNavTapped,
         ),
-      ),
-    );
+      ),);
   }
 
   Widget _buildHeader(BuildContext context) {

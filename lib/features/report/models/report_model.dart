@@ -1,3 +1,5 @@
+import 'package:sentra/core/utils/pjsrk_photo_urls.dart';
+
 class LaporanModel {
   final String id;
   final String kategori;
@@ -31,9 +33,10 @@ class LaporanModel {
     final dynamic kasus = json['detail_kasus'];
     final Map<String, dynamic>? pjsrk = _asMap(json['detail_pjsrk']);
     final Map<String, dynamic>? kasusMap = _asMap(kasus);
+    final String id = json['id_laporan']?.toString() ?? '';
 
     return LaporanModel(
-      id: json['id_laporan']?.toString() ?? '',
+      id: id,
       kategori: json['kategori']?.toString() ?? '',
       deskripsi: _resolveDeskripsi(json, penerima, pjsrk, kasusMap),
       status: json['status']?.toString() ?? '',
@@ -42,7 +45,7 @@ class LaporanModel {
           DateTime.now(),
       layanan: json['layanan_pjsrk']?.toString() ?? '',
       lokasi: _resolveLokasi(json, pjsrk, kasusMap),
-      fotoUrls: _resolveFotoUrls(pjsrk),
+      fotoUrls: _resolveFotoUrls(pjsrk, id),
     );
   }
 
@@ -107,14 +110,11 @@ class LaporanModel {
     return json['kecamatan']?.toString().trim() ?? '';
   }
 
-  static List<String> _resolveFotoUrls(Map<String, dynamic>? pjsrk) {
-    final urls = pjsrk?['foto_urls'];
-    if (urls is! List) return const [];
-
-    return urls
-        .map((e) => e?.toString() ?? '')
-        .where((e) => e.isNotEmpty)
-        .toList();
+  static List<String> _resolveFotoUrls(
+    Map<String, dynamic>? pjsrk,
+    String idLaporan,
+  ) {
+    return PjsrkPhotoUrls.resolve(pjsrk, idLaporan: idLaporan);
   }
 
   /// Label layanan PJSRK yang mudah dibaca.
