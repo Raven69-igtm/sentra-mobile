@@ -38,7 +38,7 @@ class LaporanModel {
       deskripsi: _resolveDeskripsi(json, penerima, pjsrk, kasusMap),
       status: json['status']?.toString() ?? '',
       createdAt:
-          DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.tryParse(json['created_at']?.toString() ?? '')?.toLocal() ??
           DateTime.now(),
       layanan: json['layanan_pjsrk']?.toString() ?? '',
       lokasi: _resolveLokasi(json, pjsrk, kasusMap),

@@ -4,7 +4,7 @@ import 'dart:math';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:sentra/core/network/api_client.dart';
-import 'package:sentra/features/auth/controllers/forgot_password_controller.dart';
+import 'package:sentra/features/auth/controllers/ganti_nomor_controller.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
 import 'package:dio/dio.dart';
@@ -12,14 +12,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/utils/custom_text_field.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+class GantiNomorScreen extends StatefulWidget {
+  const GantiNomorScreen({super.key});
 
   @override
-  _ForgotPasswordScreenState createState() => _ForgotPasswordScreenState();
+  _GantiNomorScreenState createState() => _GantiNomorScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _GantiNomorScreenState extends State<GantiNomorScreen> {
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController oldPhoneController = TextEditingController();
   final TextEditingController securityAnswerController =
@@ -107,7 +107,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         title: Image.asset('assets/logo/icon_ijo.png', height: 30),
         centerTitle: true,
       ),
-      body: Consumer<LupaPasswordController>(
+      body: Consumer<GantiNomorController>(
         builder: (context, controller, child) {
           return SafeArea(
             child: Padding(
@@ -133,7 +133,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          "Lupa Password",
+                          "Ganti Nomor",
                           style: TextStyle(
                             fontFamily: "Mulish",
                             fontSize: 20,
@@ -142,7 +142,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                         SizedBox(height: 6),
                         Text(
-                          "Kami akan mengirimkan OTP ke nomor telepon kamu.",
+                          "Perbarui nomor telepon yang terdaftar pada akun Anda.",
                           style: TextStyle(
                             fontFamily: "Mulish",
                             color: Colors.black54,
@@ -154,7 +154,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -206,39 +206,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                'Nomor telepon sudah tidak aktif?',
-                                style: TextStyle(
-                                  fontFamily: "Mulish",
-                                  color: Colors.black54,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () => _showOldPhoneDialog(context),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 6,
-                                ),
-                                child: Text(
-                                  "Perbarui Nomor",
-                                  style: TextStyle(
-                                    fontFamily: "Mulish",
-                                    color: Warna.backgroundIjo,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -267,7 +234,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: _kirimOTP,
+                      onPressed: () {
+                        if (phoneController.text.trim().isNotEmpty) {
+                          oldPhoneController.text = phoneController.text.trim();
+                        }
+                        _showOldPhoneDialog(context);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         minimumSize: const Size(double.infinity, 52),
@@ -280,7 +252,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         shadowColor: Colors.transparent,
                       ),
                       child: const Text(
-                        "Kirim OTP",
+                        "Perbarui Nomor",
                         style: TextStyle(
                           fontFamily: "Mulish",
                           fontWeight: FontWeight.w800,
@@ -460,6 +432,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
+            if (oldPhoneController.text.trim().length >= 10 &&
+                emergencyQuestion == null &&
+                !isLoadingQuestion &&
+                !isVerifying) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                fetchEmergencyQuestion(
+                  oldPhoneController.text.trim(),
+                  setStateDialog,
+                );
+              });
+            }
             return Dialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
@@ -1418,7 +1401,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                                             try {
                                               final controller = Provider.of<
-                                                LupaPasswordController
+                                                GantiNomorController
                                               >(context, listen: false);
 
                                               await controller.gantiNomor(
@@ -1889,7 +1872,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (!_canSubmit || isSubmitting) return;
     setState(() => isSubmitting = true);
     try {
-      final controller = Provider.of<LupaPasswordController>(
+      final controller = Provider.of<GantiNomorController>(
         context,
         listen: false,
       );

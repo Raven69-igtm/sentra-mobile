@@ -442,7 +442,7 @@ class _HistoryPageState extends State<HistoryPage> {
                         Text(
                           DateFormat(
                             'dd MMM yyyy, HH:mm',
-                          ).format(laporan.createdAt),
+                          ).format(laporan.createdAt.toLocal()),
                           style: const TextStyle(
                             fontFamily: "Mulish",
                             color: Colors.grey,
@@ -1372,7 +1372,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
   String _formatDateTime(String dateTimeStr) {
     try {
-      final DateTime dateTime = DateTime.parse(dateTimeStr);
+      final DateTime dateTime = DateTime.parse(dateTimeStr).toLocal();
       final months = [
         'Jan',
         'Feb',

@@ -3,7 +3,7 @@ import 'package:sentra/core/network/endpoints.dart';
 
 
 
-class LupaPasswordRepository {
+class GantiNomorRepository {
   // 1. Request untuk mengganti nomor telepon
   Future<Map<String, dynamic>> gantiNomor(
     String notelpLama,

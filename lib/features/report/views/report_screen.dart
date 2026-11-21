@@ -392,14 +392,8 @@ class _LaporanPageState extends State<LaporanPage> {
       return false;
     }
     if (!_penerimaSamaDenganPelapor) {
-      if (_nikPenerima.text.trim().isEmpty) {
-        CustomSnackbar.show(
-          "Mohon isi NIK penerima manfaat",
-          warna: Colors.red,
-        );
-        return false;
-      }
-      if (_nikPenerima.text.trim().length != 16) {
+      if (_nikPenerima.text.trim().isNotEmpty &&
+          _nikPenerima.text.trim().length != 16) {
         CustomSnackbar.show(
           "NIK penerima manfaat harus berjumlah 16 digit",
           warna: Colors.red,
@@ -803,7 +797,7 @@ class _LaporanPageState extends State<LaporanPage> {
                 'informasi_tambahan': null,
               }
               : {
-                'nik': _nikPenerima.text.trim(),
+                'nik': _optionalText(_nikPenerima),
                 'nama': _optionalText(_namaPenerima),
                 'Tempat_lahir': _optionalText(_tempatLahirPenerima),
                 'tanggal_lahir': _optionalText(_tanggalLahirPenerima),
@@ -1953,7 +1947,7 @@ class _LaporanPageState extends State<LaporanPage> {
             color: Colors.indigo,
             children: [
               _buildEnhancedTextField(
-                label: 'NIK Penerima Manfaat',
+                label: 'NIK Penerima Manfaat (Opsional)',
                 controller: _nikPenerima,
                 keyboardType: TextInputType.number,
                 icon: Icons.credit_card,
