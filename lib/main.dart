@@ -1,6 +1,6 @@
 import 'package:sentra/firebase_options.dart';
 import 'package:sentra/features/auth/controllers/login_controller.dart';
-import 'package:sentra/features/auth/controllers/forgot_password_controller.dart';
+import 'package:sentra/features/auth/controllers/ganti_nomor_controller.dart';
 import 'package:sentra/features/auth/controllers/register_controller.dart';
 import 'package:sentra/features/auth/services/auth_session.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
@@ -82,7 +82,7 @@ void main() async {
             providers: [
               ChangeNotifierProvider(create: (_) => LoginController()),
               ChangeNotifierProvider(create: (_) => RegisterController()),
-              ChangeNotifierProvider(create: (_) => LupaPasswordController()),
+              ChangeNotifierProvider(create: (_) => GantiNomorController()),
               ChangeNotifierProvider(create: (_) => UserProvider()),
               ChangeNotifierProvider(create: (_) => ChatController()),
             ],

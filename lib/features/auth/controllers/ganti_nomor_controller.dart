@@ -1,8 +1,8 @@
-import 'package:sentra/features/auth/repositories/forgot_password_repository.dart';
-import 'package:flutter/material.dart'; // Pastikan path file repository benar
+import 'package:sentra/features/auth/repositories/ganti_nomor_repository.dart';
+import 'package:flutter/material.dart';
 
-class LupaPasswordController extends ChangeNotifier {
-  final LupaPasswordRepository _repository = LupaPasswordRepository();
+class GantiNomorController extends ChangeNotifier {
+  final GantiNomorRepository _repository = GantiNomorRepository();
 
   bool _isLoading = false;
   String _errorMessage = '';

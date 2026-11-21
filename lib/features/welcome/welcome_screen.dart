@@ -23,7 +23,7 @@ class WelcomeWithSplashScreen extends StatefulWidget {
 }
 
 class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
   late AnimationController _floatController;
   late Animation<double> _rotationAnimation;
@@ -44,10 +44,14 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
   final TextEditingController deskripsiController = TextEditingController();
   late List<TextEditingController> controllers;
   final AudioPlayer _player = AudioPlayer();
+  bool _hasTriggeredMusic = false;
+  bool _isAudioPrepared = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _prepareAudio();
 
     controllers = [
       nikController,
@@ -153,30 +157,99 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
       CurvedAnimation(parent: _floatController, curve: Curves.easeInOutSine),
     );
 
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await precacheImage(const AssetImage('assets/logo/Image.png'), context);
-      _controller.forward().then((_) {
-        _floatController.repeat(reverse: true);
-      });
-      _playBackgroundMusic();
+    // Memicu musik tepat saat animasi logo Sentra selesai dan teks judul mulai muncul
+    _controller.addListener(() {
+      if (_controller.value >= 0.7 && !_hasTriggeredMusic) {
+        _hasTriggeredMusic = true;
+        _playBackgroundMusic();
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        precacheImage(const AssetImage('assets/logo/Image.png'), context);
+        _controller.forward().then((_) {
+          _floatController.repeat(reverse: true);
+          if (!_hasTriggeredMusic) {
+            _hasTriggeredMusic = true;
+            _playBackgroundMusic();
+          }
+        });
+      }
     });
   }
 
-  void _playBackgroundMusic() async {
-    await _player.setReleaseMode(ReleaseMode.loop);
-    await _player.setVolume(0.6);
-    await _player.play(AssetSource('audio/welcome.mp3'));
+  Future<void> _prepareAudio() async {
+    try {
+      await _player.setReleaseMode(ReleaseMode.loop);
+      await _player.setVolume(0.6);
+      await _player.setSource(AssetSource('audio/welcome.mp3'));
+      _isAudioPrepared = true;
+      if (_hasTriggeredMusic && mounted && _player.state != PlayerState.playing) {
+        await _player.resume();
+      }
+    } catch (e) {
+      debugPrint("Gagal menyiapkan audio welcome: $e");
+    }
+  }
+
+  Future<void> _playBackgroundMusic() async {
+    try {
+      // HANYA putar jika halaman Welcome sedang tampil di layar paling depan
+      if (!mounted) return;
+      final bool isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
+      if (!isCurrent) return;
+
+      if (_player.state == PlayerState.playing) return;
+      if (_isAudioPrepared) {
+        await _player.resume();
+      } else {
+        await _player.setReleaseMode(ReleaseMode.loop);
+        await _player.setVolume(0.6);
+        await _player.play(AssetSource('audio/welcome.mp3'));
+      }
+    } catch (e) {
+      debugPrint("Gagal memutar audio welcome: $e");
+      try {
+        await _player.play(AssetSource('audio/welcome.mp3'));
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _stopBackgroundMusic() async {
+    try {
+      if (_player.state == PlayerState.playing) {
+        await _player.stop();
+      }
+    } catch (e) {
+      debugPrint("Gagal menghentikan audio welcome: $e");
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // HANYA putar jika halaman Welcome sedang aktif tampil di layar paling depan
+      final bool isCurrent = ModalRoute.of(context)?.isCurrent ?? false;
+      if (mounted && isCurrent && _hasTriggeredMusic) {
+        _playBackgroundMusic();
+      }
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _stopBackgroundMusic();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     _floatController.dispose();
     _shakeController?.dispose();
     for (var controller in controllers) {
       controller.dispose();
     }
+    _stopBackgroundMusic();
     _player.dispose();
     super.dispose();
   }
@@ -264,10 +337,15 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
                           icon: Icons.flash_on,
                           backgroundColor: const Color(0xFFFDF6E3),
                           textColor: const Color(0xFF8B6220),
-                          onPressed: () {
-                            Navigator.of(context).push(
+                          onPressed: () async {
+                            await _stopBackgroundMusic();
+                            if (!context.mounted) return;
+                            await Navigator.of(context).push(
                               _slideUpRoute(const PelaporanCepatMenuScreen()),
                             );
+                            if (mounted && (ModalRoute.of(context)?.isCurrent ?? false) && _hasTriggeredMusic) {
+                              _playBackgroundMusic();
+                            }
                           },
                         ),
                       ),
@@ -292,11 +370,15 @@ class _WelcomeWithSplashScreenState extends State<WelcomeWithSplashScreen>
                           ),
                           textColor: Warna.backgroundIjo,
                           onPressed: () async {
-                            await _player.stop();
-                            Navigator.of(
+                            await _stopBackgroundMusic();
+                            if (!context.mounted) return;
+                            await Navigator.of(
                               context,
                             ).push(_slideUpRoute(const LoginPage()));
-                          }
+                            if (mounted && (ModalRoute.of(context)?.isCurrent ?? false) && _hasTriggeredMusic) {
+                              _playBackgroundMusic();
+                            }
+                          },
                         ),
                       ),
                     ),

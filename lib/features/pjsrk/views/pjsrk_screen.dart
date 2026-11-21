@@ -9,7 +9,6 @@ import 'package:sentra/features/pjsrk/views/rehabilitasi_sosial_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_bottom_nav.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_feature_card.dart';
 import 'package:sentra/features/pjsrk/views/widgets/pjsrk_info_card.dart';
-import 'package:sentra/features/pjsrk/views/widgets/pjsrk_report_card.dart';
 import 'package:sentra/features/pjsrk/views/permasalahan_sosial_screen.dart';
 
 /// Halaman Menu PJSRK (Pelayanan Jaminan Sosial dan Rehabilitasi Kesejahteraan)
@@ -25,7 +24,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
   // Warna tema halaman PJSRK
   static const Color _primaryOrange = Color(0xFFD8782E);
   static const Color _backgroundColor = Color(0xFFF8F9FA);
-  static const int _selectedNavIndex = 1;
 
   void _handleBack() {
     final navigator = Navigator.of(context);
@@ -36,41 +34,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     }
-  }
-
-  /// Menampilkan snackbar feedback sementara yang rapi dan konsisten
-  void _showFeatureNotice(String featureName) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.info_outline_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Layanan $featureName sedang dalam pengembangan',
-                style: const TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF2C3E50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        duration: const Duration(seconds: 2),
-      ),
-    );
   }
 
   /// Navigasi ke form Rehabilitasi Sosial
@@ -89,7 +52,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
     );
   }
 
-  /// Navigasi ke halaman Lihat Laporan Saya (LaporanSayaScreen)
+  /// Membuka laporan saya dari menu Riwayat dan Laporan di navigasi bawah.
   void _onLihatLaporanTap() {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final userId = userProvider.idAkun;
@@ -159,12 +122,13 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
           children: [
             _buildHeader(context),
             Expanded(
-              child: Center(
+              child: Align(
+                alignment: Alignment.topCenter,
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 600),
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -226,11 +190,6 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
                             );
                           },
                         ),
-                        const SizedBox(height: 12),
-
-                        PjsrkReportCard(
-                          onTap: _onLihatLaporanTap,
-                        ),
                       ],
                     ),
                   ),
@@ -243,8 +202,7 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
           selectedIndex: 0,
           onTabSelected: _onBottomNavTapped,
         ),
-      ),
-    );
+      ),);
   }
 
   Widget _buildHeader(BuildContext context) {
