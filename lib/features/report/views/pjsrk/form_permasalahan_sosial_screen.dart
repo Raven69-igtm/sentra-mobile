@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
-import 'package:sentra/features/pjsrk/repositories/pjsrk_report_repository.dart';
+import 'package:sentra/features/pjsrk/repositories/pjsrk_quick_report_repository.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/lokasi_autocomplete_field.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_form_header.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_submit_button.dart';
@@ -44,6 +44,9 @@ class _FormPermasalahanSosialScreenState
   // Status loading saat tombol submit ditekan
   bool _isLoading = false;
 
+  // Repository pengiriman laporan cepat ke backend SENTRA
+  final PjsrkQuickReportRepository _repository = PjsrkQuickReportRepository();
+
   @override
   void dispose() {
     _namaController.dispose();
@@ -54,8 +57,9 @@ class _FormPermasalahanSosialScreenState
     super.dispose();
   }
 
+
   /// Menangani aksi saat tombol Submit ditekan
-  void _handleSubmit() async {
+  Future<void> _handleSubmit() async {
     // 1. Validasi semua field apakah sudah terisi dengan benar
     if (!_formKey.currentState!.validate()) {
       HapticFeedback.mediumImpact();
@@ -69,42 +73,62 @@ class _FormPermasalahanSosialScreenState
       return;
     }
 
+    // 2. Pastikan pengguna sudah login sebelum mengirim laporan
+    final int? idAkun =
+        Provider.of<UserProvider>(context, listen: false).idAkun;
+
+    if (idAkun == null || idAkun <= 0) {
+      HapticFeedback.mediumImpact();
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Silakan login terlebih dahulu untuk mengirim laporan"),
+          backgroundColor: Colors.redAccent,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
-    // 2. Kirim ke backend lewat POST /api/pjsrk/cepat. Boleh tanpa login:
-    //    bila user sudah login, idAkun otomatis ikut terkirim.
-    final int? idAkun =
-        Provider.of<UserProvider>(context, listen: false).idAkun;
-
+    // 3. Kirim laporan permasalahan sosial ke server SENTRA
     try {
-      final String idLaporan =
-          await PjsrkReportRepository().kirimCepat(
+      final nomor = await _repository.kirim(
         idAkun: idAkun,
-        layanan: 'permasalahan_sosial',
-        nama: _namaController.text.trim(),
-        telepon: _teleponController.text.trim(),
-        lokasi: _lokasiController.text.trim(),
-        jenis: _jenisController.text.trim(),
-        deskripsi: _deskripsiController.text.trim(),
+        layanan: PjsrkQuickReportRepository.layananPermasalahan,
+        nama: _namaController.text,
+        telepon: _teleponController.text,
+        lokasi: _lokasiController.text,
+        jenis: _jenisController.text,
+        deskripsi: _deskripsiController.text,
       );
 
       if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
 
-      // 3. Dialog sukses membawa nomor tiket dari server (dibuat trigger DB).
-      _showSuccessDialog(idLaporan);
-    } on ApiException catch (e) {
+      // 4. Tampilkan dialog sukses beserta nomor laporan
+      _showSuccessDialog(nomor);
+    } catch (error) {
       if (!mounted) return;
+
       setState(() {
         _isLoading = false;
       });
+
+      HapticFeedback.mediumImpact();
+      final pesan = error is ApiException
+          ? error.message
+          : 'Laporan gagal dikirim. Silakan coba lagi.';
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.message),
+          content: Text(pesan),
           backgroundColor: Colors.redAccent,
           duration: const Duration(seconds: 3),
         ),
@@ -113,7 +137,7 @@ class _FormPermasalahanSosialScreenState
   }
 
   /// Dialog konfirmasi bahwa laporan berhasil terkirim
-  void _showSuccessDialog(String idLaporan) {
+  void _showSuccessDialog(String nomor) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -159,27 +183,42 @@ class _FormPermasalahanSosialScreenState
                   height: 1.4,
                 ),
               ),
-              const SizedBox(height: 12),
-
-              // Nomor tiket dari server (RKN...) supaya pelapor bisa melacak.
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8F8F0),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFBFE7D6)),
-                ),
-                child: Text(
-                  "ID Laporan: $idLaporan",
-                  style: const TextStyle(
-                    color: Color(0xFF2E7D5B),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    fontFamily: 'Mulish',
+              if (nomor.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      const Text(
+                        "Nomor Laporan",
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'Mulish',
+                          color: Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        nomor.trim(),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Mulish',
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,

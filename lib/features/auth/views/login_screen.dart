@@ -5,7 +5,7 @@ import 'package:sentra/features/auth/services/auth_session.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
-import 'package:sentra/features/auth/views/forgot_password_screen.dart';
+import 'package:sentra/features/auth/views/ganti_nomor_screen.dart';
 import 'package:sentra/features/notification/repositories/notif_repository.dart';
 import 'package:sentra/core/utils/address_field.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -209,7 +209,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
           SizedBox(height: screenHeight * 0.015),
 
-          // Lupa Password
+          // Ganti Nomor
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
@@ -217,12 +217,12 @@ class _LoginPageState extends State<LoginPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ForgotPasswordScreen(),
+                    builder: (context) => const GantiNomorScreen(),
                   ),
                 );
               },
               child: Text(
-                "Lupa password?",
+                "Ganti Nomor?",
                 style: TextStyle(
                   fontFamily: "Mulish",
                   color: Warna.backgroundIjo,
@@ -327,12 +327,13 @@ class _LoginPageState extends State<LoginPage> {
                             CustomSnackbar.show(
                               'Login Berhasil, Selamat Datang ${activeUser.nama}',
                             );
-                            Navigator.pushReplacement(
+                            Navigator.pushAndRemoveUntil(
                               context,
                               MaterialPageRoute(
                                 builder:
-                                    (context) => HomeScreen(initialIndex: 0),
+                                    (context) => const HomeScreen(initialIndex: 0),
                               ),
+                              (route) => false,
                             );
                           }
                         },

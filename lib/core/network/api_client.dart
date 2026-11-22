@@ -82,6 +82,17 @@ class ApiClient {
     return _guard(() => dio.post(url, data: data, options: options));
   }
 
+  /// Kirim data multipart (dipakai unggah foto laporan PJSRK).
+  static Future<Response> postMultipart(String url, FormData data) {
+    return _guard(
+      () => dio.post(
+        url,
+        data: data,
+        options: Options(contentType: 'multipart/form-data'),
+      ),
+    );
+  }
+
   static Future<Response> _guard(Future<Response> Function() request) async {
     try {
       return await request();

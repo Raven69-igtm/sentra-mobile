@@ -292,7 +292,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                       children: [
                                                         informasi.gambar != null
                                                             ? Image.network(
-                                                              informasi.gambar!,
+                                                              (informasi.resolvedGambar ?? informasi.gambar!),
                                                               fit: BoxFit.cover,
                                                               width:
                                                                   double
@@ -355,7 +355,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                               borderRadius: BorderRadius.circular(12),
                                                               child: informasi.gambar != null
                                                                 ? Image.network(
-                                                                  informasi.gambar!,
+                                                                  (informasi.resolvedGambar ?? informasi.gambar!),
                                                                   fit: BoxFit.contain,
                                                                   )
                                                                 : Image.asset(
@@ -561,7 +561,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 children: [
                                                   Positioned.fill(
                                                     child: Image.network(
-                                                      informasi.gambar!,
+                                                      (informasi.resolvedGambar ?? informasi.gambar!),
                                                       fit: BoxFit.cover,
                                                       loadingBuilder: (
                                                         context,

@@ -436,7 +436,7 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
         formData.files.add(MapEntry('foto[]', file));
       }
 
-      final response = await ApiClient.postRequest(
+      final response = await ApiClient.postMultipart(
         '/pjsrk/permasalahan-sosial',
         formData,
       );

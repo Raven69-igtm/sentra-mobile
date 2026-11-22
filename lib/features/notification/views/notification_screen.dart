@@ -220,7 +220,7 @@ class _NotificationPageState extends State<NotificationPage>
 
   String _formatDate(String dateString) {
     try {
-      final dateTime = DateTime.parse(dateString);
+      final dateTime = DateTime.parse(dateString).toLocal();
       final now = DateTime.now();
       final difference = now.difference(dateTime);
 

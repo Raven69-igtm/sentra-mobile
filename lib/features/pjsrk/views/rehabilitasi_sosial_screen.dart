@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
-import 'package:sentra/features/pjsrk/views/laporan_sukses_screen.dart';
+import 'package:sentra/features/pjsrk/models/pjsrk_rehab_model.dart';
+import 'package:sentra/features/pjsrk/repositories/pjsrk_rehab_repository.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_chips.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_fields.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_foto.dart';
@@ -45,15 +44,15 @@ class _RehabilitasiSosialFormScreenState
   String kondisi = 'Sakit';
   bool rahasia = true;
 
-  // true saat laporan sedang dikirim ke API (menahan tap ganda)
-  bool _sending = false;
-
   // Koordinat yang dipilih di peta (null = belum dipilih)
   double? lat;
   double? lng;
 
   // 4 slot foto (XFile dari image_picker; null = kosong)
   final List<XFile?> photos = List<XFile?>.filled(4, null);
+
+  // Status pengiriman ke server
+  bool _isLoading = false;
 
   final lokasiC = TextEditingController();
   final ciriC = TextEditingController();
@@ -81,6 +80,7 @@ class _RehabilitasiSosialFormScreenState
   }
 
   Future<void> _submit() async {
+    if (_isLoading) return;
     if (lokasiC.text.trim().isEmpty && lat == null) {
       _snack('Lokasi wajib diisi (ketuk peta atau "Lokasi saya")');
       return;
@@ -95,110 +95,90 @@ class _RehabilitasiSosialFormScreenState
     }
 
     final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
-    if (idAkun == null || idAkun <= 0) {
-      _snack('Silakan login terlebih dahulu untuk mengirim laporan');
-      return;
-    }
+    if (idAkun == null) return _snack('Silakan login terlebih dahulu');
 
-    FocusScope.of(context).unfocus();
-    setState(() => _sending = true);
+    final data = PjsrkRehabModel(
+      jenisRehabilitasi: jenis,
+      jumlahPenerima: jumlah,
+      jenisKelamin: gender,
+      kelompokUsia: usia,
+      kondisiSaatDitemukan: kondisi,
+      ciriCiri: ciriC.text.trim(),
+      rahasia: rahasia,
+      alamat: lokasiC.text.trim(),
+      latitude: lat ?? 0,
+      longitude: lng ?? 0,
+      kontak: kontakC.text.trim(),
+    );
 
+    setState(() => _isLoading = true);
     try {
-      // Form multipart disusun manual. FormData.fromMap mengirim daftar berkas
-      // dengan nama kunci yang sama ("foto"), sehingga PHP hanya menyisakan
-      // satu berkas dan API menolak dengan "The foto field must be an array".
-      // Kunci "foto[]" membuat PHP membentuk array berkas sesuai validasi API.
-      final FormData form = FormData();
-      form.fields.addAll(<MapEntry<String, String>>[
-        MapEntry('id_akun', idAkun.toString()),
-        MapEntry('jenis_rehabilitasi', jenis),
-        MapEntry('jumlah_penerima', jumlah.toString()),
-        MapEntry('jenis_kelamin', gender),
-        MapEntry('kelompok_usia', usia),
-        MapEntry('kondisi_saat_ditemukan', kondisi),
-        MapEntry('ciri_ciri', ciriC.text.trim()),
-        MapEntry('rahasia', rahasia ? '1' : '0'),
-        MapEntry('alamat', lokasiC.text.trim()),
-        MapEntry('kontak', kontakC.text.trim()),
-      ]);
-
-      if (lat != null && lng != null) {
-        form.fields.add(MapEntry('latitude', lat.toString()));
-        form.fields.add(MapEntry('longitude', lng.toString()));
-      }
-
-      final foto = <MultipartFile>[];
-      for (final photo in photos) {
-        if (photo == null) continue;
-        final nama = _namaFileFoto(photo.name);
-        final file = MultipartFile.fromBytes(
-          await photo.readAsBytes(),
-          filename: nama,
-          contentType: _tipeFoto(nama),
-        );
-        foto.add(file);
-        form.files.add(MapEntry('foto[]', file));
-      }
-
-      final response = await ApiClient.postRequest(
-        '/pjsrk/rehabilitasi',
-        form,
+      final nomor = await PjsrkRehabRepository().kirim(
+        idAkun: idAkun,
+        data: data,
+        foto: photos.whereType<XFile>().toList(),
       );
-
-      final idLaporan = _bacaIdLaporan(response.data);
       if (!mounted) return;
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => LaporanSuksesScreen(
-            reportData: {
-              'id_laporan': idLaporan,
-              'nomor_tiket': idLaporan,
-              'jenis_rehabilitasi': jenis,
-              'alamat': lokasiC.text.trim(),
-              'jumlah_foto': foto.length,
-            },
-            nomorTiket: idLaporan.isEmpty ? null : idLaporan,
-            tanggalWaktu: DateTime.now(),
-          ),
-        ),
-      );
-    } on ApiException catch (e) {
-      if (mounted) _snack(e.message);
-    } catch (_) {
-      if (mounted) _snack('Gagal mengirim laporan. Silakan coba lagi.');
+      await _tampilSukses(nomor);
+    } catch (e) {
+      if (!mounted) return;
+      _snack(e is ApiException ? e.message : 'Gagal mengirim laporan: $e');
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  /// Nomor tiket asli dibuat trigger database (contoh: RKN...), bukan lagi
-  /// dibuat di aplikasi supaya sama dengan nomor tiket admin Dinsos.
-  String _bacaIdLaporan(dynamic body) {
-    if (body is Map && body['data'] is Map) {
-      return (body['data'] as Map)['id_laporan']?.toString() ?? '';
-    }
-    return '';
-  }
+  Future<void> _tampilSukses(String nomor) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text(
+          'Laporan terkirim',
+          style: TextStyle(fontFamily: 'Mulish', fontWeight: FontWeight.w800),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Nomor laporan',
+              style: TextStyle(fontFamily: 'Mulish', fontSize: 12),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              nomor,
+              style: const TextStyle(
+                fontFamily: 'Mulish',
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Petugas Dinsos akan menindaklanjuti laporan ini.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontFamily: 'Mulish', fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'Selesai',
+              style: TextStyle(
+                fontFamily: 'Mulish',
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
 
-  /// Pastikan nama berkas punya ekstensi gambar agar server menyimpannya
-  /// dengan ekstensi yang benar.
-  String _namaFileFoto(String name) {
-    final lower = name.toLowerCase();
-    final valid = lower.endsWith('.jpg') ||
-        lower.endsWith('.jpeg') ||
-        lower.endsWith('.png') ||
-        lower.endsWith('.webp');
-    if (valid) return name;
-    return 'foto-${DateTime.now().millisecondsSinceEpoch}.jpg';
-  }
-
-  /// Tipe konten berkas agar header multipart sesuai ekstensi gambarnya.
-  DioMediaType _tipeFoto(String nama) {
-    final lower = nama.toLowerCase();
-    if (lower.endsWith('.png')) return DioMediaType('image', 'png');
-    if (lower.endsWith('.webp')) return DioMediaType('image', 'webp');
-    return DioMediaType('image', 'jpeg');
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   @override
@@ -307,7 +287,7 @@ class _RehabilitasiSosialFormScreenState
                     RehabTextArea(
                       controller: ciriC,
                       hint:
-                          'Pakaian, kondisi fisik, sudah berapa lama di lokasi…',
+                          'Pakaian, kondisi fisik, sudah berapa lama di lokasiâ€¦',
                     ),
                     const SizedBox(height: 16),
 
@@ -337,7 +317,7 @@ class _RehabilitasiSosialFormScreenState
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: _sending ? null : _submit,
+                        onPressed: _isLoading ? null : _submit,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _orange,
                           foregroundColor: Colors.white,
@@ -346,7 +326,7 @@ class _RehabilitasiSosialFormScreenState
                             borderRadius: BorderRadius.circular(14),
                           ),
                         ),
-                        child: _sending
+                        child: _isLoading
                             ? const SizedBox(
                                 width: 22,
                                 height: 22,

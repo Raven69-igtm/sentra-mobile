@@ -67,7 +67,20 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
       _snack(e.message, error: true);
     } catch (e) {
       if (!mounted) return;
-      _snack('Gagal mengirim laporan: $e', error: true);
+      final String message =
+          e is ApiException ? e.message : 'Gagal mengirim laporan: $e';
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              message,
+              style: const TextStyle(fontFamily: 'Mulish'),
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
     }
   }
 
