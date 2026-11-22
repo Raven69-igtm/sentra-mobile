@@ -313,12 +313,20 @@ class _PppaScreenState extends State<PppaScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(14),
                       child: Image.network(
-                        informasi.gambar!,
+                        informasi.resolvedGambar ?? informasi.gambar!,
                         width: double.infinity,
                         height: 180,
                         fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, __, ___) => const SizedBox.shrink(),
+                        errorBuilder: (_, __, ___) => Container(
+                          width: double.infinity,
+                          height: 180,
+                          color: const Color(0xFFE8F7ED),
+                          child: const Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Warna.backgroundIjoDark,
+                            size: 36,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -361,7 +369,7 @@ class _PpaInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? gambar = informasi.gambar;
+    final String? gambar = informasi.resolvedGambar;
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/dashboard/views/widgets/layanan_card_background.dart';
 import 'package:sentra/features/dashboard/views/pppa_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 import 'package:sentra/features/notification/views/notification_screen.dart';
@@ -20,6 +21,9 @@ class LayananItem {
   /// true untuk layanan yang belum tersedia (kartu PSK → Coming Soon).
   final bool comingSoon;
 
+  /// Ilustrasi latar khas tiap kartu layanan.
+  final LayananCardArt art;
+
   const LayananItem({
     required this.id,
     required this.title,
@@ -27,6 +31,7 @@ class LayananItem {
     required this.tags,
     required this.gradientColors,
     required this.icon,
+    required this.art,
     this.comingSoon = false,
   });
 }
@@ -51,6 +56,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
       tags: ['Rehabilitasi Sosial', 'Bencana', 'Permasalahan Sosial'],
       gradientColors: [Color(0xFFE57E3B), Color(0xFFD46824)],
       icon: Icons.favorite_border_rounded,
+      art: LayananCardArt.pjsrk,
     ),
     LayananItem(
       id: 'psk',
@@ -60,6 +66,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
       gradientColors: [Color(0xFF5B6BBF), Color(0xFF4856A6)],
       icon: Icons.outlined_flag_rounded,
       comingSoon: true,
+      art: LayananCardArt.psk,
     ),
     LayananItem(
       id: 'pppa',
@@ -69,6 +76,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
       tags: ['Pengaduan Kekerasan', 'Pemberdayaan Anak'],
       gradientColors: [Color(0xFF48B167), Color(0xFF389753)],
       icon: Icons.shield_outlined,
+      art: LayananCardArt.pppa,
     ),
   ];
 
@@ -574,6 +582,13 @@ class _BerandaScreenState extends State<BerandaScreen> {
           ),
           child: Stack(
             children: [
+              // Ilustrasi latar tematik agar kartu tidak terlihat kosong.
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: LayananBackgroundPainter(art: item.art),
+                ),
+              ),
+
               // Aksen lingkaran dekoratif (ring halus + titik lembut)
               Positioned(
                 right: -34,

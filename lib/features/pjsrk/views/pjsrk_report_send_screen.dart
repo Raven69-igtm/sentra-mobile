@@ -58,20 +58,6 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
       return;
     }
 
-    final idAkun = Provider.of<UserProvider>(context, listen: false).idAkun;
-    if (idAkun == null) {
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text(
-            'Silakan login terlebih dahulu',
-            style: const TextStyle(fontFamily: 'Mulish'),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ));
-      return;
-    }
-
     try {
       final nomor = await _c.kirim(idAkun: idAkun);
       if (!mounted) return;
@@ -81,7 +67,6 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
       _snack(e.message, error: true);
     } catch (e) {
       if (!mounted) return;
-<<<<<<< HEAD
       final String message =
           e is ApiException ? e.message : 'Gagal mengirim laporan: $e';
       ScaffoldMessenger.of(context)
@@ -96,9 +81,6 @@ class _PjsrkReportSendScreenState extends State<PjsrkReportSendScreen> {
             backgroundColor: Colors.red.shade700,
           ),
         );
-=======
-      _snack('Gagal mengirim laporan: $e', error: true);
->>>>>>> d4305948dd430ab7571f66d9b4fe3a458674b465
     }
   }
 
