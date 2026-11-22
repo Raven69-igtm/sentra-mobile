@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'pjsrk_colors.dart';
 
 /// Tombol utama oranye bergradasi (mis. "Lanjut", "Tinjau & Kirim").
-class PjsrkGradientButton extends StatelessWidget {
+///
+/// Ukuran, radius, dan feedback tekan dibuat konsisten dengan tombol
+/// utama lain di layanan PJSRK.
+class PjsrkGradientButton extends StatefulWidget {
   final String text;
   final VoidCallback onTap;
   final bool loading;
@@ -15,40 +18,71 @@ class PjsrkGradientButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
-        height: 56,
+  State<PjsrkGradientButton> createState() => _PjsrkGradientButtonState();
+}
+
+class _PjsrkGradientButtonState extends State<PjsrkGradientButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScale(
+      scale: _pressed && !widget.loading ? 0.98 : 1,
+      duration: const Duration(milliseconds: 120),
+      curve: Curves.easeOut,
+      child: Container(
+        height: 52,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           gradient: const LinearGradient(
-              colors: [Color(0xFFE08A45), PjsrkColors.primaryDark]),
-          boxShadow: const [
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFE08A45), PjsrkColors.primaryDark],
+          ),
+          boxShadow: [
             BoxShadow(
-                color: Color.fromRGBO(214, 118, 44, 0.35),
-                blurRadius: 20,
-                offset: Offset(0, 8))
+              color: PjsrkColors.primary.withAlpha(70),
+              blurRadius: 16,
+              offset: const Offset(0, 7),
+            ),
           ],
         ),
         child: Material(
           color: Colors.transparent,
+          borderRadius: BorderRadius.circular(16),
           child: InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: loading ? null : onTap,
+            borderRadius: BorderRadius.circular(16),
+            onTap: widget.loading ? null : widget.onTap,
+            onHighlightChanged: (value) {
+              setState(() => _pressed = value);
+            },
+            splashColor: Colors.white.withAlpha(40),
+            highlightColor: Colors.white.withAlpha(20),
             child: Center(
-              child: loading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 3, color: Colors.white),
-                    )
-                  : Text(text,
-                      style: const TextStyle(
+              child:
+                  widget.loading
+                      ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.6,
+                          color: Colors.white,
+                        ),
+                      )
+                      : Text(
+                        widget.text,
+                        style: const TextStyle(
                           fontFamily: 'Mulish',
                           color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800)),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }

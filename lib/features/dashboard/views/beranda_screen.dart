@@ -552,11 +552,25 @@ class _BerandaScreenState extends State<BerandaScreen> {
     );
   }
 
+  String? _imageAssetFor(LayananItem item) {
+    switch (item.id) {
+      case 'pjsrk':
+        return 'assets/image/beranda/pjsrk.png';
+      case 'psk':
+        return 'assets/image/beranda/psk.png';
+      case 'pppa':
+        return 'assets/image/beranda/pppa.png';
+      default:
+        return null;
+    }
+  }
+
   /// Kartu Layanan (PJSRK, PSK, PPPA) — gradient warna khas tiap layanan
   /// dengan aksen dekoratif halus. Kartu PSK tetap penuh warna, ditandai
   /// badge COMING SOON sebagai indikator layanan belum tersedia.
   Widget _buildServiceCard(BuildContext context, LayananItem item) {
     final bool isComingSoon = item.comingSoon;
+    final String? imageAsset = _imageAssetFor(item);
 
     return Material(
       color: Colors.transparent,
@@ -582,13 +596,6 @@ class _BerandaScreenState extends State<BerandaScreen> {
           ),
           child: Stack(
             children: [
-              // Ilustrasi latar tematik agar kartu tidak terlihat kosong.
-              Positioned.fill(
-                child: CustomPaint(
-                  painter: LayananBackgroundPainter(art: item.art),
-                ),
-              ),
-
               // Aksen lingkaran dekoratif (ring halus + titik lembut)
               Positioned(
                 right: -34,
@@ -614,6 +621,53 @@ class _BerandaScreenState extends State<BerandaScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white.withAlpha(14),
+                  ),
+                ),
+              ),
+
+              if (imageAsset != null)
+                Positioned.fill(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FractionallySizedBox(
+                      widthFactor: 0.54,
+                      heightFactor: 1,
+                      child: Image.asset(
+                        imageAsset,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.centerRight,
+                      ),
+                    ),
+                  ),
+                ),
+
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        item.gradientColors.first.withAlpha(255),
+                        item.gradientColors.first.withAlpha(125),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        item.gradientColors.last.withAlpha(0),
+                        item.gradientColors.last.withAlpha(120),
+                      ],
+                      stops: const [0.55, 1.0],
+                    ),
                   ),
                 ),
               ),
