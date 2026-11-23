@@ -3,6 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_typography.dart';
+import 'package:sentra/core/widgets/sentra_button.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
+import 'package:sentra/core/widgets/sentra_snackbar.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/pjsrk/models/pjsrk_rehab_model.dart';
@@ -21,8 +26,7 @@ class RehabilitasiSosialFormScreen extends StatefulWidget {
 
 class _RehabilitasiSosialFormScreenState
     extends State<RehabilitasiSosialFormScreen> {
-  static const _orange = Color(0xFFD6762E);
-  static const _bg = Color(0xFFFAFAFA);
+  static const _bg = Colors.white;
 
   // ---------- STATE FORM ----------
   String jenis = 'Tunawisma';
@@ -67,15 +71,10 @@ class _RehabilitasiSosialFormScreenState
   }
 
   void _snack(String msg, {bool ok = false}) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg, style: const TextStyle(fontFamily: 'Mulish')),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: ok ? const Color(0xFF3F8F63) : const Color(0xFF2C3E50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-      ),
+    SentraSnackbar.show(
+      msg,
+      context: context,
+      type: ok ? SentraSnackbarType.success : SentraSnackbarType.warning,
     );
   }
 
@@ -194,11 +193,12 @@ class _RehabilitasiSosialFormScreenState
         backgroundColor: _bg,
         body: Column(
           children: [
-            // Header oranye
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.fromLTRB(16, top + 8, 16, 14),
-              color: _orange,
+            // Curved Header PJSRK (Opsi B)
+            SentraCurvedHeader(
+              gradient: AppColors.pjsrkHeaderGradient,
+              backgroundAsset: 'assets/image/beranda/pjsrk.png',
+              curveHeight: 26,
+              padding: EdgeInsets.fromLTRB(12, top + 6, 12, 34),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -208,18 +208,16 @@ class _RehabilitasiSosialFormScreenState
                       tooltip: 'Kembali',
                       onPressed: _handleBack,
                       icon: const Icon(
-                        Icons.arrow_back,
+                        Icons.arrow_back_rounded,
                         color: Colors.white,
-                        size: 20,
+                        size: 22,
                       ),
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Rehabilitasi Sosial',
-                    style: TextStyle(
-                      fontFamily: 'Mulish',
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
+                    style: AppTypography.title.copyWith(
+                      fontSize: 18,
                       color: Colors.white,
                     ),
                   ),
@@ -287,7 +285,7 @@ class _RehabilitasiSosialFormScreenState
                     RehabTextArea(
                       controller: ciriC,
                       hint:
-                          'Pakaian, kondisi fisik, sudah berapa lama di lokasiâ€¦',
+                          'Pakaian, kondisi fisik, sudah berapa lama di lokasi…',
                     ),
                     const SizedBox(height: 16),
 
@@ -313,39 +311,11 @@ class _RehabilitasiSosialFormScreenState
                     ),
                     const SizedBox(height: 24),
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _submit,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _orange,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.4,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                            : const Text(
-                                'Kirim Laporan',
-                                style: TextStyle(
-                                  fontFamily: 'Mulish',
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
+                    SentraButton.primary(
+                      label: 'Kirim Laporan',
+                      isLoading: _isLoading,
+                      onPressed: _submit,
+                      accentColor: ServicePalette.pjsrk.primary,
                     ),
                   ],
                 ),

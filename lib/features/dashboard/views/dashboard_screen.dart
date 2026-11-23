@@ -1,3 +1,6 @@
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_spacing.dart';
+import 'package:sentra/core/widgets/sentra_card.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/chat/views/chat_screen.dart';
 import 'package:sentra/features/chat/views/room_chat_screen.dart';
@@ -79,24 +82,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         DateFormat('EEE dd MMM').format(DateTime.now()).toUpperCase();
 
     return Scaffold(
-      backgroundColor: Colors.transparent, 
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.white,
-              Colors.white,
-              Colors.white,
-              Colors.white,
-            ],
-            stops: [0.0, 0.3, 0.8, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          bottom: false, 
-          child: SingleChildScrollView(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
             padding: EdgeInsets.only(
               left: 16,
               right: 16,
@@ -183,24 +172,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 5),
                 TrackingLaporan(),
                 const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black12, blurRadius: 6),
-                    ],
-                  ),
+                SentraCard(
                   child: Column(
                     children: [
-                      Text(
+                      const Text(
                         textAlign: TextAlign.center,
-                        "Statistik Laporan Kekerasan\nNganjuk",
-                        style: const TextStyle(
-                          fontFamily: "Mulish",
+                        'Statistik Laporan Kekerasan\nNganjuk',
+                        style: TextStyle(
+                          fontFamily: 'Mulish',
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       LineChartScreen(),
@@ -208,36 +190,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black12, blurRadius: 6),
-                    ],
-                  ),
+                SentraCard(
                   child: Column(
                     children: [
-                      Text(
+                      const Text(
                         textAlign: TextAlign.left,
-                        "Informasi",
-                        style: const TextStyle(
-                          fontFamily: "Mulish",
+                        'Informasi',
+                        style: TextStyle(
+                          fontFamily: 'Mulish',
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 10),
                       isLoading
                           ? Shimmer.fromColors(
-                            baseColor: Colors.grey[300]!,
-                            highlightColor: Colors.grey[100]!,
+                            baseColor: AppColors.shimmerBase,
+                            highlightColor: AppColors.shimmerHighlight,
                             child: Container(
                               height: 200,
                               decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(8),
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.radiusLg,
+                                ),
                               ),
                             ),
                           )
@@ -715,7 +692,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }

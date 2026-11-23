@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/chat/controllers/chat_controller.dart';
 import 'package:sentra/features/chat/models/chat_model.dart';
@@ -1085,59 +1087,74 @@ class _ChatKonsultasiScreenState extends State<ChatKonsultasiScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(ChatController chatController) {
-    return AppBar(
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Warna.backgroundIjoDark, Warna.backgroundIjo],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      ),
-      title: Row(
-        children: [
-          const CircleAvatar(
-            backgroundColor: Colors.white24,
-            child: Icon(Icons.person, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.receiverName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontFamily: 'Mulish',
-                  fontWeight: FontWeight.bold,
-                ),
+    final topInset = MediaQuery.of(context).padding.top;
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(96),
+      child: SentraCurvedHeader(
+        gradient: AppColors.pppaHeaderGradient,
+        backgroundAsset: 'assets/image/beranda/pppa.png',
+        curveHeight: 24,
+        padding: EdgeInsets.fromLTRB(8, topInset + 6, 16, 30),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Kembali',
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () {
+                final String? role =
+                    Provider.of<UserProvider>(context, listen: false).role;
+                if (role == 'user') {
+                  if (Navigator.canPop(context)) {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                    );
+                  }
+                } else {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => const RoomChat()),
+                  );
+                }
+              },
+            ),
+            const CircleAvatar(
+              radius: 18,
+              backgroundColor: Colors.white24,
+              child: Icon(Icons.person, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.receiverName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontFamily: 'Mulish',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    'Layanan Konsultasi PPA',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 11,
+                      fontFamily: 'Mulish',
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
-      ),
-      centerTitle: false,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
-        onPressed: () {
-          final String? role =
-              Provider.of<UserProvider>(context, listen: false).role;
-          if (role == 'user') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-            );
-          } else {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const RoomChat()),
-            );
-          }
-        },
+            ),
+          ],
+        ),
       ),
     );
   }
