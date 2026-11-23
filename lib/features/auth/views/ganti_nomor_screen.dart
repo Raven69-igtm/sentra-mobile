@@ -1,10 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:math';
 
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:sentra/core/network/api_client.dart';
-import 'package:sentra/features/auth/controllers/forgot_password_controller.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/core/network/endpoints.dart';
+import 'package:sentra/features/auth/controllers/ganti_nomor_controller.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/core/utils/custom_snackbar.dart';
 import 'package:dio/dio.dart';
@@ -12,85 +12,27 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/utils/custom_text_field.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key});
+class GantiNomorScreen extends StatefulWidget {
+  const GantiNomorScreen({super.key});
 
   @override
-  _ForgotPasswordScreenState createState() => _ForgotPasswordScreenState();
+  _GantiNomorScreenState createState() => _GantiNomorScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _GantiNomorScreenState extends State<GantiNomorScreen> {
   final TextEditingController phoneController = TextEditingController();
   final TextEditingController oldPhoneController = TextEditingController();
   final TextEditingController securityAnswerController =
       TextEditingController();
   final TextEditingController newPhoneController = TextEditingController();
-  String? _verificationId;
-  String? otpSentGlobal;
 
-  Future<void> _kirimOTP() async {
-    final phone = phoneController.text.trim();
-
-    if (phone.isEmpty || !RegExp(r'^0[0-9]{9,12}$').hasMatch(phone)) {
-      FocusScope.of(context).unfocus();
-      CustomSnackbar.show(
-        'Masukkan nomor telepon yang valid',
-        warna: Colors.redAccent,
-        tinggi: 100,
-      );
-      return;
-    }
-
-    final formattedPhone = '62${phone.substring(1)}';
-
-    final otpCode = (Random().nextInt(900000) + 100000).toString();
-
-    final dio = Dio();
-
-    try {
-      print(formattedPhone);
-      final response = await dio.post(
-        'https://${ApiClient.baseUrl.replaceAll('/public', '')}:3123/send-otp',
-        data: {'phoneNumber': formattedPhone, 'otpCode': otpCode},
-        options: Options(headers: {'Content-Type': 'application/json'}),
-      );
-      print('Response: ${response.data}');
-      print(response.statusCode);
-      if (response.statusCode == 200) {
-        FocusScope.of(context).unfocus();
-        CustomSnackbar.show(
-          'OTP berhasil dikirim',
-          tinggi: 100,
-          warna: Warna.backgroundIjo,
-        );
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => OtpVerificationScreen(
-                  phoneNumber: phone,
-                  verificationId: otpCode,
-                ),
-          ),
-        );
-      } else {
-        FocusScope.of(context).unfocus();
-        CustomSnackbar.show(
-          'Gagal mengirim OTP',
-          warna: Colors.redAccent,
-          tinggi: 100,
-          icon: Icons.error_outline_rounded,
-        );
-      }
-    } catch (e) {
-      FocusScope.of(context).unfocus();
-      CustomSnackbar.show(
-        'Terjadi kesalahan,silahkan cek koneksi internet anda',
-        warna: Colors.redAccent,
-        tinggi: 100,
-        icon: Icons.error_outline_rounded,
-      );
-    }
+  @override
+  void dispose() {
+    phoneController.dispose();
+    oldPhoneController.dispose();
+    securityAnswerController.dispose();
+    newPhoneController.dispose();
+    super.dispose();
   }
 
   @override
@@ -107,7 +49,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         title: Image.asset('assets/logo/icon_ijo.png', height: 30),
         centerTitle: true,
       ),
-      body: Consumer<LupaPasswordController>(
+      body: Consumer<GantiNomorController>(
         builder: (context, controller, child) {
           return SafeArea(
             child: Padding(
@@ -133,7 +75,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: const [
                         Text(
-                          "Lupa Password",
+                          "Ganti Nomor",
                           style: TextStyle(
                             fontFamily: "Mulish",
                             fontSize: 20,
@@ -142,7 +84,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                         SizedBox(height: 6),
                         Text(
-                          "Kami akan mengirimkan OTP ke nomor telepon kamu.",
+                          "Perbarui nomor telepon yang terdaftar pada akun Anda.",
                           style: TextStyle(
                             fontFamily: "Mulish",
                             color: Colors.black54,
@@ -154,7 +96,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
@@ -206,39 +148,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                'Nomor telepon sudah tidak aktif?',
-                                style: TextStyle(
-                                  fontFamily: "Mulish",
-                                  color: Colors.black54,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                            InkWell(
-                              onTap: () => _showOldPhoneDialog(context),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 6,
-                                ),
-                                child: Text(
-                                  "Perbarui Nomor",
-                                  style: TextStyle(
-                                    fontFamily: "Mulish",
-                                    color: Warna.backgroundIjo,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),
@@ -267,7 +176,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ],
                     ),
                     child: ElevatedButton(
-                      onPressed: _kirimOTP,
+                      onPressed: () {
+                        if (phoneController.text.trim().isNotEmpty) {
+                          oldPhoneController.text = phoneController.text.trim();
+                        }
+                        _showOldPhoneDialog(context);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         minimumSize: const Size(double.infinity, 52),
@@ -280,7 +194,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         shadowColor: Colors.transparent,
                       ),
                       child: const Text(
-                        "Kirim OTP",
+                        "Perbarui Nomor",
                         style: TextStyle(
                           fontFamily: "Mulish",
                           fontWeight: FontWeight.w800,
@@ -338,23 +252,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       });
 
       try {
-        final response = await Dio().post(
-          '${ApiClient.protocol}://${ApiClient.baseUrl}/api/auth/get-emergency-question',
+        final response = await ApiClient.dio.post(
+          Endpoints.emergencyQuestion,
           data: {'notelp': formattedPhone},
           options: Options(
-            headers: {'Content-Type': 'application/json'},
             receiveTimeout: const Duration(seconds: 10),
             sendTimeout: const Duration(seconds: 10),
           ),
           cancelToken: cancelToken,
         );
 
-        print('API Response: ${response.data}');
         final data = response.data;
 
-        if (response.statusCode == 200 && data['success']) {
+        if (response.statusCode == 200 && data is Map && data['success'] == true) {
           setStateDialog(() {
-            emergencyQuestion = data['emerquest'];
+            emergencyQuestion = data['emerquest']?.toString();
             isLoadingQuestion = false;
           });
         } else {
@@ -364,7 +276,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           });
           if (mounted) {
             CustomSnackbar.show(
-              data['message'] ??
+              (data is Map ? data['message']?.toString() : null) ??
                   'Nomor telepon tidak terdaftar atau tidak memiliki pertanyaan keamanan',
               warna: Colors.red,
               tinggi: 100,
@@ -378,51 +290,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           isLoadingQuestion = false;
         });
         if (e.type != DioExceptionType.cancel && mounted) {
-          String errorMessage = 'Koneksi error. Coba lagi nanti.';
-          if (e.response != null) {
-            try {
-              if (e.response!.data is Map) {
-                errorMessage =
-                    e.response!.data['message']?.toString() ?? errorMessage;
-              } else if (e.response!.data is String) {
-                try {
-                  final parsed = jsonDecode(e.response!.data);
-                  if (parsed is Map) {
-                    errorMessage =
-                        parsed['message']?.toString() ?? errorMessage;
-                  }
-                } catch (_) {
-                  errorMessage = e.response!.data.toString();
-                }
-              }
-            } catch (_) {
-              errorMessage = 'Terjadi kesalahan pada server';
-            }
-          } else if (e.type == DioExceptionType.connectionTimeout ||
-              e.type == DioExceptionType.receiveTimeout) {
-            errorMessage = 'Waktu tunggu habis. Periksa koneksi internet Anda.';
-          }
-
-          if (mounted) {
-            print('Error: $errorMessage');
-            CustomSnackbar.show(
-              errorMessage,
-              warna: Colors.red,
-              tinggi: 100,
-              icon: Icons.wifi_off_rounded,
-            );
-          }
+          final errorMessage = ApiException.fromDio(e).message;
+          CustomSnackbar.show(
+            errorMessage,
+            warna: Colors.red,
+            tinggi: 100,
+            icon: Icons.wifi_off_rounded,
+          );
         }
       }
     }
 
     Future<bool> verifySecurityAnswer(String phoneNumber, String answer) async {
       try {
-        final response = await Dio().post(
-          '${ApiClient.protocol}://${ApiClient.baseUrl}/api/auth/emergency-check',
-          data: {'notelp': phoneNumber, 'answer': answer},
+        final response = await ApiClient.postRequest(
+          Endpoints.emergencyCheck,
+          {'notelp': phoneNumber, 'answer': answer},
           options: Options(
-            headers: {'Content-Type': 'application/json'},
             receiveTimeout: const Duration(seconds: 10),
             sendTimeout: const Duration(seconds: 10),
           ),
@@ -435,15 +319,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         } else {
           FocusScope.of(context).unfocus();
           CustomSnackbar.show(
-            data['message'] ?? 'Jawaban keamanan tidak sesuai',
+            (data is Map ? data['message']?.toString() : null) ??
+                'Jawaban keamanan tidak sesuai',
             warna: Colors.red,
             tinggi: 100,
             icon: Icons.error_outline_rounded,
           );
           return false;
         }
-      } on DioException catch (e) {
-        print(e);
+      } on ApiException catch (e) {
+        FocusScope.of(context).unfocus();
+        CustomSnackbar.show(
+          e.message,
+          warna: Colors.red,
+          tinggi: 100,
+          icon: Icons.error_outline_rounded,
+        );
+        return false;
+      } catch (_) {
         CustomSnackbar.show(
           'Gagal memverifikasi jawaban. Periksa koneksi internet Anda.',
           warna: Colors.red,
@@ -460,6 +353,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
+            if (oldPhoneController.text.trim().length >= 10 &&
+                emergencyQuestion == null &&
+                !isLoadingQuestion &&
+                !isVerifying) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                fetchEmergencyQuestion(
+                  oldPhoneController.text.trim(),
+                  setStateDialog,
+                );
+              });
+            }
             return Dialog(
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
@@ -1418,7 +1322,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                                             try {
                                               final controller = Provider.of<
-                                                LupaPasswordController
+                                                GantiNomorController
                                               >(context, listen: false);
 
                                               await controller.gantiNomor(
@@ -1526,7 +1430,7 @@ class OtpVerificationScreen extends StatefulWidget {
   const OtpVerificationScreen({
     super.key,
     required this.phoneNumber,
-    required this.verificationId,
+    this.verificationId = '',
   });
 
   @override
@@ -1538,9 +1442,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     6,
     (index) => TextEditingController(),
   );
+  Timer? _countdownTimer;
   int _secondsRemaining = 300;
   bool _canResend = false;
-  get phoneNumber => null;
+  bool _isResending = false;
 
   @override
   void initState() {
@@ -1548,14 +1453,30 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     _startTimer();
   }
 
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    for (final c in otpControllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
   void _startTimer() {
-    Future.delayed(Duration(seconds: 1), () {
+    _countdownTimer?.cancel();
+    _secondsRemaining = 300;
+    _canResend = false;
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       if (_secondsRemaining > 0) {
         setState(() {
           _secondsRemaining--;
         });
-        _startTimer();
       } else {
+        timer.cancel();
         setState(() {
           _canResend = true;
         });
@@ -1575,41 +1496,29 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       return;
     }
 
-    final formattedPhone = '62${phone.substring(1)}';
-
-    final otpCode = (Random().nextInt(900000) + 100000).toString();
-
-    final dio = Dio();
+    if (_isResending) return;
+    setState(() => _isResending = true);
 
     try {
-      print(formattedPhone);
-      final response = await dio.post(
-        'https://${ApiClient.baseUrl.replaceAll('/public', '')}:3123/send-otp',
-        data: {'phoneNumber': formattedPhone, 'otpCode': otpCode},
-        options: Options(headers: {'Content-Type': 'application/json'}),
-      );
-
-      if (response.statusCode == 200) {
-        FocusScope.of(context).unfocus();
-        CustomSnackbar.show('OTP berhasil dikirim');
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) => OtpVerificationScreen(
-                  phoneNumber: phone,
-                  verificationId: otpCode,
-                ),
-          ),
-        );
-      } else {
-        FocusScope.of(context).unfocus();
-        CustomSnackbar.show('Gagal mengirim OTP: ${response.statusMessage}');
-      }
-    } catch (e) {
+      // OTP selalu dibuat dan diverifikasi di sisi server (Laravel).
+      await ApiClient.postRequest(Endpoints.forgotPassword, {'notelp': phone});
+      if (!mounted) return;
       FocusScope.of(context).unfocus();
-      CustomSnackbar.show('Terjadi kesalahan: $e');
+      CustomSnackbar.show('OTP baru berhasil dikirim');
+      _startTimer();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      FocusScope.of(context).unfocus();
+      CustomSnackbar.show(e.message, warna: Colors.redAccent);
+    } catch (_) {
+      if (!mounted) return;
+      FocusScope.of(context).unfocus();
+      CustomSnackbar.show(
+        'Gagal mengirim ulang OTP. Periksa koneksi internet Anda.',
+        warna: Colors.redAccent,
+      );
+    } finally {
+      if (mounted) setState(() => _isResending = false);
     }
   }
 
@@ -1772,22 +1681,28 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
               ),
               child: ElevatedButton(
                 onPressed: () {
-                  final enteredOTP = otpControllers.map((c) => c.text).join();
-                  if (enteredOTP == widget.verificationId) {
+                  final enteredOTP =
+                      otpControllers.map((c) => c.text.trim()).join();
+                  if (enteredOTP.length == 6 &&
+                      RegExp(r'^[0-9]{6}$').hasMatch(enteredOTP)) {
                     FocusScope.of(context).unfocus();
-                    CustomSnackbar.show('OTP berhasil diverifikasi');
+                    // Verifikasi OTP dilakukan di backend saat reset password.
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder:
                             (context) => ResetPasswordScreen(
                               phoneNumber: widget.phoneNumber,
+                              otpCode: enteredOTP,
                             ),
                       ),
                     );
                   } else {
                     FocusScope.of(context).unfocus();
-                    CustomSnackbar.show('OTP tidak cocok', warna: Colors.red);
+                    CustomSnackbar.show(
+                      'Masukkan 6 digit kode OTP dengan benar',
+                      warna: Colors.red,
+                    );
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -1820,8 +1735,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
 class ResetPasswordScreen extends StatefulWidget {
   final String phoneNumber;
+  final String? otpCode;
 
-  const ResetPasswordScreen({super.key, required this.phoneNumber});
+  const ResetPasswordScreen({
+    super.key,
+    required this.phoneNumber,
+    this.otpCode,
+  });
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -1889,19 +1809,34 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     if (!_canSubmit || isSubmitting) return;
     setState(() => isSubmitting = true);
     try {
-      final controller = Provider.of<LupaPasswordController>(
-        context,
-        listen: false,
-      );
-      await controller.updatePassword(
-        widget.phoneNumber,
-        passwordController.text,
-        confirmPasswordController.text,
-      );
+      if (widget.otpCode != null && widget.otpCode!.isNotEmpty) {
+        // Reset password dengan verifikasi OTP sisi server.
+        await ApiClient.postRequest(Endpoints.resetPassword, {
+          'notelp': widget.phoneNumber,
+          'otp': widget.otpCode,
+          'password': passwordController.text,
+        });
+      } else {
+        final controller = Provider.of<GantiNomorController>(
+          context,
+          listen: false,
+        );
+        await controller.updatePassword(
+          widget.phoneNumber,
+          passwordController.text,
+          confirmPasswordController.text,
+        );
+      }
+      if (!mounted) return;
       FocusScope.of(context).unfocus();
-      CustomSnackbar.show("Password Berhasil diganti");
-      if (mounted) Navigator.popUntil(context, (route) => route.isFirst);
+      CustomSnackbar.show("Password berhasil diganti");
+      Navigator.popUntil(context, (route) => route.isFirst);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      FocusScope.of(context).unfocus();
+      CustomSnackbar.show(e.message, warna: Colors.red);
     } catch (_) {
+      if (!mounted) return;
       FocusScope.of(context).unfocus();
       CustomSnackbar.show('Gagal mengganti password', warna: Colors.red);
     } finally {

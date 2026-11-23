@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
+import 'package:sentra/core/network/api_client.dart';
 import 'pjsrk_text_box.dart';
 
 /// PETA langkah 2 (Lokasi) — pakai OpenStreetMap (flutter_map).
@@ -137,11 +137,15 @@ class _PjsrkMapPreviewState extends State<PjsrkMapPreview> {
       'limit': '1',
       'countrycodes': 'id',
     });
-    final res = await http
-        .get(uri, headers: _headers)
-        .timeout(const Duration(seconds: 10));
-    if (res.statusCode != 200) return null;
-    final list = jsonDecode(res.body) as List;
+    final res = await ApiClient.externalDio.getUri<dynamic>(
+      uri,
+      options: Options(
+        headers: _headers,
+        receiveTimeout: const Duration(seconds: 10),
+      ),
+    );
+    if (res.statusCode != 200 || res.data is! List) return null;
+    final list = res.data as List;
     if (list.isEmpty) return null;
     final lat = double.tryParse('${list.first['lat']}');
     final lon = double.tryParse('${list.first['lon']}');
@@ -167,12 +171,16 @@ class _PjsrkMapPreviewState extends State<PjsrkMapPreview> {
         'addressdetails': '1',
         'zoom': '18',
       });
-      final res = await http
-          .get(uri, headers: _headers)
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode != 200 || !mounted) return;
+      final res = await ApiClient.externalDio.getUri<dynamic>(
+        uri,
+        options: Options(
+          headers: _headers,
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
+      if (res.statusCode != 200 || !mounted || res.data is! Map) return;
 
-      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final data = Map<String, dynamic>.from(res.data as Map);
       final a = (data['address'] as Map?)?.cast<String, dynamic>() ?? {};
 
       final jalan = [

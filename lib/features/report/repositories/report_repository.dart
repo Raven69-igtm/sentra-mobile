@@ -1,60 +1,55 @@
 import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/endpoints.dart';
 import 'package:sentra/features/report/models/report_model.dart';
 import 'package:sentra/features/report/models/statistic_model.dart';
 
 class LaporanRepository {
-
-  Future<List<LaporanModel>> getUserReports(int userId) async {
-    try {
-      final response = await ApiClient.getRequest('/user-reports/$userId');
-      List data = response.data['laporan'];
-      return data.map((e) => LaporanModel.fromJson(e)).toList();
-    } catch (e) {
-      throw Exception('Gagal mengambil laporan user');
-    }
+  Future<List<LaporanModel>> getUserReports(int userId, {String? scope}) async {
+    final response = await ApiClient.getRequest(
+      '${Endpoints.userReports}/$userId',
+      params:
+          scope != null && scope.isNotEmpty ? {'scope': scope} : null,
+    );
+    final List<dynamic> data = (response.data['laporan'] as List?) ?? const [];
+    return data
+        .map((e) => LaporanModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   Future<List<LaporanModel>> getUserReportsByCategory(
     int userId,
-    String kategori,
-  ) async {
-    try {
-      final response = await ApiClient.getRequest(
-        '/user-reports-by-category/$userId/$kategori',
-      );
-      List data = response.data['laporan'];
-      return data.map((e) => LaporanModel.fromJson(e)).toList();
-    } catch (e) {
-      throw Exception('Gagal mengambil laporan berdasarkan kategori');
-    }
+    String kategori, {
+    String? scope,
+  }) async {
+    final response = await ApiClient.getRequest(
+      '${Endpoints.userReportsByCategory}/$userId/$kategori',
+      params:
+          scope != null && scope.isNotEmpty ? {'scope': scope} : null,
+    );
+    final List<dynamic> data = (response.data['laporan'] as List?) ?? const [];
+    return data
+        .map((e) => LaporanModel.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
   }
 
   /// Mengirim laporan ke backend dan mengembalikan isi respons ({success, message, data}).
-  ///
-  /// `DioException` tidak dibungkus agar status HTTP (422/401/403/500)
-  /// dan jenis kesalahan jaringan tetap dapat dikenali pemanggil.
   Future<dynamic> postReport(Map<String, dynamic> laporanData) async {
-    final response = await ApiClient.postRequest('/post-report', laporanData);
+    final response = await ApiClient.postRequest(
+      Endpoints.postReport,
+      laporanData,
+    );
     return response.data;
   }
 
   Future<String> trackingReport(String trackingCode) async {
-    try {
-      final response = await ApiClient.postRequest('/track-report', {
-        "id_laporan": trackingCode
-      });
-      return response.data['status'] ?? '';
-    } catch (e) {
-      throw Exception('Gagal tracking laporan : $e');
-    }
+    final response = await ApiClient.postRequest(Endpoints.trackReport, {
+      'id_laporan': trackingCode,
+    });
+    return response.data['status']?.toString() ?? '';
   }
 
   Future<StatistikModel> getReportStatistic() async {
-    try {
-      final response = await ApiClient.getRequest('/report-statistics');
-      return StatistikModel.fromJson(response.data['data']);
-    } catch (e) {
-      throw Exception('Gagal mengambil statistik laporan');
-    }
+    final response = await ApiClient.getRequest(Endpoints.reportStatistics);
+    return StatistikModel.fromJson(response.data['data']);
   }
 }

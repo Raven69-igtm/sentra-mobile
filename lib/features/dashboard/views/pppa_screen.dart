@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/constants/app_constants.dart';
+import 'package:sentra/core/theme/app_colors.dart';
 import 'package:sentra/core/utils/app_colors.dart';
+import 'package:sentra/core/widgets/sentra_bottom_nav.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/chat/views/chat_screen.dart';
 import 'package:sentra/features/chat/views/room_chat_screen.dart';
@@ -79,7 +82,7 @@ class _PppaScreenState extends State<PppaScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const LaporanPage(openedFromPpa: true),
+        builder: (_) => const LaporanPage(),
       ),
     );
   }
@@ -170,7 +173,7 @@ class _PppaScreenState extends State<PppaScreen> {
         statusBarBrightness: Brightness.dark,
       ),
       child: Scaffold(
-        backgroundColor: const Color(0xFFF5F7F9),
+        backgroundColor: Colors.white,
         body: Column(
           children: [
             _PpaHeader(onBack: _handleBack, onChat: _openChatRoom),
@@ -313,12 +316,20 @@ class _PppaScreenState extends State<PppaScreen> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(14),
                       child: Image.network(
-                        informasi.gambar!,
+                        informasi.resolvedGambar ?? informasi.gambar!,
                         width: double.infinity,
                         height: 180,
                         fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, __, ___) => const SizedBox.shrink(),
+                        errorBuilder: (_, __, ___) => Container(
+                          width: double.infinity,
+                          height: 180,
+                          color: const Color(0xFFE8F7ED),
+                          child: const Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Warna.backgroundIjoDark,
+                            size: 36,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -361,7 +372,7 @@ class _PpaInfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? gambar = informasi.gambar;
+    final String? gambar = informasi.resolvedGambar;
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
@@ -467,15 +478,16 @@ class _PpaHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Container(
-      width: double.infinity,
+    return SentraCurvedHeader(
+      gradient: AppColors.pppaHeaderGradient,
+      backgroundAsset: 'assets/image/beranda/pppa.png',
+      curveHeight: 28,
       padding: EdgeInsets.only(
         top: statusBarHeight + 8,
-        bottom: 12,
+        bottom: 38,
         left: 16,
         right: 16,
       ),
-      decoration: const BoxDecoration(color: Warna.backgroundIjo),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
@@ -577,19 +589,8 @@ class _PpaHero extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Warna.backgroundIjo, Warna.backgroundIjoDark],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Warna.backgroundIjo.withAlpha(60),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        gradient: AppColors.pppaHeaderGradient,
+        borderRadius: BorderRadius.circular(24),
       ),
       clipBehavior: Clip.antiAlias,
       child: Stack(
@@ -702,22 +703,21 @@ class _HeroPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(38),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withAlpha(64)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: Colors.white),
+          Icon(icon, size: 14, color: ServicePalette.pppa.primary),
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Mulish',
               fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              color: ServicePalette.pppa.primary,
             ),
           ),
         ],
@@ -935,139 +935,32 @@ class _PpaBottomNav extends StatelessWidget {
     required this.onTabSelected,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, -2),
-          ),
-        ],
-      ),
-      padding: EdgeInsets.only(
-        top: 8,
-        bottom: bottomPadding > 0 ? bottomPadding : 8,
-        left: 16,
-        right: 16,
-      ),
-      // heightFactor 1.0 keeps the nav sized to its content; a plain Center
-      // would expand to the full Scaffold height and collapse the body.
-      child: Center(
-        heightFactor: 1.0,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Row(
-            children: [
-              Expanded(
-                child: _PpaNavItem(
-                  icon: Icons.history_rounded,
-                  label: 'Riwayat',
-                  isActive: selectedIndex == 0,
-                  onTap: () => onTabSelected(0),
-                ),
-              ),
-              Expanded(
-                child: _PpaNavItem(
-                  icon: Icons.eco_rounded,
-                  label: 'PPA',
-                  isActive: selectedIndex == 1,
-                  onTap: () => onTabSelected(1),
-                  isCenter: true,
-                ),
-              ),
-              Expanded(
-                child: _PpaNavItem(
-                  icon: Icons.description_outlined,
-                  label: 'Laporan',
-                  isActive: selectedIndex == 2,
-                  onTap: () => onTabSelected(2),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PpaNavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-  final bool isCenter;
-
-  const _PpaNavItem({
-    required this.icon,
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-    this.isCenter = false,
-  });
+  static const List<SentraNavItem> _items = [
+    SentraNavItem(
+      icon: Icons.history_rounded,
+      activeIcon: Icons.history_rounded,
+      label: 'Riwayat',
+    ),
+    SentraNavItem(
+      icon: Icons.eco_outlined,
+      activeIcon: Icons.eco_rounded,
+      label: 'PPA',
+    ),
+    SentraNavItem(
+      icon: Icons.description_outlined,
+      activeIcon: Icons.description_rounded,
+      label: 'Laporan',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final Color activeColor = Warna.backgroundIjo;
-    const Color inactiveColor = Color(0xFF9CA3AF);
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        mouseCursor: SystemMouseCursors.click,
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              isCenter
-                  ? Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: activeColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: activeColor.withAlpha(70),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 24),
-                  )
-                  : SizedBox(
-                    width: 42,
-                    height: 42,
-                    child: Icon(
-                      icon,
-                      color: isActive ? activeColor : inactiveColor,
-                      size: 24,
-                    ),
-                  ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                  color: isActive ? activeColor : inactiveColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return SentraBottomNav(
+      currentIndex: selectedIndex,
+      onTap: onTabSelected,
+      items: _items,
+      activeColor: ServicePalette.pppa.primary,
+      activeBgColor: ServicePalette.pppa.softTint,
     );
   }
 }

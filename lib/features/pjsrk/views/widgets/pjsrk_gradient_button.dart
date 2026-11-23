@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'pjsrk_colors.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/widgets/sentra_button.dart';
 
-/// Tombol utama oranye bergradasi (mis. "Lanjut", "Tinjau & Kirim").
+/// Tombol utama modul PJSRK — memakai `SentraButton.primary` dengan aksen
+/// `ServicePalette.pjsrk.primary` (#A84F0F, radius 12, tinggi 52, tanpa bayangan).
 class PjsrkGradientButton extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
@@ -15,40 +17,12 @@ class PjsrkGradientButton extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
-        height: 56,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: const LinearGradient(
-              colors: [Color(0xFFE08A45), PjsrkColors.primaryDark]),
-          boxShadow: const [
-            BoxShadow(
-                color: Color.fromRGBO(214, 118, 44, 0.35),
-                blurRadius: 20,
-                offset: Offset(0, 8))
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: loading ? null : onTap,
-            child: Center(
-              child: loading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 3, color: Colors.white),
-                    )
-                  : Text(text,
-                      style: const TextStyle(
-                          fontFamily: 'Mulish',
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800)),
-            ),
-          ),
-        ),
-      );
+  Widget build(BuildContext context) {
+    return SentraButton.primary(
+      label: text,
+      isLoading: loading,
+      onPressed: onTap,
+      accentColor: ServicePalette.pjsrk.primary,
+    );
+  }
 }

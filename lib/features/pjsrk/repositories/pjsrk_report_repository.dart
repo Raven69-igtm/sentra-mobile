@@ -2,10 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exception.dart';
+import '../../../core/network/endpoints.dart';
 import '../models/pjsrk_report_event_model.dart';
 import '../models/pjsrk_report_location_model.dart';
 
 /// REPOSITORY: satu-satunya tempat yang bicara dengan server.
+///
+/// Nomor laporan selalu berasal dari backend SENTRA (tidak dikarang di sini).
 ///
 /// Pengaduan bencana dikirim ke endpoint PJSRK di backend admin SENTRA
 /// (`POST /api/pjsrk/bencana`), tabel yang sama dengan Rehabilitasi Sosial
@@ -55,8 +59,53 @@ class PjsrkReportRepository {
       );
     }
 
-    final response = await ApiClient.postRequest('/pjsrk/bencana', form);
+    final response = await ApiClient.postMultipart(
+      Endpoints.pjsrkBencana,
+      form,
+    );
+
     return _bacaIdLaporan(response.data);
+  }
+
+  /// Kirim form ringkas "Laporan Cepat" PJSRK.
+  ///
+  /// Dipakai tiga form cepat (rehabilitasi sosial, bencana alam, permasalahan
+  /// sosial) yang hanya meminta nama, telepon, lokasi, jenis, dan deskripsi.
+  /// [idAkun] boleh null: menu Laporan Cepat bisa dibuka sebelum login, dan
+  /// backend mencatat kiriman anonim pada akun pelapor guest.
+  ///
+  /// [layanan] harus salah satu nilai enum backend:
+  /// pengaduan_bencana | rehabilitasi_sosial | permasalahan_sosial.
+  Future<String> kirimCepat({
+    int? idAkun,
+    required String layanan,
+    required String nama,
+    required String telepon,
+    required String lokasi,
+    required String jenis,
+    required String deskripsi,
+  }) async {
+    final Map<String, dynamic> payload = <String, dynamic>{
+      // Hanya dikirim bila user sedang login.
+      if (idAkun != null && idAkun > 0) 'id_akun': idAkun,
+      'layanan': layanan,
+      'nama': nama,
+      'telepon': telepon,
+      'lokasi': lokasi,
+      'jenis': jenis,
+      'deskripsi': deskripsi,
+    };
+
+    final response = await ApiClient.postRequest(Endpoints.pjsrkCepat, payload);
+
+    final String idLaporan = _bacaIdLaporan(response.data);
+    if (idLaporan.isEmpty) {
+      throw ApiException(
+        message: 'Server tidak mengembalikan nomor laporan.',
+        statusCode: response.statusCode,
+      );
+    }
+    return idLaporan;
   }
 
   /// Tanggal + jam kejadian dalam format ISO dengan offset WIB (+07:00),
@@ -87,7 +136,8 @@ class PjsrkReportRepository {
   String _namaFoto(XFile foto) {
     final String name = foto.name;
     final String lower = name.toLowerCase();
-    final bool valid = lower.endsWith('.jpg') ||
+    final bool valid =
+        lower.endsWith('.jpg') ||
         lower.endsWith('.jpeg') ||
         lower.endsWith('.png') ||
         lower.endsWith('.webp');

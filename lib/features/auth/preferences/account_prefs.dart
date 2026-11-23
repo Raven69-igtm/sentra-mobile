@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AkunPrefs {
@@ -9,6 +12,10 @@ class AkunPrefs {
   static const _keyEmail = 'email';
   static const _keyAlamat = 'alamat';
   static const _keyToken = 'auth_token';
+
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   // Simpan data akun
   static Future<void> simpanAkun({
@@ -44,18 +51,51 @@ class AkunPrefs {
     };
   }
 
-  // Simpan token Sanctum untuk autentikasi API mobile
+  // Simpan token Sanctum di FlutterSecureStorage (terenkripsi di perangkat).
   static Future<void> simpanToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
+    if (!kIsWeb) {
+      try {
+        await _secureStorage.write(key: _keyToken, value: token);
+        // Hapus salinan lama di SharedPreferences agar tidak tersimpan plaintext.
+        await prefs.remove(_keyToken);
+        return;
+      } on MissingPluginException {
+        // Fallback untuk lingkungan widget/unit test tanpa native channel.
+      } on PlatformException {
+        // Fallback aman bila keystore perangkat sedang tidak tersedia.
+      }
+    }
     await prefs.setString(_keyToken, token);
   }
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!kIsWeb) {
+      try {
+        final secureToken = await _secureStorage.read(key: _keyToken);
+        if (secureToken != null && secureToken.isNotEmpty) {
+          return secureToken;
+        }
+
+        // Migrasi otomatis token lama dari SharedPreferences ke SecureStorage.
+        final legacyToken = prefs.getString(_keyToken);
+        if (legacyToken != null && legacyToken.isNotEmpty) {
+          await _secureStorage.write(key: _keyToken, value: legacyToken);
+          await prefs.remove(_keyToken);
+          return legacyToken;
+        }
+        return null;
+      } on MissingPluginException {
+        // Fallback lingkungan test.
+      } on PlatformException {
+        // Fallback keystore error.
+      }
+    }
     return prefs.getString(_keyToken);
   }
 
-  // Hapus data akun (misalnya saat logout)
+  // Hapus data akun dan token (misalnya saat logout atau sesi 401)
   static Future<void> hapusAkun() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_keyAkun);
@@ -66,5 +106,15 @@ class AkunPrefs {
     await prefs.remove(_keyEmail);
     await prefs.remove(_keyAlamat);
     await prefs.remove(_keyToken);
+
+    if (!kIsWeb) {
+      try {
+        await _secureStorage.delete(key: _keyToken);
+      } on MissingPluginException {
+        // Abaikan di lingkungan test.
+      } on PlatformException {
+        // Abaikan error keystore saat logout.
+      }
+    }
   }
 }

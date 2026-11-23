@@ -1,8 +1,8 @@
-import 'package:sentra/features/auth/repositories/forgot_password_repository.dart';
-import 'package:flutter/material.dart'; // Pastikan path file repository benar
+import 'package:sentra/features/auth/repositories/ganti_nomor_repository.dart';
+import 'package:flutter/material.dart';
 
-class LupaPasswordController extends ChangeNotifier {
-  final LupaPasswordRepository _repository = LupaPasswordRepository();
+class GantiNomorController extends ChangeNotifier {
+  final GantiNomorRepository _repository = GantiNomorRepository();
 
   bool _isLoading = false;
   String _errorMessage = '';
@@ -34,12 +34,12 @@ class LupaPasswordController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Fungsi untuk verifikasi OTP
-  Future<void> verifikasiOtp(String notelpBaru, String otp) async {
+  // Fungsi untuk permintaan OTP reset password (server-side)
+  Future<void> mintaOtpResetPassword(String notelp) async {
     _isLoading = true;
     notifyListeners();
 
-    final result = await _repository.verifikasiOtp(notelpBaru, otp);
+    final result = await _repository.mintaOtpResetPassword(notelp);
 
     _isLoading = false;
     notifyListeners();
@@ -49,8 +49,7 @@ class LupaPasswordController extends ChangeNotifier {
       _successMessage = '';
     } else {
       _errorMessage = '';
-      _successMessage =
-          'OTP berhasil diverifikasi! Silakan buat password baru.';
+      _successMessage = 'Kode OTP telah dikirim ke nomor Anda.';
     }
 
     notifyListeners();

@@ -4,7 +4,6 @@ import 'package:sentra/features/dashboard/views/widgets/stepper_tracking_widget.
 import 'package:sentra/core/utils/custom_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:sentra/features/report/views/widgets/badge_widget.dart';
-import 'package:get/get.dart';
 
 class TrackingLaporan extends StatefulWidget {
   const TrackingLaporan({super.key});
@@ -14,7 +13,7 @@ class TrackingLaporan extends StatefulWidget {
 }
 
 class _TrackingLaporanState extends State<TrackingLaporan> {
-  final LaporanController laporanController = Get.put(LaporanController());
+  final LaporanController laporanController = LaporanController();
   final TextEditingController trackingCodeController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -39,8 +38,8 @@ class _TrackingLaporanState extends State<TrackingLaporan> {
     try {
       await laporanController.trackingReport(kode);
 
-      if (laporanController.trackingStatus.value.isNotEmpty) {
-        if (laporanController.trackingStatus.value == "dirujuk") {
+      if (laporanController.trackingStatus.isNotEmpty) {
+        if (laporanController.trackingStatus == "dirujuk") {
           if (mounted) {
             showDialog(
               context: context,
@@ -246,32 +245,34 @@ class _TrackingLaporanState extends State<TrackingLaporan> {
             );
           }
         }
-      } else if (laporanController.errorMessage.value.isNotEmpty) {
+      } else if (laporanController.errorMessage.isNotEmpty) {
         CustomSnackbar.show(
-          laporanController.errorMessage.value,
+          laporanController.errorMessage,
           warna: Colors.red,
           tinggi: 100,
           icon: Icons.error_outline_rounded,
         );
       }
     } finally {
-      setState(() {
-        _isSearching = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+        });
+      }
     }
   }
 
   void _clearSearch() {
     trackingCodeController.clear();
-    // Reset tampilan stepper ke default jika diperlukan
-    if (laporanController.trackingStatus.value.isNotEmpty) {
-      laporanController.trackingStatus.value = '';
+    if (laporanController.trackingStatus.isNotEmpty) {
+      laporanController.clearTrackingState();
     }
     setState(() {});
   }
 
   @override
   void dispose() {
+    laporanController.dispose();
     trackingCodeController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
@@ -493,13 +494,16 @@ class _TrackingLaporanState extends State<TrackingLaporan> {
                       ),
                     ),
                     SizedBox(width: screenWidth * 0.04),
-                    Obx(() {
-                      final String currentStatus =
-                          laporanController.trackingStatus.value.isEmpty
-                              ? 'dikirim'
-                              : laporanController.trackingStatus.value;
-                      return TrackingBadge(status: currentStatus);
-                    }),
+                    AnimatedBuilder(
+                      animation: laporanController,
+                      builder: (context, _) {
+                        final String currentStatus =
+                            laporanController.trackingStatus.isEmpty
+                                ? 'dikirim'
+                                : laporanController.trackingStatus;
+                        return TrackingBadge(status: currentStatus);
+                      },
+                    ),
                   ],
                 ),
 
@@ -536,13 +540,16 @@ class _TrackingLaporanState extends State<TrackingLaporan> {
                         ],
                       ),
                       SizedBox(height: screenHeight * 0.015),
-                      Obx(() {
-                        final String currentStatus =
-                            laporanController.trackingStatus.value.isEmpty
-                                ? 'dikirim'
-                                : laporanController.trackingStatus.value;
-                        return MiniStepperTracking(status: currentStatus);
-                      }),
+                      AnimatedBuilder(
+                        animation: laporanController,
+                        builder: (context, _) {
+                          final String currentStatus =
+                              laporanController.trackingStatus.isEmpty
+                                  ? 'dikirim'
+                                  : laporanController.trackingStatus;
+                          return MiniStepperTracking(status: currentStatus);
+                        },
+                      ),
                       SizedBox(height: screenHeight * 0.012),
                       Text(
                         'Status akan diperbarui secara otomatis ketika laporan Anda diproses.',

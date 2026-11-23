@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
+import 'package:sentra/features/auth/preferences/account_prefs.dart';
 import 'api_exception.dart';
 
 class ApiClient {
@@ -26,21 +28,91 @@ class ApiClient {
   static String get wsUrl =>
       _wsUrlOverride.isNotEmpty
           ? _wsUrlOverride
-          : (isLocal ? 'ws://127.0.0.1:3021' : 'ws://18.136.209.83:3021');
+          : (isLocal ? 'ws://127.0.0.1:3021' : 'wss://sentra.pbltifnganjuk.com/ws');
 
-  static final Dio dio = Dio(
+  /// Callback global ketika server merespons 401 pada request terautentikasi
+  /// (token kedaluwarsa atau dicabut). Diatur dari `main.dart`.
+  static VoidCallback? onUnauthorized;
+  static bool _isHandlingUnauthorized = false;
+
+  static final Dio dio = _createDio();
+
+  /// Client Dio terpisah untuk layanan pihak ketiga (Nominatim/OSM/Mapbox)
+  /// agar header `Authorization: Bearer <token>` SENTRA tidak pernah bocor keluar.
+  static final Dio externalDio = Dio(
     BaseOptions(
-      baseUrl: '$apiOrigin/api',
-      connectTimeout: const Duration(seconds: 12),
-      sendTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
-      headers: {
-        'Content-Type': 'application/json',
-        // Laravel hanya mengembalikan JSON (422/401) bila diminta via header ini.
-        'Accept': 'application/json',
-      },
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      headers: {'Accept': 'application/json'},
     ),
   );
+
+  static Dio _createDio() {
+    final client = Dio(
+      BaseOptions(
+        baseUrl: '$apiOrigin/api',
+        connectTimeout: const Duration(seconds: 12),
+        sendTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+        headers: {
+          'Content-Type': 'application/json',
+          // Laravel hanya mengembalikan JSON (422/401) bila diminta via header ini.
+          'Accept': 'application/json',
+        },
+      ),
+    );
+
+    client.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
+          if (options.headers['Authorization'] == null) {
+            String? token = _authToken;
+            if (token == null || token.isEmpty) {
+              try {
+                token = await AkunPrefs.getToken();
+              } catch (_) {
+                token = null;
+              }
+            }
+            if (token != null && token.isNotEmpty) {
+              _authToken = token;
+              dio.options.headers['Authorization'] = 'Bearer $token';
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+          }
+          handler.next(options);
+        },
+        onError: (DioException error, ErrorInterceptorHandler handler) {
+          final status = error.response?.statusCode;
+          final hadAuthHeader =
+              error.requestOptions.headers['Authorization'] != null;
+          final path = error.requestOptions.path;
+          final isAuthEndpoint =
+              path.contains('/auth/login') ||
+              path.contains('/auth/register') ||
+              path.contains('/user');
+
+          if (status == 401 &&
+              hadAuthHeader &&
+              !isAuthEndpoint &&
+              !_isHandlingUnauthorized &&
+              onUnauthorized != null) {
+            _isHandlingUnauthorized = true;
+            try {
+              onUnauthorized!.call();
+            } finally {
+              Future<void>.delayed(const Duration(seconds: 2), () {
+                _isHandlingUnauthorized = false;
+              });
+            }
+          }
+          handler.next(error);
+        },
+      ),
+    );
+
+    return client;
+  }
 
   static String? _authToken;
 
@@ -74,12 +146,39 @@ class ApiClient {
     return _guard(() => dio.put(url, data: data, options: options));
   }
 
+  static Future<Response> patchRequest(
+    String url, {
+    dynamic data,
+    Options? options,
+  }) {
+    return _guard(() => dio.patch(url, data: data, options: options));
+  }
+
+  static Future<Response> deleteRequest(
+    String url, {
+    dynamic data,
+    Options? options,
+  }) {
+    return _guard(() => dio.delete(url, data: data, options: options));
+  }
+
   static Future<Response> postRequest(
     String url,
     dynamic data, {
     Options? options,
   }) {
     return _guard(() => dio.post(url, data: data, options: options));
+  }
+
+  /// Kirim data multipart (dipakai unggah foto laporan PJSRK).
+  static Future<Response> postMultipart(String url, FormData data) {
+    return _guard(
+      () => dio.post(
+        url,
+        data: data,
+        options: Options(contentType: 'multipart/form-data'),
+      ),
+    );
   }
 
   static Future<Response> _guard(Future<Response> Function() request) async {

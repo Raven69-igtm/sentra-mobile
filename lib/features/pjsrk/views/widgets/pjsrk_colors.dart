@@ -1,27 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:sentra/core/theme/app_colors.dart';
 
-/// Warna tema form pengaduan.
-/// Jika di lib/core sudah ada file warna/tema, pindahkan ke sana.
+/// Warna tema form pengaduan PJSRK — dimigrasikan ke `ServicePalette.pjsrk`
+/// dan `AppColors` agar selaras dengan kontras WCAG AA (5,54:1).
 class PjsrkColors {
   PjsrkColors._();
 
-  static const primary = Color(0xFFD6762C);
-  static const primaryDark = Color(0xFFC76A22);
-  static const primaryLight = Color(0xFFFCEBDC);
-  static const primaryText = Color(0xFFB85A14);
-  static const bg = Color(0xFFFAFAFA);
-  static const border = Color(0xFFE9E9EC);
-  static const muted = Color(0xFF7B7F86);
-  static const graySoft = Color(0xFFECEEF1);
+  static const primary = Color(0xFFA84F0F); // ServicePalette.pjsrk.primary
+  static const primaryDark = Color(0xFF8B400B);
+  static const primaryLight = Color(0xFFFCEBDC); // ServicePalette.pjsrk.softTint
+  static const primaryText = Color(0xFFA84F0F);
+  static const bg = AppColors.background;
+  static const border = AppColors.border;
+  static const muted = AppColors.textMuted;
+  static const graySoft = AppColors.surfaceVariant;
 
-  // ---- baru: dipakai form Lokasi & Kirim ----
-  static const mapBg = Color(0xFFDDEEE2);
+  // ---- dipakai form Lokasi & Kirim ----
+  static const mapBg = AppColors.primarySoft;
   static const mapBorder = Color(0xFFCFE5D5);
-  static const pin = Color(0xFFF0506E);
-  static const green = Color(0xFF3B8F5F);
-  static const noticeBg = Color(0xFFFEF3E0);
+  static const pin = AppColors.error;
+  static const green = AppColors.primary;
+  static const noticeBg = AppColors.statusTerkirimBg;
   static const noticeBorder = Color(0xFFF6DDB0);
-  static const noticeText = Color(0xFF8A5A14);
+  static const noticeText = AppColors.statusTerkirimFg;
 }
 
 OutlineInputBorder pjsrkOutline(Color color, double radius) =>

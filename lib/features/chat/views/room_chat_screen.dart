@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/chat/repositories/chat_repository.dart';
@@ -100,57 +102,78 @@ class _RoomChatState extends State<RoomChat> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final topInset = MediaQuery.of(context).padding.top;
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Pesan',
-          style: TextStyle(
-            fontFamily: "Mulish",
-            fontWeight: FontWeight.w800,
-            fontSize: 22,
-            color: Colors.black87,
-          ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded, color: Colors.black87),
-            onPressed: _fetchUsers,
-          ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded, color: Colors.black87),
-            onSelected: (v) {
-              if (v == 'clear') {
-                setState(() {
-                  _query = '';
-                  _searchController.clear();
-                });
-              }
-            },
-            itemBuilder:
-                (context) => [
-                  const PopupMenuItem(
-                    value: 'clear',
-                    child: Text('Bersihkan pencarian'),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(156),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SentraCurvedHeader(
+              gradient: AppColors.pppaHeaderGradient,
+              backgroundAsset: 'assets/image/beranda/pppa.png',
+              curveHeight: 22,
+              padding: EdgeInsets.fromLTRB(8, topInset + 6, 8, 26),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Kembali',
+                    icon: const Icon(
+                      Icons.arrow_back_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Expanded(
+                    child: Text(
+                      'Pesan Konsultasi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontFamily: 'Mulish',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 18,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Refresh',
+                    icon: const Icon(
+                      Icons.refresh_rounded,
+                      color: Colors.white,
+                    ),
+                    onPressed: _fetchUsers,
+                  ),
+                  PopupMenuButton<String>(
+                    icon: const Icon(
+                      Icons.more_vert_rounded,
+                      color: Colors.white,
+                    ),
+                    onSelected: (v) {
+                      if (v == 'clear') {
+                        setState(() {
+                          _query = '';
+                          _searchController.clear();
+                        });
+                      }
+                    },
+                    itemBuilder:
+                        (context) => const [
+                          PopupMenuItem(
+                            value: 'clear',
+                            child: Text('Bersihkan pencarian'),
+                          ),
+                        ],
                   ),
                 ],
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(64),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: _buildSearchField(theme),
-          ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: _buildSearchField(theme),
+            ),
+          ],
         ),
       ),
       body: RefreshIndicator(

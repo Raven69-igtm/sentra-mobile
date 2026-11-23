@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_spacing.dart';
+import 'package:sentra/core/theme/app_typography.dart';
 
-/// Kartu Informasi utama PJSRK di bagian atas halaman
+/// Banner hero utama halaman PJSRK sesuai `design_system.md`:
+/// warna solid `ServicePalette.pjsrk.primary` (#A84F0F, putih 5,54:1),
+/// radius 24, tanpa bayangan, chip berlatar putih solid dengan teks oranye tua.
 class PjsrkInfoCard extends StatelessWidget {
   final String title;
   final String description;
@@ -9,96 +14,125 @@ class PjsrkInfoCard extends StatelessWidget {
     super.key,
     this.title = 'PJSRK',
     this.description =
-        'Pilih jenis laporan yang ingin Anda sampaikan. Petugas akan menindaklanjuti dalam 2 hari kerja.',
+        'Pilih jenis laporan sosial atau bencana yang ingin Anda sampaikan kepada Dinas Sosial Kabupaten Nganjuk.',
   });
 
   @override
   Widget build(BuildContext context) {
+    final pjsrkColor = ServicePalette.pjsrk.primary;
+
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFE58036),
-            Color(0xFFD8782E),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33D8782E),
-            blurRadius: 12,
-            offset: Offset(0, 5),
+        color: pjsrkColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: const Icon(
+                  Icons.favorite_border_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.title.copyWith(color: Colors.white),
+                    ),
+                    Text(
+                      'Pelayanan Jaminan Sosial & Rehabilitasi',
+                      style: AppTypography.caption.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            description,
+            style: AppTypography.body.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              _HeroTag(
+                icon: Icons.home_outlined,
+                label: 'Rehabilitasi',
+                color: pjsrkColor,
+              ),
+              _HeroTag(
+                icon: Icons.warning_amber_rounded,
+                label: 'Bencana',
+                color: pjsrkColor,
+              ),
+              _HeroTag(
+                icon: Icons.groups_2_outlined,
+                label: 'Sosial',
+                color: pjsrkColor,
+              ),
+            ],
           ),
         ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(18),
-        child: Stack(
-          children: [
-            // Lingkaran dekoratif transparan kanan (efek visual sesuai referensi)
-            Positioned(
-              right: -30,
-              bottom: -30,
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0x22FFFFFF),
-                ),
-              ),
-            ),
-            Positioned(
-              right: 25,
-              bottom: -55,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0x15FFFFFF),
-                ),
-              ),
-            ),
-
-            // Teks Informasi
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontFamily: 'Mulish',
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    description,
-                    style: const TextStyle(
-                      fontFamily: 'Mulish',
-                      fontSize: 12.5,
-                      height: 1.4,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xEEFFFFFF),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
+class _HeroTag extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _HeroTag({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: AppTypography.label.copyWith(
+              letterSpacing: 0.1,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

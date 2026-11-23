@@ -1,0 +1,917 @@
+openapi: 3.0.3
+info:
+  title: SENTRA Mobile & Web REST API
+  version: 1.0.0
+  description: >-
+    Dokumentasi OpenAPI 3.0.3 untuk seluruh 43 route REST API SENTRA
+    (Dinas Sosial & DPPPA Kabupaten Nganjuk) dari `C:\Projects\Sentra\routes\api.php`.
+    Dapat langsung di-import ke Postman, Insomnia, atau Swagger UI.
+servers:
+  - url: http://127.0.0.1:8000/api
+    description: Local Laravel Development Server
+  - url: https://sentra.pbltifnganjuk.com/public/api
+    description: Production Server
+tags:
+  - name: Auth & Akun
+    description: Registrasi, login, sesi, profil, ganti nomor & password (AkunControllerMobile)
+  - name: Laporan PPPA & Umum
+    description: Pelaporan PPPA, laporan cepat, tracking, riwayat, pencarian, & statistik
+  - name: PJSRK
+    description: Pengaduan bencana, rehabilitasi sosial, permasalahan sosial, & laporan cepat PJSRK
+  - name: Chat Konsultasi
+    description: Percakapan konsultasi terproteksi Sanctum
+  - name: Notifikasi & FCM
+    description: Daftar notifikasi in-app, status baca, restore, & push notification FCM
+  - name: Informasi
+    description: Berita dan gambar informasi terkini publik
+  - name: Legacy Auth (Deprecated)
+    description: Route duplikat dari AuthControllerMobile (target hapus di Fase P2)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+  schemas:
+    UserMobile:
+      type: object
+      properties:
+        id_akun: { type: integer, example: 42 }
+        nama: { type: string, example: Budi Santoso }
+        notelp: { type: string, example: "081234567890" }
+        email: { type: string, nullable: true, example: budi@example.com }
+        jenis_kelamin: { type: string, nullable: true, example: Pria }
+        alamat: { type: string, nullable: true, example: Kec. Nganjuk }
+        role: { type: string, example: user }
+        is_active: { type: boolean, example: true }
+    ChatMobile:
+      type: object
+      properties:
+        id_chat: { type: integer, example: 108 }
+        sender_id: { type: integer, example: 42 }
+        receiver_id: { type: integer, example: 1 }
+        message: { type: string, example: Halo admin }
+        replied_to_id: { type: integer, nullable: true }
+        sent_at: { type: string, format: date-time }
+        is_read: { type: integer, example: 0 }
+        is_notified: { type: integer, example: 0 }
+    NotifikasiItem:
+      type: object
+      properties:
+        id_notif: { type: integer, example: 15 }
+        id_akun: { type: integer, example: 42 }
+        judul: { type: string, example: RKN000124 - Laporan Diterima }
+        pesan: { type: string }
+        tipe: { type: string, enum: [admin, user] }
+        status: { type: string, enum: [terkirim, dibaca] }
+        source: { type: string, nullable: true, enum: [PPA, PJSRK, Pesan] }
+        id_laporan: { type: string, nullable: true, example: RKN000124 }
+        created_at: { type: string, format: date-time }
+    InformasiItem:
+      type: object
+      properties:
+        id: { type: integer, example: 1 }
+        judul: { type: string }
+        deskripsi: { type: string }
+        gambar: { type: string, nullable: true }
+        gambar_url: { type: string, nullable: true }
+        tanggal: { type: string, nullable: true }
+        waktu: { type: string, nullable: true }
+    MessageResponse:
+      type: object
+      properties:
+        message: { type: string }
+    ValidationError:
+      type: object
+      properties:
+        message: { type: string, example: The given data was invalid. }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+
+paths:
+  /user:
+    get:
+      tags: [Auth & Akun]
+      summary: Ambil profil user yang sedang login
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Data akun aktif
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserMobile" }
+        "401": { description: Tidak terautentikasi }
+
+  /auth/register:
+    post:
+      tags: [Auth & Akun]
+      summary: Registrasi akun masyarakat baru
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp, nama, password]
+              properties:
+                notelp: { type: string, maxLength: 15 }
+                nama: { type: string, maxLength: 50 }
+                password: { type: string, minLength: 6 }
+                emerquest: { type: string, nullable: true, maxLength: 100 }
+                answquest: { type: string, nullable: true, maxLength: 100 }
+                gender: { type: string, nullable: true, maxLength: 100 }
+                alamat: { type: string, nullable: true, maxLength: 100 }
+      responses:
+        "201": { description: Akun berhasil ditambahkan }
+        "422":
+          description: Validasi gagal
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ValidationError" }
+
+  /auth/login:
+    post:
+      tags: [Auth & Akun]
+      summary: Login dengan nomor telepon dan password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp, password]
+              properties:
+                notelp: { type: string }
+                password: { type: string }
+      responses:
+        "200":
+          description: Login berhasil beserta token Sanctum
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  user: { $ref: "#/components/schemas/UserMobile" }
+                  token: { type: string }
+        "401": { description: No Telp atau password salah }
+
+  /auth/biometric:
+    post:
+      tags: [Auth & Akun]
+      deprecated: true
+      summary: "[P0 AUDIT] Login/refresh berbasis notelp tanpa verifikasi tambahan"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp]
+              properties:
+                notelp: { type: string }
+      responses:
+        "200": { description: Login biometrik berhasil }
+        "401": { description: Nomor telepon atau akun tidak valid }
+
+  /auth/email:
+    post:
+      tags: [Auth & Akun]
+      deprecated: true
+      summary: "[P0 AUDIT] Login berbasis email tanpa verifikasi ID token"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200": { description: Login dengan email berhasil }
+        "401": { description: Email atau akun tidak valid }
+
+  /auth/getdata:
+    get:
+      tags: [Auth & Akun]
+      deprecated: true
+      summary: "[P0 AUDIT] Daftar seluruh akun (publik — target hapus/admin only)"
+      responses:
+        "200":
+          description: Daftar akun
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/UserMobile" }
+
+  /auth/get-emergency-question:
+    post:
+      tags: [Auth & Akun]
+      summary: Ambil pertanyaan darurat berdasarkan nomor telepon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp]
+              properties:
+                notelp: { type: string, maxLength: 15 }
+      responses:
+        "200": { description: Pertanyaan ditemukan }
+        "404": { description: Nomor telepon tidak ditemukan }
+
+  /auth/emergency-check:
+    post:
+      tags: [Auth & Akun]
+      summary: Verifikasi jawaban pertanyaan darurat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp, answer]
+              properties:
+                notelp: { type: string }
+                answer: { type: string }
+      responses:
+        "200": { description: Verifikasi berhasil }
+        "400": { description: Jawaban tidak sesuai }
+
+  /auth/edit/{id}:
+    put:
+      tags: [Auth & Akun]
+      summary: Perbarui profil akun sendiri
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notelp: { type: string, maxLength: 15 }
+                nama: { type: string, maxLength: 50 }
+                email: { type: string, format: email, maxLength: 100 }
+                jenis_kelamin: { type: string, maxLength: 100 }
+                alamat: { type: string, maxLength: 100 }
+                password: { type: string, minLength: 6 }
+                emerquest: { type: string, maxLength: 100 }
+                answquest: { type: string, maxLength: 100 }
+      responses:
+        "200": { description: Akun berhasil diperbarui }
+        "403": { description: Tidak berhak mengubah akun lain }
+        "404": { description: Akun tidak ditemukan }
+
+  /auth/delete/{id}:
+    delete:
+      tags: [Auth & Akun]
+      summary: Hapus akun sendiri dan cabut semua token
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Akun berhasil dihapus }
+        "403": { description: Tidak berhak menghapus akun lain }
+
+  /auth/updatenomor:
+    post:
+      tags: [Auth & Akun]
+      summary: Perbarui nomor telepon akun yang sedang login
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp_lama, notelp_baru, answquest]
+              properties:
+                notelp_lama: { type: string, maxLength: 15 }
+                notelp_baru: { type: string, maxLength: 15 }
+                answquest: { type: string, maxLength: 100 }
+      responses:
+        "200": { description: Nomor telepon berhasil diperbarui }
+        "401": { description: Jawaban pertanyaan darurat salah }
+        "403": { description: Bukan pemilik nomor }
+
+  /auth/ubahpassword:
+    post:
+      tags: [Auth & Akun]
+      summary: Ubah password akun dan cabut token perangkat lain
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, password2]
+              properties:
+                notelp: { type: string, nullable: true, maxLength: 15 }
+                password: { type: string, minLength: 6 }
+                password2: { type: string, minLength: 6 }
+      responses:
+        "200": { description: Password berhasil diperbarui }
+        "403": { description: Tidak berhak mengubah password akun ini }
+
+  /post-report:
+    post:
+      tags: [Laporan PPPA & Umum]
+      summary: Kirim laporan lengkap PPPA (pelapor, penerima, terlapor, kasus, anak)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_akun, kategori, status, detail_pelapor, detail_penerima_manfaat, detail_kasus]
+              properties:
+                id_akun: { type: integer }
+                kategori: { type: string }
+                status: { type: string, enum: [dikirim, diterima, diproses, selesai] }
+                judul: { type: string, nullable: true, maxLength: 150 }
+                kecamatan: { type: string, nullable: true, maxLength: 100 }
+                layanan_pjsrk: { type: string, nullable: true, enum: [rehabilitasi_sosial, pengaduan_bencana, permasalahan_sosial] }
+                detail_pelapor: { type: object }
+                detail_penerima_manfaat: { type: object }
+                detail_terlapor: { type: array, items: { type: object } }
+                detail_kasus: { type: object }
+                informasi_anak: { type: array, items: { type: object } }
+      responses:
+        "200": { description: Laporan berhasil dikirim }
+        "422": { description: Validasi gagal }
+
+  /laporan-cepat:
+    post:
+      tags: [Laporan PPPA & Umum]
+      summary: Kirim laporan cepat PPPA (boleh tanpa login / anonim guest)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nik, nama, no_telp, alamat, deskripsi]
+              properties:
+                id_akun: { type: integer, nullable: true }
+                nik: { type: string, maxLength: 100 }
+                nama: { type: string, maxLength: 150 }
+                no_telp: { type: string, maxLength: 15 }
+                alamat: { type: string, maxLength: 255 }
+                deskripsi: { type: string }
+      responses:
+        "201": { description: Laporan cepat berhasil dikirim }
+
+  /track-report:
+    post:
+      tags: [Laporan PPPA & Umum]
+      summary: Lacak status dan detail laporan berdasarkan id_laporan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_laporan]
+              properties:
+                id_laporan: { type: string, example: RKN000124 }
+      responses:
+        "200": { description: Status dan detail laporan ditemukan }
+        "404": { description: Laporan tidak ditemukan }
+
+  /user-reports/{id_akun}:
+    get:
+      tags: [Laporan PPPA & Umum]
+      summary: Ambil semua riwayat laporan milik akun
+      parameters:
+        - name: id_akun
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Daftar laporan user }
+
+  /user-reports-by-category/{id_akun}/{status}:
+    get:
+      tags: [Laporan PPPA & Umum]
+      summary: Ambil riwayat laporan milik akun berdasarkan status
+      parameters:
+        - name: id_akun
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: status
+          in: path
+          required: true
+          schema: { type: string, enum: [dikirim, diterima, diproses, selesai, ditolak, dirujuk] }
+      responses:
+        "200": { description: Daftar laporan terfilter status }
+
+  /search:
+    get:
+      tags: [Laporan PPPA & Umum]
+      summary: Cari laporan berdasarkan kata kunci dan id_akun
+      parameters:
+        - name: keyword
+          in: query
+          schema: { type: string }
+        - name: id_akun
+          in: query
+          schema: { type: integer }
+      responses:
+        "200": { description: Hasil pencarian laporan }
+
+  /report-statistics:
+    get:
+      tags: [Laporan PPPA & Umum]
+      summary: Statistik jumlah laporan per kategori per bulan pada tahun berjalan
+      responses:
+        "200": { description: Data statistik bulanan }
+
+  /pjsrk/bencana:
+    post:
+      tags: [PJSRK]
+      summary: Kirim pengaduan bencana (multipart + maksimal 4 foto)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [id_akun, jenis_bencana, waktu_kejadian, tingkat_dampak, jiwa_terdampak, rumah_rusak, keterangan, kebutuhan_mendesak, alamat, kelurahan, kecamatan, latitude, longitude, kontak]
+              properties:
+                id_akun: { type: integer }
+                jenis_bencana: { type: string, maxLength: 100 }
+                waktu_kejadian: { type: string, format: date-time }
+                tingkat_dampak: { type: string, enum: [Ringan, Sedang, Berat] }
+                jiwa_terdampak: { type: integer, minimum: 0 }
+                rumah_rusak: { type: integer, minimum: 0 }
+                keterangan: { type: string }
+                kebutuhan_mendesak: { type: array, items: { type: string } }
+                alamat: { type: string, maxLength: 255 }
+                kelurahan: { type: string, maxLength: 100 }
+                kecamatan: { type: string, maxLength: 100 }
+                patokan_lokasi: { type: string, nullable: true }
+                latitude: { type: number }
+                longitude: { type: number }
+                kontak: { type: string, maxLength: 30 }
+                foto: { type: array, maxItems: 4, items: { type: string, format: binary } }
+      responses:
+        "201": { description: Laporan pengaduan bencana berhasil dikirim }
+
+  /pjsrk/rehabilitasi:
+    post:
+      tags: [PJSRK]
+      summary: Kirim laporan rehabilitasi sosial (multipart + maksimal 4 foto)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [id_akun, jenis_rehabilitasi, jumlah_penerima, jenis_kelamin, kelompok_usia, kondisi_saat_ditemukan, ciri_ciri, alamat, kontak]
+              properties:
+                id_akun: { type: integer }
+                jenis_rehabilitasi: { type: string, enum: [Tunawisma, Anak Terlantar] }
+                jumlah_penerima: { type: integer, minimum: 1 }
+                jenis_kelamin: { type: string, enum: [Laki-laki, Perempuan, Campuran] }
+                kelompok_usia: { type: string, enum: [Dewasa, Lansia, Bersama anak] }
+                kondisi_saat_ditemukan: { type: string, enum: [Sehat, Sakit, Gangguan jiwa] }
+                ciri_ciri: { type: string }
+                rahasia: { type: boolean }
+                alamat: { type: string, maxLength: 255 }
+                latitude: { type: number, nullable: true }
+                longitude: { type: number, nullable: true }
+                kontak: { type: string, maxLength: 30 }
+                foto: { type: array, maxItems: 4, items: { type: string, format: binary } }
+      responses:
+        "201": { description: Laporan rehabilitasi sosial berhasil dikirim }
+
+  /pjsrk/permasalahan-sosial:
+    post:
+      tags: [PJSRK]
+      summary: Kirim laporan permasalahan sosial (multipart + maksimal 4 foto)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [id_akun, jenis_permasalahan, judul, uraian, alamat]
+              properties:
+                id_akun: { type: integer }
+                jenis_permasalahan: { type: string, maxLength: 100 }
+                judul: { type: string, maxLength: 150 }
+                uraian: { type: string }
+                alamat: { type: string, maxLength: 255 }
+                kelurahan: { type: string, nullable: true }
+                kecamatan: { type: string, nullable: true }
+                latitude: { type: number, nullable: true }
+                longitude: { type: number, nullable: true }
+                rahasia: { type: boolean }
+                kontak: { type: string, nullable: true }
+                foto: { type: array, maxItems: 4, items: { type: string, format: binary } }
+      responses:
+        "201": { description: Laporan permasalahan sosial berhasil dikirim }
+
+  /pjsrk/cepat:
+    post:
+      tags: [PJSRK]
+      summary: Kirim laporan cepat PJSRK (boleh tanpa login / anonim guest)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [layanan, nama, telepon, lokasi, jenis, deskripsi]
+              properties:
+                id_akun: { type: integer, nullable: true }
+                layanan: { type: string, enum: [pengaduan_bencana, rehabilitasi_sosial, permasalahan_sosial] }
+                nama: { type: string, maxLength: 150 }
+                telepon: { type: string, maxLength: 30 }
+                lokasi: { type: string, maxLength: 255 }
+                jenis: { type: string, maxLength: 100 }
+                deskripsi: { type: string }
+      responses:
+        "201": { description: Laporan cepat PJSRK berhasil dikirim }
+
+  /chats:
+    post:
+      tags: [Chat Konsultasi]
+      summary: Kirim pesan konsultasi baru (otomatis memicu FCM)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [receiver_id, message]
+              properties:
+                receiver_id: { type: integer }
+                message: { type: string }
+                replied_to_id: { type: integer, nullable: true }
+      responses:
+        "201":
+          description: Pesan tersimpan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatMobile" }
+        "422": { description: Tidak dapat mengirim ke akun sendiri / validasi gagal }
+
+  /chats/{userId}:
+    get:
+      tags: [Chat Konsultasi]
+      summary: Ambil riwayat pesan milik user login
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: other_user_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Daftar chat
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ChatMobile" }
+        "403": { description: Bukan pemilik percakapan }
+
+  /conversations/{userId}:
+    get:
+      tags: [Chat Konsultasi]
+      summary: Daftar ringkasan percakapan terakhir
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Daftar percakapan }
+        "403": { description: Bukan pemilik akun }
+
+  /chats/{chatId}/read:
+    put:
+      tags: [Chat Konsultasi]
+      summary: Tandai pesan sudah dibaca (khusus penerima)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Status baca diperbarui }
+        "403": { description: Bukan penerima pesan }
+
+  /chat/update/{chatId}:
+    put:
+      tags: [Chat Konsultasi]
+      summary: Edit isi pesan (khusus pengirim)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+      responses:
+        "200": { description: Pesan diperbarui }
+        "403": { description: Bukan pengirim pesan }
+
+  /chat/delete/{chatId}:
+    delete:
+      tags: [Chat Konsultasi]
+      summary: Hapus satu pesan (khusus pengirim)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Pesan dihapus }
+        "403": { description: Bukan pengirim pesan }
+
+  /chats/{senderId}/{receiverId}:
+    delete:
+      tags: [Chat Konsultasi]
+      summary: Hapus seluruh percakapan antara dua akun
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: senderId
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: receiverId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Percakapan dihapus }
+        "403": { description: Bukan peserta percakapan }
+
+  /notifications:
+    get:
+      tags: [Notifikasi & FCM]
+      summary: Ambil daftar notifikasi akun (maks 200 terbaru)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: user_id
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Daftar notifikasi
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/NotifikasiItem" }
+
+  /notifications/{id}/read:
+    patch:
+      tags: [Notifikasi & FCM]
+      summary: Tandai notifikasi sebagai dibaca
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Notifikasi ditandai dibaca }
+        "404": { description: Notifikasi tidak ditemukan }
+
+  /notifications/{id}:
+    delete:
+      tags: [Notifikasi & FCM]
+      summary: Hapus notifikasi
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200": { description: Notifikasi dihapus }
+        "404": { description: Notifikasi tidak ditemukan }
+
+  /notifications/restore:
+    post:
+      tags: [Notifikasi & FCM]
+      summary: Pulihkan notifikasi yang baru dihapus (undo)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_akun, judul, pesan, tipe]
+              properties:
+                id_notif: { type: integer, nullable: true }
+                id_akun: { type: integer }
+                judul: { type: string, maxLength: 100 }
+                pesan: { type: string, maxLength: 255 }
+                tipe: { type: string, enum: [admin, user] }
+                status: { type: string, enum: [terkirim, dibaca] }
+                created_at: { type: string, format: date-time }
+      responses:
+        "200": { description: Notifikasi dipulihkan }
+
+  /update-fcm-token:
+    post:
+      tags: [Notifikasi & FCM]
+      summary: Perbarui FCM device token milik akun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_id, fcm_token]
+              properties:
+                user_id: { type: integer }
+                fcm_token: { type: string }
+      responses:
+        "200": { description: FCM token updated }
+
+  /new-message:
+    post:
+      tags: [Notifikasi & FCM]
+      summary: "[P0 AUDIT] Trigger push notification FCM pesan baru (target internal only)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sender_id, receiver_id, message]
+              properties:
+                sender_id: { type: integer }
+                receiver_id: { type: integer }
+                message: { type: string }
+      responses:
+        "200": { description: Notifikasi dikirim }
+
+  /report-update:
+    post:
+      tags: [Notifikasi & FCM]
+      summary: "[P0 AUDIT] Trigger notifikasi DB & FCM perubahan status laporan (target internal/admin)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_laporan, user_id, status]
+              properties:
+                id_laporan: { type: string }
+                user_id: { type: integer }
+                status: { type: string, enum: [dikirim, diterima, diproses, selesai] }
+      responses:
+        "200": { description: Notifikasi laporan dikirim }
+
+  /informasi:
+    get:
+      tags: [Informasi]
+      summary: Ambil daftar informasi terkini (urut terbaru)
+      responses:
+        "200":
+          description: Daftar informasi publik
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: success }
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/InformasiItem" }
+
+  /informasi/{informasi}/gambar:
+    get:
+      tags: [Informasi]
+      summary: Unduh file gambar informasi dengan header CORS & cache
+      parameters:
+        - name: informasi
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: File gambar
+          content:
+            image/*:
+              schema: { type: string, format: binary }
+        "404": { description: Gambar tidak ditemukan }
+
+  /login:
+    post:
+      tags: [Legacy Auth (Deprecated)]
+      deprecated: true
+      summary: Login legacy (duplikat /auth/login)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp, password]
+              properties:
+                notelp: { type: string }
+                password: { type: string }
+      responses:
+        "200": { description: Login berhasil }
+
+  /register:
+    post:
+      tags: [Legacy Auth (Deprecated)]
+      deprecated: true
+      summary: Register legacy (duplikat /auth/register)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp, nama, password]
+              properties:
+                notelp: { type: string }
+                nama: { type: string }
+                password: { type: string, minLength: 6 }
+      responses:
+        "200": { description: Registrasi berhasil }
+
+  /forgot-password:
+    post:
+      tags: [Legacy Auth (Deprecated)]
+      deprecated: true
+      summary: Lupa password legacy (buat OTP di kolom akun.otp)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp]
+              properties:
+                notelp: { type: string }
+      responses:
+        "200": { description: OTP telah dikirim }
+        "404": { description: No Telp tidak ditemukan }
+
+  /reset-password:
+    post:
+      tags: [Legacy Auth (Deprecated)]
+      deprecated: true
+      summary: Reset password legacy dengan OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [notelp, otp, password]
+              properties:
+                notelp: { type: string }
+                otp: { type: string }
+                password: { type: string, minLength: 6 }
+      responses:
+        "200": { description: Password berhasil direset }
+        "400": { description: OTP tidak valid atau kadaluarsa }

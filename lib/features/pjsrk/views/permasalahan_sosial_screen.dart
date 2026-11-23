@@ -8,8 +8,10 @@ import 'package:latlong2/latlong.dart' hide Path;
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/pjsrk/repositories/pjsrk_permasalahan_repository.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/pjsrk/views/laporan_sukses_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_fields.dart';
@@ -53,13 +55,13 @@ class PermasalahanSosialScreen extends StatefulWidget {
 }
 
 class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
-  // Palet Warna Sesuai Desain Referensi Sentra
-  static const Color _primaryOrange = Color(0xFFD8782E);
-  static const Color _lightOrangeBg = Color(0xFFFFF2E6);
-  static const Color _neutralDark = Color(0xFF252525);
-  static const Color _neutralGrey = Color(0xFF6B7280);
-  static const Color _borderGrey = Color(0xFFE5E7EB);
-  static const Color _greenActive = Color(0xFF48A868);
+  // Palet Warna PJSRK (Opsi B — WCAG AA)
+  static const Color _primaryOrange = Color(0xFFA84F0F);
+  static const Color _lightOrangeBg = Color(0xFFFCEBDC);
+  static const Color _neutralDark = AppColors.textPrimary;
+  static const Color _neutralGrey = AppColors.textSecondary;
+  static const Color _borderGrey = AppColors.border;
+  static const Color _greenActive = AppColors.primary;
 
   // Daftar opsi jenis permasalahan
   final List<String> _jenisPermasalahanList = [
@@ -407,41 +409,30 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     setState(() => _isSending = true);
 
     try {
-      // Form multipart disusun manual. FormData.fromMap mengirim daftar berkas
-      // dengan nama kunci yang sama ("foto"), sehingga PHP hanya menyisakan
-      // satu berkas dan API menolak dengan "The foto field must be an array".
-      // Kunci "foto[]" membuat PHP membentuk array berkas sesuai validasi API.
-      final FormData formData = FormData();
-      formData.fields.addAll(<MapEntry<String, String>>[
-        MapEntry('id_akun', idAkun.toString()),
-        MapEntry('jenis_permasalahan', _selectedJenis),
-        MapEntry('judul', _judulController.text.trim()),
-        MapEntry('uraian', _uraianController.text.trim()),
-        MapEntry('alamat', _lokasiController.text.trim()),
-        MapEntry('latitude', _currentLatLng.latitude.toString()),
-        MapEntry('longitude', _currentLatLng.longitude.toString()),
-        MapEntry('rahasia', _isAnonymous ? '1' : '0'),
-      ]);
-
       final List<MultipartFile> files = <MultipartFile>[];
       for (final PhotoItem item in _photoList) {
         final Uint8List? bytes = await _readPhotoBytes(item);
         if (bytes == null) continue;
-        final MultipartFile file = MultipartFile.fromBytes(
-          bytes,
-          filename: _photoFileName(item),
-          contentType: _photoContentType(item),
+        files.add(
+          MultipartFile.fromBytes(
+            bytes,
+            filename: _photoFileName(item),
+            contentType: _photoContentType(item),
+          ),
         );
-        files.add(file);
-        formData.files.add(MapEntry('foto[]', file));
       }
 
-      final response = await ApiClient.postRequest(
-        '/pjsrk/permasalahan-sosial',
-        formData,
+      final String idLaporan = await PjsrkPermasalahanRepository().kirim(
+        idAkun: idAkun,
+        jenisPermasalahan: _selectedJenis,
+        judul: _judulController.text.trim(),
+        uraian: _uraianController.text.trim(),
+        alamat: _lokasiController.text.trim(),
+        latitude: _currentLatLng.latitude,
+        longitude: _currentLatLng.longitude,
+        rahasia: _isAnonymous,
+        fotoFiles: files,
       );
-
-      final String idLaporan = _bacaIdLaporan(response.data);
       if (!mounted) return;
 
       final DateTime now = DateTime.now();
@@ -466,14 +457,18 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
       }
 
       // DEFAULT ACTION: halaman sukses memakai nomor tiket dari server
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => LaporanSuksesScreen(
-            reportData: reportData,
-            nomorTiket: idLaporan.isEmpty ? null : idLaporan,
-            tanggalWaktu: now,
-          ),
+          builder:
+              (_) => LaporanSuksesScreen(
+                reportData: reportData,
+                nomorTiket: idLaporan.isEmpty ? null : idLaporan,
+                tanggalWaktu: now,
+                judulLayanan: 'Permasalahan Sosial',
+                pesanKonfirmasi:
+                    'Terima kasih sudah peduli. Petugas Dinsos akan memverifikasi dan menindaklanjuti laporan Permasalahan Sosial Anda.',
+              ),
         ),
       );
     } on ApiException catch (e) {
@@ -487,16 +482,9 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     }
   }
 
-  /// Nomor tiket asli dibuat trigger database (contoh: RKN...).
-  String _bacaIdLaporan(dynamic body) {
-    if (body is Map && body['data'] is Map) {
-      return (body['data'] as Map)['id_laporan']?.toString() ?? '';
-    }
-    return '';
-  }
-
   Future<Uint8List?> _readPhotoBytes(PhotoItem item) async {
     if (item.bytes != null) return item.bytes;
+    if (kIsWeb) return null;
     if (item.file != null) return item.file!.readAsBytes();
     final path = item.path ?? '';
     if (path.isEmpty) return null;
@@ -779,61 +767,48 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     );
   }
 
-  /// Header bagian atas dengan warna oranye hangat dan tombol back
+  /// Curved Header PJSRK (Opsi B — melengkung ke bawah).
   Widget _buildHeader(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Container(
-      width: double.infinity,
+    return SentraCurvedHeader(
+      gradient: AppColors.pjsrkHeaderGradient,
+      backgroundAsset: 'assets/image/beranda/pjsrk.png',
+      curveHeight: 26,
       padding: EdgeInsets.only(
-        top: statusBarHeight + 8,
-        bottom: 14,
-        left: 16,
-        right: 16,
-      ),
-      decoration: const BoxDecoration(
-        color: _primaryOrange,
+        top: statusBarHeight + 6,
+        bottom: 34,
+        left: 12,
+        right: 12,
       ),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
-          child: Stack(
-            alignment: Alignment.center,
+          child: Row(
             children: [
-              // Tombol Back di sisi kiri
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Material(
-                  color: Colors.white.withAlpha(56),
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => Navigator.of(context).pop(),
-                    child: const SizedBox(
-                      width: 38,
-                      height: 38,
-                      child: Icon(
-                        Icons.chevron_left_rounded,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
+              IconButton(
+                tooltip: 'Kembali',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const Expanded(
+                child: Text(
+                  'Permasalahan Sosial',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ),
-
-              // Judul Header tepat di tengah secara horizontal
-              const Text(
-                'Permasalahan Sosial',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: 0.2,
-                ),
-              ),
+              const SizedBox(width: 48),
             ],
           ),
         ),

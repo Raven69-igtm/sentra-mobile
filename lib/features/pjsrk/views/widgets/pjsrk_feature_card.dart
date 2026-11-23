@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_spacing.dart';
+import 'package:sentra/core/theme/app_typography.dart';
+import 'package:sentra/core/widgets/sentra_card.dart';
 
-/// Kartu Fitur individual untuk layanan PJSRK
+/// Kartu fitur layanan PJSRK berbasis `SentraCard` (putih, border 1px #E5E9EF,
+/// radius 16, tanpa bayangan).
 class PjsrkFeatureCard extends StatelessWidget {
   final String title;
   final String description;
@@ -21,89 +26,42 @@ class PjsrkFeatureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000), // ~4% opacity shadow
-            blurRadius: 10,
-            offset: Offset(0, 3),
+    return SentraCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md + 2),
+      semanticLabel: '$title: $description',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor, size: 24),
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          mouseCursor: SystemMouseCursors.click,
-          splashColor: iconColor.withAlpha(30),
-          highlightColor: iconColor.withAlpha(15),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+          const SizedBox(width: AppSpacing.md + 2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Container Ikon di sebelah kiri
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: iconBgColor,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(
-                    icon,
-                    color: iconColor,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 14),
-
-                // Bagian Teks (Judul dan Deskripsi)
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF252525),
-                        ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        description,
-                        style: const TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 12,
-                          height: 1.35,
-                          color: Color(0xFF8D9299),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // Icon Chevron Right di sebelah kanan
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  color: Color(0xFF252525),
-                  size: 22,
-                ),
+                Text(title, style: AppTypography.subtitle),
+                const SizedBox(height: AppSpacing.xs),
+                Text(description, style: AppTypography.caption),
               ],
             ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.sm),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.textMuted,
+            size: 22,
+          ),
+        ],
       ),
     );
   }

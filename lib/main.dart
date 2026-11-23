@@ -1,13 +1,18 @@
+import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/theme/app_theme.dart';
 import 'package:sentra/firebase_options.dart';
 import 'package:sentra/features/auth/controllers/login_controller.dart';
-import 'package:sentra/features/auth/controllers/forgot_password_controller.dart';
+import 'package:sentra/features/auth/controllers/ganti_nomor_controller.dart';
 import 'package:sentra/features/auth/controllers/register_controller.dart';
 import 'package:sentra/features/auth/services/auth_session.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/features/chat/controllers/chat_controller.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
+import 'package:sentra/features/notification/controllers/notif_badge_provider.dart';
 import 'package:sentra/features/notification/services/notif_service.dart';
+import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/splash/splash_screen.dart';
 import 'package:sentra/features/welcome/welcome_screen.dart';
 import 'package:device_preview/device_preview.dart';
@@ -23,6 +28,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
     GlobalKey<ScaffoldMessengerState>();
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -73,6 +79,27 @@ void main() async {
 
   await SharedPreferences.getInstance();
 
+  // Handler global ketika token Sanctum kedaluwarsa atau dicabut (HTTP 401).
+  ApiClient.onUnauthorized = () async {
+    await AuthSession.clear();
+    final navContext = navigatorKey.currentContext;
+    if (navContext != null && navContext.mounted) {
+      Provider.of<UserProvider>(navContext, listen: false).clearUser();
+      Provider.of<ChatController>(navContext, listen: false).reset();
+      Provider.of<LaporanController>(navContext, listen: false).reset();
+      Provider.of<NotificationBadgeProvider>(navContext, listen: false).reset();
+    }
+    navigatorKey.currentState?.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginPage()),
+      (route) => false,
+    );
+    scaffoldMessengerKey.currentState?.showSnackBar(
+      const SnackBar(
+        content: Text('Sesi Anda telah berakhir. Silakan masuk kembali.'),
+      ),
+    );
+  };
+
   runApp(
     DevicePreview(
       enabled: !kReleaseMode,
@@ -82,9 +109,13 @@ void main() async {
             providers: [
               ChangeNotifierProvider(create: (_) => LoginController()),
               ChangeNotifierProvider(create: (_) => RegisterController()),
-              ChangeNotifierProvider(create: (_) => LupaPasswordController()),
+              ChangeNotifierProvider(create: (_) => GantiNomorController()),
               ChangeNotifierProvider(create: (_) => UserProvider()),
               ChangeNotifierProvider(create: (_) => ChatController()),
+              ChangeNotifierProvider(create: (_) => LaporanController()),
+              ChangeNotifierProvider(
+                create: (_) => NotificationBadgeProvider(),
+              ),
             ],
             child: const MyApp(),
           ),
@@ -99,9 +130,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: 'Mulish'),
+      theme: buildSentraTheme(),
       locale: DevicePreview.locale(context),
       builder: DevicePreview.appBuilder,
+      navigatorKey: navigatorKey,
       scaffoldMessengerKey: scaffoldMessengerKey,
       home: const StartupGate(),
     );

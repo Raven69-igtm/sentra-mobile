@@ -1,9 +1,13 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_typography.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
+import 'package:sentra/core/widgets/sentra_gradient_icon.dart';
+import 'package:sentra/core/widgets/sentra_status_badge.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/notification/controllers/notif_badge_provider.dart';
 import 'package:sentra/features/notification/controllers/notif_controller.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
@@ -26,6 +30,7 @@ class _NotificationPageState extends State<NotificationPage>
   final ScrollController _scrollController = ScrollController();
 
   // Local state untuk optimistic updates
+  List<Map<String, dynamic>> _allNotifications = [];
   List<Map<String, dynamic>> _notifications = [];
   String? _currentUserId;
   String _selectedFilter = 'Semua';
@@ -56,125 +61,85 @@ class _NotificationPageState extends State<NotificationPage>
   }
 
   Color _getTitleColor(String? title) {
-    if (title == null) return Colors.grey[800]!;
+    if (title == null) return AppColors.textSecondary;
+
+    final lower = title.toLowerCase();
+    if (lower.contains('pesan')) {
+      return AppColors.info;
+    }
 
     final parts = title.split(' - ');
-    if (parts.length < 2) {
-      switch (title.toLowerCase()) {
-        case 'pesan baru':
-          return Colors.blue[700]!;
-        default:
-          return Colors.grey[800]!;
-      }
-    }
-
-    final status = parts[1].trim().toLowerCase();
-    switch (status) {
-      case 'laporan terkirim':
-        return Colors.orange[700]!;
-      case 'laporan diterima':
-        return Colors.blue[700]!;
-      case 'laporan diproses':
-        return Colors.deepOrange[700]!;
-      case 'laporan selesai':
-        return Colors.green[700]!;
-      default:
-        return Colors.grey[800]!;
-    }
+    final statusText = parts.length >= 2 ? parts[1].trim() : title;
+    return SentraStatusStyle.resolve(statusText).foreground;
   }
 
   IconData _getNotificationIcon(String? title) {
     if (title == null) return Icons.notifications;
 
-    final parts = title.split(' - ');
-    if (parts.length < 2) {
-      switch (title.toLowerCase()) {
-        case 'pesan baru':
-          return Icons.message;
-        default:
-          return Icons.notifications;
-      }
+    final lower = title.toLowerCase();
+    if (lower.contains('pesan')) {
+      return Icons.message_rounded;
     }
 
-    final status = parts[1].trim().toLowerCase();
-    switch (status) {
-      case 'laporan terkirim':
-        return Icons.send;
-      case 'laporan diterima':
-        return Icons.inbox;
-      case 'laporan diproses':
-        return Icons.hourglass_empty;
-      case 'laporan selesai':
-        return Icons.check_circle;
-      default:
-        return Icons.notifications;
+    final parts = title.split(' - ');
+    if (parts.length < 2) {
+      return Icons.notifications_rounded;
     }
+    return SentraStatusStyle.resolve(parts[1].trim()).icon;
   }
 
   Widget _buildFilterTabs() {
     final tabs = ['Semua', 'PPA', 'PJSRK', 'Pesan', 'Laporan', 'Lainnya'];
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(25),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 1, sigmaY: 1),
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children:
-                  tabs.map((tab) {
-                    final isSelected = _selectedFilter == tab;
-                    return InkWell(
-                      onTap: () {
-                        setState(() {
-                          _selectedFilter = tab;
-                        });
-                        _updateBadgeCount();
-                      },
-                      borderRadius: BorderRadius.circular(25),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              isSelected
-                                  ? Warna.backgroundIjo.withOpacity(0.1)
-                                  : Colors.transparent,
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                        child: Text(
-                          tab,
-                          style: TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 13,
-                            fontWeight:
-                                isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color:
-                                isSelected
-                                    ? Warna.backgroundIjo
-                                    : Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-            ),
-          ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children:
+              tabs.map((tab) {
+                final isSelected = _selectedFilter == tab;
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    setState(() {
+                      _selectedFilter = tab;
+                    });
+                    _updateBadgeCount();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child:
+                        isSelected
+                            ? SentraGradientText(
+                              tab,
+                              style: const TextStyle(
+                                fontFamily: 'Mulish',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            )
+                            : Text(
+                              tab,
+                              style: const TextStyle(
+                                fontFamily: 'Mulish',
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                  ),
+                );
+              }).toList(),
         ),
       ),
     );
@@ -191,14 +156,21 @@ class _NotificationPageState extends State<NotificationPage>
           notification['id_laporan'],
         ].whereType<Object>().join(' ').toLowerCase();
 
+    final title = notification['title']?.toString().toLowerCase() ?? '';
+
+    // Chat selalu kategori "Pesan", meskipun isi pesannya menyebut PPA/PJSRK.
+    if (notification['source']?.toString().toLowerCase() == 'pesan' ||
+        title == 'pesan baru' ||
+        title.contains('pesan')) {
+      return 'Pesan';
+    }
+
     if (sourceMetadata.contains('pjsrk')) return 'PJSRK';
     if (sourceMetadata.contains('pppa') ||
         RegExp(r'\bppa\b').hasMatch(sourceMetadata)) {
       return 'PPA';
     }
 
-    final title = notification['title']?.toString().toLowerCase() ?? '';
-    if (title == 'pesan baru' || title.contains('pesan')) return 'Pesan';
     if (title.contains('laporan') ||
         notification['id_laporan']?.toString().isNotEmpty == true) {
       return 'Laporan';
@@ -213,7 +185,7 @@ class _NotificationPageState extends State<NotificationPage>
 
   String _formatDate(String dateString) {
     try {
-      final dateTime = DateTime.parse(dateString);
+      final dateTime = DateTime.parse(dateString).toLocal();
       final now = DateTime.now();
       final difference = now.difference(dateTime);
 
@@ -233,17 +205,25 @@ class _NotificationPageState extends State<NotificationPage>
     }
   }
 
-  // Update badge count dan notify HomeScreen
+  // Update badge count dan sinkronkan ke NotificationBadgeProvider + callback
   void _updateBadgeCount() {
+    final source =
+        _allNotifications.isNotEmpty ? _allNotifications : _notifications;
     final unreadCount =
-        _notifications
+        source
             .where(
               (notif) => notif['status'] == false || notif['dibaca'] == false,
             )
             .length;
 
-    // Notify HomeScreen untuk update badge
     widget.onBadgeCountChanged?.call(unreadCount);
+    if (mounted) {
+      final badgeProvider = Provider.of<NotificationBadgeProvider?>(
+        context,
+        listen: false,
+      );
+      badgeProvider?.syncUnreadCount(unreadCount);
+    }
   }
 
   // Optimistic mark as read
@@ -344,14 +324,19 @@ class _NotificationPageState extends State<NotificationPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: _buildAppBar(),
-      body: Stack(
-        children: [
-          FadeTransition(
-            opacity: _fadeAnimation,
-            child: Consumer<UserProvider>(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            _buildCurvedHeader(),
+            Expanded(
+              child: Stack(
+                children: [
+                  FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Consumer<UserProvider>(
               builder: (context, userProvider, child) {
                 if (userProvider.user == null) {
                   return _buildUserNotFoundState();
@@ -375,16 +360,20 @@ class _NotificationPageState extends State<NotificationPage>
                       return _buildLoadingState();
                     }
 
-                    _notifications = List.from(snapshot.data!);
+                    _allNotifications = List.from(snapshot.data!);
+                    _notifications = List.from(_allNotifications);
                     if (_selectedFilter != 'Semua') {
                       _notifications =
-                          _notifications
-                              .where(
-                                (notif) =>
-                                    _getNotificationCategory(notif) ==
-                                    _selectedFilter,
-                              )
-                              .toList();
+                          _notifications.where((notif) {
+                            final category = _getNotificationCategory(notif);
+                            // "Laporan" = gabungan notifikasi laporan PPA & PJSRK.
+                            if (_selectedFilter == 'Laporan') {
+                              return category == 'PPA' ||
+                                  category == 'PJSRK' ||
+                                  category == 'Laporan';
+                            }
+                            return category == _selectedFilter;
+                          }).toList();
                     }
 
                     _notifications.sort((a, b) {
@@ -409,8 +398,17 @@ class _NotificationPageState extends State<NotificationPage>
               },
             ),
           ),
-          Positioned(top: 0, left: 0, right: 0, child: _buildFilterTabs()),
-        ],
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: _buildFilterTabs(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -473,53 +471,39 @@ class _NotificationPageState extends State<NotificationPage>
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Warna.backgroundIjo, Warna.backgroundBiru],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-      ),
-      leading: IconButton(
-        tooltip: 'Kembali',
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () {
-          final navigator = Navigator.of(context);
-          if (navigator.canPop()) {
-            navigator.pop();
-          } else {
-            navigator.pushReplacement(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          }
-        },
-      ),
-      title: Row(
+  Widget _buildCurvedHeader() {
+    final topInset = MediaQuery.of(context).padding.top;
+    return SentraCurvedHeader(
+      gradient: AppColors.headerCurvedGradient,
+      curveHeight: 28,
+      padding: EdgeInsets.fromLTRB(12, topInset + 8, 16, 36),
+      child: Row(
         children: [
-          Image.asset('assets/logo/Image.png', height: 30, width: 30),
-          const SizedBox(width: 8),
-          const Text(
-            "SENTRA",
-            style: TextStyle(
-              fontFamily: "Mulish",
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          IconButton(
+            tooltip: 'Kembali',
+            icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+            onPressed: () {
+              final navigator = Navigator.of(context);
+              if (navigator.canPop()) {
+                navigator.pop();
+              } else {
+                navigator.pushReplacement(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                );
+              }
+            },
           ),
-          const Spacer(),
-          const Text(
-            "Notifikasi",
-            style: TextStyle(
-              fontFamily: "Mulish",
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+          Image.asset(
+            'assets/logo/Image.png',
+            height: 28,
+            width: 34,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Notifikasi',
+            style: AppTypography.title.copyWith(
+              fontSize: 18,
               color: Colors.white,
             ),
           ),
@@ -953,6 +937,7 @@ class _NotificationPageState extends State<NotificationPage>
 
     try {
       await _controller!.deleteNotification(notifId);
+      _allNotifications.removeWhere((item) => item['id']?.toString() == notifId);
       _showSuccessSnackBar(
         'Notifikasi "${removedNotif['title']}" dihapus',
         removedNotif,

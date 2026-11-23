@@ -10,23 +10,35 @@ class ChatController extends ChangeNotifier {
   final ChatRepository _repository = ChatRepository();
   List<Chat> _chats = [];
   WebSocketChannel? _channel;
+  StreamSubscription<dynamic>? _channelSubscription;
+  Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  int? _connectedUserId;
   bool _wsReady = false;
   bool _shouldReconnect = true;
+  bool _isDisposed = false;
   final Map<int, bool> _typingStatusMap = {};
   Chat? _repliedToChat;
 
   List<Chat> get chats => _chats;
+  bool get isWebSocketReady => _wsReady;
   bool isUserTyping(int userId) => _typingStatusMap[userId] ?? false;
   Chat? get repliedToChat => _repliedToChat;
 
+  void _safeNotify() {
+    if (!_isDisposed) {
+      notifyListeners();
+    }
+  }
+
   void setRepliedToChat(Chat? chat) {
     _repliedToChat = chat;
-    notifyListeners();
+    _safeNotify();
   }
 
   void clearRepliedToChat() {
     _repliedToChat = null;
-    notifyListeners();
+    _safeNotify();
   }
 
   void emitTypingStatus({
@@ -34,8 +46,7 @@ class ChatController extends ChangeNotifier {
     required int receiverId,
     required bool isTyping,
   }) {
-    if (_channel == null) {
-      print('Error: WebSocket channel is null');
+    if (_channel == null || !_wsReady) {
       return;
     }
     try {
@@ -45,63 +56,108 @@ class ChatController extends ChangeNotifier {
         'receiverId': receiverId,
         'isTyping': isTyping,
       };
-      print('Sending typing status: $typingData');
       _channel!.sink.add(jsonEncode(typingData));
-      print('Typing status sent successfully');
     } catch (e) {
-      print('Error sending typing status: $e');
+      debugPrint('Error sending typing status: $e');
     }
   }
 
-  void connectToChat(int userId) {
-    _shouldReconnect = true;
+  void _cleanupChannel() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _channelSubscription?.cancel();
+    _channelSubscription = null;
+    _wsReady = false;
     try {
-      print('Attempting to connect to WebSocket: ${ApiClient.wsUrl} for userId: $userId');
-      _channel = WebSocketChannel.connect(Uri.parse(ApiClient.wsUrl));
+      _channel?.sink.close();
+    } catch (_) {}
+    _channel = null;
+  }
+
+  void _scheduleReconnect(int userId) {
+    if (!_shouldReconnect || _isDisposed) return;
+    if (_reconnectTimer?.isActive ?? false) return;
+
+    final delaySeconds = (2 << _reconnectAttempts).clamp(2, 30);
+    _reconnectAttempts = (_reconnectAttempts + 1).clamp(0, 5);
+    debugPrint(
+      'WebSocket reconnect scheduled in ${delaySeconds}s for userId: $userId',
+    );
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
+      if (_shouldReconnect && !_isDisposed) {
+        connectToChat(userId);
+      }
+    });
+  }
+
+  void connectToChat(int userId) {
+    final token = ApiClient.authToken;
+    if (token == null || token.isEmpty) {
+      debugPrint('WebSocket skipped: Sanctum token not available.');
+      return;
+    }
+
+    // Jika sudah terhubung untuk user yang sama dan channel aktif, hindari duplikasi.
+    if (_connectedUserId == userId && _channel != null && _wsReady) {
+      return;
+    }
+
+    _cleanupChannel();
+    _shouldReconnect = true;
+    _connectedUserId = userId;
+
+    try {
+      debugPrint(
+        'Attempting to connect to WebSocket: ${ApiClient.wsUrl} for userId: $userId',
+      );
+      final channel = WebSocketChannel.connect(Uri.parse(ApiClient.wsUrl));
+      _channel = channel;
       _wsReady = false;
-      _channel!.ready.then(
+
+      channel.ready.then(
         (_) {
+          if (_channel != channel || _isDisposed) return;
           _wsReady = true;
-          print('WebSocket connected for userId: $userId');
+          _reconnectAttempts = 0;
+          debugPrint('WebSocket connected for userId: $userId');
+          channel.sink.add(
+            jsonEncode({
+              'type': 'register',
+              'token': token,
+              'user_id': userId.toString(),
+              'user_type': 'user',
+            }),
+          );
         },
         onError: (error) {
+          if (_channel != channel) return;
           _wsReady = false;
-          print('WebSocket connection failed for userId $userId: $error');
+          debugPrint('WebSocket connection failed for userId $userId: $error');
+          _scheduleReconnect(userId);
         },
       );
-      _channel!.sink.add(
-        jsonEncode({
-          'type': 'register',
-          'user_id': userId.toString(),
-          'user_type': 'user',
-        }),
-      );
-      print('Registration sent for userId: $userId');
-      _channel!.stream.listen(
+
+      _channelSubscription = channel.stream.listen(
         (message) {
           _onNewMessage(message);
         },
         onError: (error) {
+          if (_channel != channel) return;
           _wsReady = false;
-          print('WebSocket error for userId $userId: $error');
-          if (_shouldReconnect) {
-            Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
-          }
+          debugPrint('WebSocket error for userId $userId: $error');
+          _scheduleReconnect(userId);
         },
         onDone: () {
+          if (_channel != channel) return;
           _wsReady = false;
-          print('WebSocket connection closed for userId $userId');
-          if (_shouldReconnect) {
-            Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
-          }
+          debugPrint('WebSocket connection closed for userId $userId');
+          _scheduleReconnect(userId);
         },
       );
     } catch (e) {
       _wsReady = false;
-      print('Error connecting to WebSocket for userId $userId: $e');
-      if (_shouldReconnect) {
-        Future.delayed(Duration(seconds: 5), () => connectToChat(userId));
-      }
+      debugPrint('Error connecting to WebSocket for userId $userId: $e');
+      _scheduleReconnect(userId);
     }
   }
 
@@ -141,7 +197,12 @@ class ChatController extends ChangeNotifier {
     try {
       print('Received message: $message');
       final data = jsonDecode(message);
-      if (data['type'] == 'new_message') {
+      if (data['type'] == 'auth_error') {
+        debugPrint('WebSocket auth_error: ${data['message']}');
+        _shouldReconnect = false;
+        _cleanupChannel();
+        return;
+      } else if (data['type'] == 'new_message') {
         final chat = Chat.fromJson(data);
         final index = _chats.indexWhere(
           (c) =>
@@ -306,9 +367,9 @@ class ChatController extends ChangeNotifier {
 
   void closeConnection() {
     _shouldReconnect = false;
-    _wsReady = false;
-    _channel?.sink.close();
-    _channel = null;
+    _connectedUserId = null;
+    _reconnectAttempts = 0;
+    _cleanupChannel();
   }
 
   /// Membersihkan state chat saat logout / ganti akun.
@@ -317,6 +378,13 @@ class ChatController extends ChangeNotifier {
     _chats = [];
     _typingStatusMap.clear();
     _repliedToChat = null;
-    notifyListeners();
+    _safeNotify();
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    closeConnection();
+    super.dispose();
   }
 }

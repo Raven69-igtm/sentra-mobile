@@ -1,4 +1,12 @@
 {
   "cmake.sourceDirectory": "C:/Users/A R I E F/Documents/sentra_mobile/linux",
-  "python.terminal.useEnvFile": true
+  "python.terminal.useEnvFile": true,
+  "dart.flutterSdkPath": "C:/src/flutter",
+  "dart.env": {
+    "PUB_CACHE": "C:/Pub/Cache"
+  },
+  "terminal.integrated.env.windows": {
+    "PUB_CACHE": "C:/Pub/Cache",
+    "PATH": "C:/src/flutter/bin;${env:PATH}"
+  }
 }

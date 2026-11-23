@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:sentra/core/theme/app_colors.dart';
 import 'package:sentra/core/utils/pjsrk_photo_urls.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/report/models/report_model.dart';
 
@@ -21,13 +23,14 @@ class DetailLaporanScreen extends StatefulWidget {
 }
 
 class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
-  static const Color _primaryOrange = Color(0xFFD6762E);
-  static const Color _bgGrey = Color(0xFFFAFAFA);
-  static const Color _textDark = Color(0xFF2A2A2A);
-  static const Color _textGrey = Color(0xFF7A7F85);
-  static const Color _green = Color(0xFF58A97B);
+  static const Color _primaryOrange = Color(0xFFA84F0F);
+  static const Color _bgGrey = Colors.white;
+  static const Color _textDark = AppColors.textPrimary;
+  static const Color _textGrey = AppColors.textSecondary;
+  static const Color _green = AppColors.primary;
 
-  final LaporanController _controller = Get.put(LaporanController());
+  LaporanController? _controller;
+  bool _ownsController = false;
 
   Map<String, dynamic>? _detail;
   bool _loading = true;
@@ -35,13 +38,27 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   @override
   void initState() {
     super.initState();
+    try {
+      _controller = Provider.of<LaporanController>(context, listen: false);
+    } catch (_) {
+      _controller = LaporanController();
+      _ownsController = true;
+    }
     _loadDetail();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsController) {
+      _controller?.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _loadDetail() async {
     setState(() => _loading = true);
     try {
-      final result = await _controller.getReportDetailById(
+      final result = await _controller!.getReportDetailById(
         widget.laporan.id.toString(),
       );
       if (mounted) {
@@ -283,49 +300,33 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
 
   Widget _buildHeader() {
     final top = MediaQuery.of(context).padding.top;
-    return Container(
-      color: _primaryOrange,
-      child: Column(
+    return SentraCurvedHeader(
+      gradient: AppColors.pjsrkHeaderGradient,
+      backgroundAsset: 'assets/image/beranda/pjsrk.png',
+      curveHeight: 26,
+      padding: EdgeInsets.fromLTRB(12, top + 6, 12, 32),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          SizedBox(height: top),
-          SizedBox(
-            height: 56,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Material(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(10),
-                        onTap: () => Navigator.of(context).pop(),
-                        child: const SizedBox(
-                          width: 36,
-                          height: 36,
-                          child: Icon(
-                            Icons.chevron_left_rounded,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const Text(
-                  'Detail Laporan',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontFamily: 'Mulish',
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+          Align(
+            alignment: Alignment.centerLeft,
+            child: IconButton(
+              tooltip: 'Kembali',
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(
+                Icons.arrow_back_rounded,
+                color: Colors.white,
+                size: 22,
+              ),
+            ),
+          ),
+          const Text(
+            'Detail Laporan',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 17,
+              fontFamily: 'Mulish',
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
