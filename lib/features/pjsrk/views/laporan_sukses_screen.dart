@@ -31,12 +31,11 @@ class LaporanSuksesScreen extends StatelessWidget {
     this.onKembaliKeBeranda,
   });
 
-  // Palet Warna Sesuai Desain Referensi Sentra
-  static const Color _primaryOrange = Color(0xFFD8782E);
-  static const Color _primaryGreen = Color(0xFF429468);
-  static const Color _lightGreenBadge = Color(0xFFE2F2E9);
-  static const Color _dashedGreenBorder = Color(0xFF6EBE92);
-  static const Color _darkGreenText = Color(0xFF287D56);
+  // Palet Warna Oranye SENTRA untuk konfirmasi sukses PJSRK.
+  static const Color _primaryOrange = Color(0xFFD6762C);
+  static const Color _lightOrangeBadge = Color(0xFFFCEBDC);
+  static const Color _dashedOrangeBorder = Color(0xFFE6A469);
+  static const Color _darkOrangeText = Color(0xFFB85A14);
   static const Color _neutralDark = Color(0xFF252525);
   static const Color _neutralGrey = Color(0xFF8D9299);
 
@@ -157,7 +156,7 @@ class LaporanSuksesScreen extends StatelessWidget {
                       children: [
                         const SizedBox(height: 12),
 
-                        // Icon Checklist Bulat Hijau Besar
+                        // Icon Checklist Bulat Oranye Besar
                         _buildCheckmarkBadge(),
                         const SizedBox(height: 24),
 
@@ -192,7 +191,7 @@ class LaporanSuksesScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 28),
 
-                        // Card Nomor Tiket dengan Dashed Border Hijau
+                        // Card Nomor Tiket dengan Dashed Border Oranye
                         _buildTicketCard(context),
                         const SizedBox(height: 36),
 
@@ -244,29 +243,29 @@ class LaporanSuksesScreen extends StatelessWidget {
     );
   }
 
-  /// Badge Checklist Hijau Bulat Besar
+  /// Badge Checklist Oranye Bulat Besar
   Widget _buildCheckmarkBadge() {
     return Container(
       width: 104,
       height: 104,
       decoration: const BoxDecoration(
-        color: _lightGreenBadge,
+        color: _lightOrangeBadge,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
       child: const Icon(
         Icons.check_rounded,
         size: 58,
-        color: _primaryGreen,
+        color: _primaryOrange,
       ),
     );
   }
 
-  /// Card Nomor Tiket dengan Garis Putus-putus Hijau
+  /// Card Nomor Tiket dengan Garis Putus-putus Oranye
   Widget _buildTicketCard(BuildContext context) {
     return CustomPaint(
       painter: _DashedBorderPainter(
-        color: _dashedGreenBorder,
+        color: _dashedOrangeBorder,
         strokeWidth: 1.3,
         gap: 4.0,
         radius: 16.0,
@@ -306,7 +305,7 @@ class LaporanSuksesScreen extends StatelessWidget {
                         fontFamily: 'Mulish',
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: _darkGreenText,
+                        color: _darkOrangeText,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -314,7 +313,7 @@ class LaporanSuksesScreen extends StatelessWidget {
                     Icon(
                       Icons.copy_rounded,
                       size: 16,
-                      color: _darkGreenText.withOpacity(0.6),
+                      color: _darkOrangeText.withOpacity(0.6),
                     ),
                   ],
                 ),
@@ -342,13 +341,13 @@ class LaporanSuksesScreen extends StatelessWidget {
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
-        // Tombol 1: Lacak Laporan (Hijau Solid)
+        // Tombol 1: Lacak Laporan (Oranye Solid)
         SizedBox(
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: _primaryGreen,
+              backgroundColor: _primaryOrange,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -375,8 +374,8 @@ class LaporanSuksesScreen extends StatelessWidget {
           height: 48,
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
-              foregroundColor: _primaryGreen,
-              side: const BorderSide(color: _primaryGreen, width: 1.4),
+              foregroundColor: _primaryOrange,
+              side: const BorderSide(color: _primaryOrange, width: 1.4),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -447,4 +446,5 @@ class _DashedBorderPainter extends CustomPainter {
         oldDelegate.radius != radius;
   }
 }
+
 
