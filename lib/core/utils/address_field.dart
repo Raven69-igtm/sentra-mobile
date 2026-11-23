@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 
 class Address {
@@ -40,7 +41,7 @@ class AddressAutocompleteCustom extends StatefulWidget {
 
 class _AddressAutocompleteCustomState extends State<AddressAutocompleteCustom> {
   final TextEditingController _internalController = TextEditingController();
-  final Dio _dio = Dio();
+  final Dio _dio = ApiClient.externalDio;
   List<Address> _suggestions = [];
   bool _isLoading = false;
   bool _noResults = false;
@@ -299,7 +300,7 @@ class AddressAutocompleteEnhanced extends StatefulWidget {
 class _AddressAutocompleteEnhancedState
     extends State<AddressAutocompleteEnhanced> {
   final TextEditingController _internalController = TextEditingController();
-  final Dio _dio = Dio();
+  final Dio _dio = ApiClient.externalDio;
   List<Address> _suggestions = [];
   bool _isLoading = false;
   bool _noResults = false;
@@ -617,7 +618,7 @@ class AddressAutocompleteCompact extends StatefulWidget {
 
 class _AddressAutocompleteCompactState extends State<AddressAutocompleteCompact> {
   final TextEditingController _internalController = TextEditingController();
-  final Dio _dio = Dio();
+  final Dio _dio = ApiClient.externalDio;
   List<Address> _suggestions = [];
   bool _isLoading = false;
   bool _noResults = false;
@@ -961,7 +962,7 @@ class AddressAutocompleteStandard extends StatefulWidget {
 
 class _AddressAutocompleteStandardState extends State<AddressAutocompleteStandard> {
   final TextEditingController _internalController = TextEditingController();
-  final Dio _dio = Dio();
+  final Dio _dio = ApiClient.externalDio;
   List<Address> _suggestions = [];
   bool _isLoading = false;
   bool _noResults = false;

@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:sentra/features/notification/repositories/notif_repository.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -5,12 +8,13 @@ class NotificationController {
   final NotificationRepository _repository = NotificationRepository();
   final BehaviorSubject<List<Map<String, dynamic>>> _notificationsSubject =
       BehaviorSubject<List<Map<String, dynamic>>>();
+  StreamSubscription<List<Map<String, dynamic>>>? _subscription;
 
   Stream<List<Map<String, dynamic>>> get notificationStream =>
       _notificationsSubject.stream;
 
   NotificationController(String userId) {
-    _repository
+    _subscription = _repository
         .getNotifications(userId)
         .listen(
           (notifications) {
@@ -19,14 +23,12 @@ class NotificationController {
             }
           },
           onError: (error) {
-            // Error sudah di-handle di repository, tapi sebagai safety net:
-            print('NotificationController stream error (non-fatal): $error');
+            debugPrint('NotificationController stream error (non-fatal): $error');
             if (!_notificationsSubject.isClosed) {
-              // Tetap emit list kosong, jangan crash
               _notificationsSubject.add([]);
             }
           },
-          cancelOnError: false, // Jangan cancel stream saat error
+          cancelOnError: false,
         );
   }
 
@@ -59,6 +61,9 @@ class NotificationController {
   }
 
   void dispose() {
+    _subscription?.cancel();
+    _subscription = null;
+    _repository.dispose();
     _notificationsSubject.close();
   }
 }

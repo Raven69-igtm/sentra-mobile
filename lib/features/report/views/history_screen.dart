@@ -8,7 +8,6 @@ import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/report/models/report_model.dart';
 import 'package:sentra/features/report/services/search_service.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:intl/intl.dart';
@@ -23,7 +22,7 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  final LaporanController laporanController = Get.put(LaporanController());
+  late final LaporanController laporanController;
   final TextEditingController searchController = TextEditingController();
   String selectedFilter = "all";
   int? userId;
@@ -35,9 +34,12 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
+    laporanController = Provider.of<LaporanController>(context, listen: false);
     userId = Provider.of<UserProvider>(context, listen: false).idAkun;
     if (userId != null) {
-      laporanController.getUserReports(userId!);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) laporanController.getUserReports(userId!);
+      });
     }
   }
 
@@ -56,64 +58,66 @@ class _HistoryPageState extends State<HistoryPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: buildAppBar(),
-      body: Obx(() {
-        final List<LaporanModel> laporanList =
-            selectedFilter.toLowerCase() == "all"
-                ? laporanController.laporanList
-                : laporanController.laporanByCategoryList;
+      body: Consumer<LaporanController>(
+        builder: (context, controller, _) {
+          final List<LaporanModel> laporanList =
+              selectedFilter.toLowerCase() == "all"
+                  ? controller.laporanList
+                  : controller.laporanByCategoryList;
 
-        if (laporanController.isLoading.value || isLoading) {
-          return _buildShimmerEffect();
-        }
+          if (controller.isLoading || isLoading) {
+            return _buildShimmerEffect();
+          }
 
-        final String listError =
-            errorMessage.isNotEmpty
-                ? errorMessage
-                : (userId == null
-                    ? 'Sesi akun tidak ditemukan. Silakan login ulang.'
-                    : laporanController.errorMessage.value);
+          final String listError =
+              errorMessage.isNotEmpty
+                  ? errorMessage
+                  : (userId == null
+                      ? 'Sesi akun tidak ditemukan. Silakan login ulang.'
+                      : controller.errorMessage);
 
-        return Column(
-          children: [
-            buildFilterTabs(),
-            const SizedBox(height: 8),
-            buildSearchField(),
-            const SizedBox(height: 8),
-            if (listError.isNotEmpty)
-              Expanded(
-                child: SentraEmptyState.error(
-                  description: listError,
-                  onAction: userId != null ? _reload : null,
+          return Column(
+            children: [
+              buildFilterTabs(),
+              const SizedBox(height: 8),
+              buildSearchField(),
+              const SizedBox(height: 8),
+              if (listError.isNotEmpty)
+                Expanded(
+                  child: SentraEmptyState.error(
+                    description: listError,
+                    onAction: userId != null ? _reload : null,
+                  ),
                 ),
-              ),
-            if (listError.isEmpty)
-              Expanded(
-                child:
-                    laporanList.isEmpty
-                        ? const SentraEmptyState(
-                          icon: Icons.inbox_outlined,
-                          title: 'Belum ada laporan',
-                          description:
-                              'Laporan yang Anda kirim akan muncul di sini.',
-                        )
-                        : ListView.separated(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          itemCount: laporanList.length + 1,
-                          separatorBuilder:
-                              (_, __) => const SizedBox(height: 6),
-                          itemBuilder: (context, index) {
-                            if (index == laporanList.length) {
-                              final screenHeight =
-                                  MediaQuery.of(context).size.height;
-                              return SizedBox(height: screenHeight * 0.07);
-                            }
-                            return _buildReportTile(laporanList[index]);
-                          },
-                        ),
-              ),
-          ],
-        );
-      }),
+              if (listError.isEmpty)
+                Expanded(
+                  child:
+                      laporanList.isEmpty
+                          ? const SentraEmptyState(
+                            icon: Icons.inbox_outlined,
+                            title: 'Belum ada laporan',
+                            description:
+                                'Laporan yang Anda kirim akan muncul di sini.',
+                          )
+                          : ListView.separated(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            itemCount: laporanList.length + 1,
+                            separatorBuilder:
+                                (_, __) => const SizedBox(height: 6),
+                            itemBuilder: (context, index) {
+                              if (index == laporanList.length) {
+                                final screenHeight =
+                                    MediaQuery.of(context).size.height;
+                                return SizedBox(height: screenHeight * 0.07);
+                              }
+                              return _buildReportTile(laporanList[index]);
+                            },
+                          ),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 

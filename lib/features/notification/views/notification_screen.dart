@@ -5,6 +5,7 @@ import 'package:sentra/core/theme/app_colors.dart';
 import 'package:sentra/core/theme/app_typography.dart';
 import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/core/widgets/sentra_gradient_icon.dart';
+import 'package:sentra/core/widgets/sentra_status_badge.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/notification/controllers/notif_controller.dart';
 import 'package:sentra/core/utils/app_colors.dart';
@@ -58,59 +59,31 @@ class _NotificationPageState extends State<NotificationPage>
   }
 
   Color _getTitleColor(String? title) {
-    if (title == null) return Colors.grey[800]!;
+    if (title == null) return AppColors.textSecondary;
+
+    final lower = title.toLowerCase();
+    if (lower.contains('pesan')) {
+      return AppColors.info;
+    }
 
     final parts = title.split(' - ');
-    if (parts.length < 2) {
-      switch (title.toLowerCase()) {
-        case 'pesan baru':
-          return Colors.blue[700]!;
-        default:
-          return Colors.grey[800]!;
-      }
-    }
-
-    final status = parts[1].trim().toLowerCase();
-    switch (status) {
-      case 'laporan terkirim':
-        return Colors.orange[700]!;
-      case 'laporan diterima':
-        return Colors.blue[700]!;
-      case 'laporan diproses':
-        return Colors.deepOrange[700]!;
-      case 'laporan selesai':
-        return Colors.green[700]!;
-      default:
-        return Colors.grey[800]!;
-    }
+    final statusText = parts.length >= 2 ? parts[1].trim() : title;
+    return SentraStatusStyle.resolve(statusText).foreground;
   }
 
   IconData _getNotificationIcon(String? title) {
     if (title == null) return Icons.notifications;
 
-    final parts = title.split(' - ');
-    if (parts.length < 2) {
-      switch (title.toLowerCase()) {
-        case 'pesan baru':
-          return Icons.message;
-        default:
-          return Icons.notifications;
-      }
+    final lower = title.toLowerCase();
+    if (lower.contains('pesan')) {
+      return Icons.message_rounded;
     }
 
-    final status = parts[1].trim().toLowerCase();
-    switch (status) {
-      case 'laporan terkirim':
-        return Icons.send;
-      case 'laporan diterima':
-        return Icons.inbox;
-      case 'laporan diproses':
-        return Icons.hourglass_empty;
-      case 'laporan selesai':
-        return Icons.check_circle;
-      default:
-        return Icons.notifications;
+    final parts = title.split(' - ');
+    if (parts.length < 2) {
+      return Icons.notifications_rounded;
     }
+    return SentraStatusStyle.resolve(parts[1].trim()).icon;
   }
 
   Widget _buildFilterTabs() {

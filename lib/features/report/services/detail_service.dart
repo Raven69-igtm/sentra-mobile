@@ -1,11 +1,12 @@
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/core/network/endpoints.dart';
 
 class ReportDetailService {
   /// Detail laporan memakai endpoint POST /track-report.
   /// Backend tidak menyediakan GET /laporan/{id}.
   Future<Map<String, dynamic>?> fetchReportDetailById(String idLaporan) async {
-    final response = await ApiClient.postRequest('/track-report', {
+    final response = await ApiClient.postRequest(Endpoints.trackReport, {
       'id_laporan': idLaporan,
     });
 

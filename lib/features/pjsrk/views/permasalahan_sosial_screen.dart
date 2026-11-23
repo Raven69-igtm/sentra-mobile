@@ -8,8 +8,8 @@ import 'package:latlong2/latlong.dart' hide Path;
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/features/pjsrk/repositories/pjsrk_permasalahan_repository.dart';
 import 'package:sentra/core/theme/app_colors.dart';
 import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
@@ -409,41 +409,30 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     setState(() => _isSending = true);
 
     try {
-      // Form multipart disusun manual. FormData.fromMap mengirim daftar berkas
-      // dengan nama kunci yang sama ("foto"), sehingga PHP hanya menyisakan
-      // satu berkas dan API menolak dengan "The foto field must be an array".
-      // Kunci "foto[]" membuat PHP membentuk array berkas sesuai validasi API.
-      final FormData formData = FormData();
-      formData.fields.addAll(<MapEntry<String, String>>[
-        MapEntry('id_akun', idAkun.toString()),
-        MapEntry('jenis_permasalahan', _selectedJenis),
-        MapEntry('judul', _judulController.text.trim()),
-        MapEntry('uraian', _uraianController.text.trim()),
-        MapEntry('alamat', _lokasiController.text.trim()),
-        MapEntry('latitude', _currentLatLng.latitude.toString()),
-        MapEntry('longitude', _currentLatLng.longitude.toString()),
-        MapEntry('rahasia', _isAnonymous ? '1' : '0'),
-      ]);
-
       final List<MultipartFile> files = <MultipartFile>[];
       for (final PhotoItem item in _photoList) {
         final Uint8List? bytes = await _readPhotoBytes(item);
         if (bytes == null) continue;
-        final MultipartFile file = MultipartFile.fromBytes(
-          bytes,
-          filename: _photoFileName(item),
-          contentType: _photoContentType(item),
+        files.add(
+          MultipartFile.fromBytes(
+            bytes,
+            filename: _photoFileName(item),
+            contentType: _photoContentType(item),
+          ),
         );
-        files.add(file);
-        formData.files.add(MapEntry('foto[]', file));
       }
 
-      final response = await ApiClient.postMultipart(
-        '/pjsrk/permasalahan-sosial',
-        formData,
+      final String idLaporan = await PjsrkPermasalahanRepository().kirim(
+        idAkun: idAkun,
+        jenisPermasalahan: _selectedJenis,
+        judul: _judulController.text.trim(),
+        uraian: _uraianController.text.trim(),
+        alamat: _lokasiController.text.trim(),
+        latitude: _currentLatLng.latitude,
+        longitude: _currentLatLng.longitude,
+        rahasia: _isAnonymous,
+        fotoFiles: files,
       );
-
-      final String idLaporan = _bacaIdLaporan(response.data);
       if (!mounted) return;
 
       final DateTime now = DateTime.now();
@@ -798,32 +787,31 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 600),
-          child: Stack(
-            alignment: Alignment.center,
+          child: Row(
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: IconButton(
-                  tooltip: 'Kembali',
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(
-                    Icons.arrow_back_rounded,
+              IconButton(
+                tooltip: 'Kembali',
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const Expanded(
+                child: Text(
+                  'Permasalahan Sosial',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Mulish',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
                     color: Colors.white,
-                    size: 22,
+                    letterSpacing: 0.2,
                   ),
                 ),
               ),
-              const Text(
-                'Permasalahan Sosial',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  letterSpacing: 0.2,
-                ),
-              ),
+              const SizedBox(width: 48),
             ],
           ),
         ),

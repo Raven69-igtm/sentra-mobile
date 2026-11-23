@@ -23,18 +23,13 @@ class GantiNomorRepository {
     }
   }
 
-  // 2. Verifikasi OTP
-  Future<Map<String, dynamic>> verifikasiOtp(
-    String notelpBaru,
-    String otp,
-  ) async {
+  // 2. Request OTP lupa password (server-side)
+  Future<Map<String, dynamic>> mintaOtpResetPassword(String notelp) async {
     try {
-      final response = await ApiClient.postRequest(Endpoints.verifikasiOTP, {
-        'notelp': notelpBaru,
-        'otp': otp,
+      final response = await ApiClient.postRequest(Endpoints.forgotPassword, {
+        'notelp': notelp,
       });
-
-      return response.data;
+      return Map<String, dynamic>.from(response.data as Map);
     } catch (e) {
       return {'error': true, 'message': 'Terjadi kesalahan: $e'};
     }

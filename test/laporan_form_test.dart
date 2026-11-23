@@ -96,12 +96,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final switchPenerima = find.byType(Switch).first;
-    await tester.ensureVisible(switchPenerima);
-    await tester.pumpAndSettle();
+    await _scrollIntoView(tester, switchPenerima);
     await tester.tap(switchPenerima);
     await tester.pumpAndSettle();
 
-    expect(find.text('NIK Penerima Manfaat'), findsOneWidget);
+    expect(find.text('NIK Penerima Manfaat (Opsional)'), findsOneWidget);
     expect(find.text('Alamat Penerima Manfaat'), findsOneWidget);
     expect(find.text('Hubungan dengan Terlapor'), findsOneWidget);
     expect(find.text('No. Telepon Penerima'), findsOneWidget);

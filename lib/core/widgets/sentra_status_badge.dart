@@ -43,6 +43,14 @@ class SentraStatusStyle {
         icon: Icons.inbox_rounded,
       );
     }
+    if (normalized.contains('rujuk')) {
+      return const SentraStatusStyle(
+        label: 'Dirujuk',
+        foreground: AppColors.info,
+        background: Color(0xFFE0F2FE),
+        icon: Icons.forward_to_inbox_rounded,
+      );
+    }
     if (normalized.contains('tolak') || normalized.contains('batal')) {
       return const SentraStatusStyle(
         label: 'Ditolak',

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:sentra/core/theme/app_colors.dart';
 import 'package:sentra/core/utils/pjsrk_photo_urls.dart';
 import 'package:sentra/core/widgets/sentra_curved_header.dart';
@@ -29,7 +29,8 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   static const Color _textGrey = AppColors.textSecondary;
   static const Color _green = AppColors.primary;
 
-  final LaporanController _controller = Get.put(LaporanController());
+  LaporanController? _controller;
+  bool _ownsController = false;
 
   Map<String, dynamic>? _detail;
   bool _loading = true;
@@ -37,13 +38,27 @@ class _DetailLaporanScreenState extends State<DetailLaporanScreen> {
   @override
   void initState() {
     super.initState();
+    try {
+      _controller = Provider.of<LaporanController>(context, listen: false);
+    } catch (_) {
+      _controller = LaporanController();
+      _ownsController = true;
+    }
     _loadDetail();
+  }
+
+  @override
+  void dispose() {
+    if (_ownsController) {
+      _controller?.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _loadDetail() async {
     setState(() => _loading = true);
     try {
-      final result = await _controller.getReportDetailById(
+      final result = await _controller!.getReportDetailById(
         widget.laporan.id.toString(),
       );
       if (mounted) {

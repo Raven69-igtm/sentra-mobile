@@ -1,10 +1,11 @@
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/core/network/endpoints.dart';
 
 class SearchService {
   Future<List<dynamic>> fetchSearchResults(String keyword, int? id) async {
     final response = await ApiClient.getRequest(
-      '/search',
+      Endpoints.searchReports,
       params: {'keyword': keyword, 'id_akun': id},
     );
     final data = response.data;

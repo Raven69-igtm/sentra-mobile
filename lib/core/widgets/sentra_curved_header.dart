@@ -37,17 +37,19 @@ class SentraCurvedHeader extends StatelessWidget {
           children: [
             if (backgroundAsset != null)
               Positioned.fill(
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Opacity(
-                    opacity: backgroundOpacity,
-                    child: FractionallySizedBox(
-                      widthFactor: 0.5,
-                      heightFactor: 1.0,
-                      child: Image.asset(
-                        backgroundAsset!,
-                        fit: BoxFit.contain,
-                        alignment: Alignment.centerRight,
+                child: IgnorePointer(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Opacity(
+                      opacity: backgroundOpacity,
+                      child: FractionallySizedBox(
+                        widthFactor: 0.5,
+                        heightFactor: 1.0,
+                        child: Image.asset(
+                          backgroundAsset!,
+                          fit: BoxFit.contain,
+                          alignment: Alignment.centerRight,
+                        ),
                       ),
                     ),
                   ),

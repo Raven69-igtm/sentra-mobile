@@ -42,8 +42,14 @@ class PjsrkReportEventController extends ChangeNotifier {
     );
   }
 
-  DateTime tanggal = sekarangWib();
-  TimeOfDay jam = TimeOfDay.fromDateTime(sekarangWib());
+  PjsrkReportEventController({DateTime? initialNow}) {
+    final now = initialNow ?? sekarangWib();
+    tanggal = now;
+    jam = TimeOfDay.fromDateTime(now);
+  }
+
+  late DateTime tanggal;
+  late TimeOfDay jam;
   String tingkatDampak = 'Sedang';
   final Set<String> kebutuhan = {'Evakuasi', 'Makanan'};
 
