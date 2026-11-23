@@ -5,7 +5,7 @@ enum PjsrkFotoSource { kamera, galeri, hapus }
 
 const _dark = Color(0xFF252525);
 const _muted = Color(0xFF7A7F85);
-const _orange = Color(0xFFD6762E);
+const _orange = Color(0xFFA84F0F);
 const _orangeSoft = Color(0xFFFFF2E6);
 const _greenSoft = Color(0xFFE4F1E9);
 const _greenIcon = Color(0xFF2E7D32);

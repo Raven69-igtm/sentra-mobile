@@ -1,3 +1,4 @@
+import 'package:sentra/core/theme/app_theme.dart';
 import 'package:sentra/firebase_options.dart';
 import 'package:sentra/features/auth/controllers/login_controller.dart';
 import 'package:sentra/features/auth/controllers/ganti_nomor_controller.dart';
@@ -99,7 +100,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(fontFamily: 'Mulish'),
+      theme: buildSentraTheme(),
       locale: DevicePreview.locale(context),
       builder: DevicePreview.appBuilder,
       scaffoldMessengerKey: scaffoldMessengerKey,

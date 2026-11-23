@@ -1,4 +1,8 @@
 import 'dart:async';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_typography.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
+import 'package:sentra/core/widgets/sentra_empty_state.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/report/models/report_model.dart';
@@ -77,50 +81,20 @@ class _HistoryPageState extends State<HistoryPage> {
             const SizedBox(height: 8),
             if (listError.isNotEmpty)
               Expanded(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.cloud_off_rounded,
-                          size: 42,
-                          color: Colors.redAccent,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          listError,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.red,
-                            fontFamily: "Mulish",
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        if (userId != null)
-                          OutlinedButton.icon(
-                            onPressed: _reload,
-                            icon: const Icon(Icons.refresh_rounded),
-                            label: const Text(
-                              'Coba Lagi',
-                              style: TextStyle(fontFamily: "Mulish"),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
+                child: SentraEmptyState.error(
+                  description: listError,
+                  onAction: userId != null ? _reload : null,
                 ),
               ),
             if (listError.isEmpty)
               Expanded(
                 child:
                     laporanList.isEmpty
-                        ? const Center(
-                          child: Text(
-                            "No reports available",
-                            style: TextStyle(fontFamily: "Mulish"),
-                          ),
+                        ? const SentraEmptyState(
+                          icon: Icons.inbox_outlined,
+                          title: 'Belum ada laporan',
+                          description:
+                              'Laporan yang Anda kirim akan muncul di sini.',
                         )
                         : ListView.separated(
                           padding: const EdgeInsets.symmetric(vertical: 6),
@@ -143,66 +117,48 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  AppBar buildAppBar() {
-    return AppBar(
-      automaticallyImplyLeading: false,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      flexibleSpace: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Warna.backgroundIjo, Warna.backgroundBiru],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
+  PreferredSizeWidget buildAppBar() {
+    final topInset = MediaQuery.of(context).padding.top;
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(92),
+      child: SentraCurvedHeader(
+        gradient: AppColors.pppaHeaderGradient,
+        backgroundAsset: 'assets/image/beranda/pppa.png',
+        curveHeight: 24,
+        padding: EdgeInsets.fromLTRB(8, topInset + 6, 16, 30),
+        child: Row(
+          children: [
+            IconButton(
+              tooltip: 'Kembali',
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () {
+                final navigator = Navigator.of(context);
+                if (navigator.canPop()) {
+                  navigator.pop();
+                } else {
+                  navigator.pushReplacement(
+                    MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  );
+                }
+              },
+            ),
+            Text(
+              'Riwayat Laporan PPA',
+              style: AppTypography.title.copyWith(
+                fontSize: 18,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
-      ),
-      leading: IconButton(
-        tooltip: 'Kembali',
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () {
-          final navigator = Navigator.of(context);
-          if (navigator.canPop()) {
-            navigator.pop();
-          } else {
-            navigator.pushReplacement(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-            );
-          }
-        },
-      ),
-      title: Row(
-        children: [
-          Image.asset('assets/logo/Image.png', height: 30, width: 30),
-          const SizedBox(width: 8),
-          const Text(
-            "SENTRA",
-            style: TextStyle(
-              fontFamily: "Mulish",
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          Spacer(),
-          const Text(
-            "Riwayat Laporan",
-            style: TextStyle(
-              fontFamily: "Mulish",
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ],
       ),
     );
   }
 
   Widget buildFilterTabs() {
     final List<Map<String, String>> tabs = [
-      {"label": "All", "value": "all"},
-      {"label": "Dikirim", "value": "dikirim"},
+      {"label": "Semua", "value": "all"},
+      {"label": "Terkirim", "value": "dikirim"},
       {"label": "Diterima", "value": "diterima"},
       {"label": "Diproses", "value": "diproses"},
       {"label": "Selesai", "value": "selesai"},
@@ -258,7 +214,7 @@ class _HistoryPageState extends State<HistoryPage> {
         controller: searchController,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: "Search by Name",
+          hintText: "Cari berdasarkan nama...",
           prefixIcon: const Icon(Icons.search),
           suffixIcon:
               searchController.text.isNotEmpty

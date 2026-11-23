@@ -127,8 +127,15 @@ flutter:
     - family: Mulish
       fonts:
         - asset: assets/font/Mulish-Regular.ttf
+          weight: 400
+        - asset: assets/font/Mulish-Medium.ttf
+          weight: 500
+        - asset: assets/font/Mulish-SemiBold.ttf
+          weight: 600
         - asset: assets/font/Mulish-Bold.ttf
           weight: 700
+        - asset: assets/font/Mulish-ExtraBold.ttf
+          weight: 800
         - asset: assets/font/Mulish-Italic.ttf
           style: italic
   #       - asset: fonts/Schyler-Regular.ttf

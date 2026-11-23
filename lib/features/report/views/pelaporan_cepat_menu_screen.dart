@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_typography.dart';
 import 'package:sentra/features/report/views/widgets/pelaporan_cepat/card_pjsrk.dart';
 import 'package:sentra/features/report/views/widgets/pelaporan_cepat/card_pppa.dart';
 import 'package:sentra/features/report/views/widgets/pelaporan_cepat/header_pelaporan_cepat.dart';
@@ -41,7 +43,7 @@ class PelaporanCepatMenuScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 46, 132, 93), // Warna hijau tua polos tanpa gradasi tema Sentra
+      backgroundColor: AppColors.primary,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -55,26 +57,19 @@ class PelaporanCepatMenuScreen extends StatelessWidget {
             const SizedBox(height: 10),
 
             // -----------------------------------------------------------------
-            // 2. SHEET KONTEN PUTIH (Pilihan Layanan)
+            // 2. SHEET KONTEN TERANG (Pilihan Layanan)
             // -----------------------------------------------------------------
             Expanded(
               child: Container(
                 decoration: const BoxDecoration(
-                  color: Color(0xFFFAFBFC),
+                  color: AppColors.background,
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(32),
+                    top: Radius.circular(24),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x1F000000),
-                      blurRadius: 20,
-                      offset: Offset(0, -6),
-                    ),
-                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(32),
+                    top: Radius.circular(24),
                   ),
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.fromLTRB(20, 24, 20, 36),
@@ -87,22 +82,12 @@ class PelaporanCepatMenuScreen extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             const Text(
-                              "Pilih layanan",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w800,
-                                fontFamily: 'Mulish',
-                                color: Color(0xFF1E293B),
-                              ),
+                              'Pilih layanan',
+                              style: AppTypography.subtitle,
                             ),
                             Text(
-                              "2 layanan",
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                fontFamily: 'Mulish',
-                                color: Colors.grey.shade500,
-                              ),
+                              '2 layanan',
+                              style: AppTypography.caption,
                             ),
                           ],
                         ),

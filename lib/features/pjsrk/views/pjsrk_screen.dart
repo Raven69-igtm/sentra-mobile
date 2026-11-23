@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_spacing.dart';
+import 'package:sentra/core/theme/app_typography.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
+import 'package:sentra/core/widgets/sentra_snackbar.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/pjsrk/views/permasalahan_sosial_screen.dart';
@@ -23,8 +28,7 @@ class PjsrkScreen extends StatefulWidget {
 }
 
 class _PjsrkScreenState extends State<PjsrkScreen> {
-  static const Color _primaryOrange = PjsrkColors.primary;
-  static const Color _backgroundColor = Color(0xFFF5F7F9);
+  static const Color _backgroundColor = Colors.white;
 
   void _handleBack() {
     final navigator = Navigator.of(context);
@@ -64,32 +68,10 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
         MaterialPageRoute(builder: (_) => const LaporanSayaScreen()),
       );
     } else {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.lock_outline_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Silakan login terlebih dahulu untuk melihat riwayat laporan',
-                  style: TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 13,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: PjsrkColors.primaryDark,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        ),
+      SentraSnackbar.show(
+        'Silakan masuk terlebih dahulu untuk melihat riwayat laporan.',
+        context: context,
+        type: SentraSnackbarType.warning,
       );
     }
   }
@@ -204,119 +186,64 @@ class _PjsrkScreenState extends State<PjsrkScreen> {
   Widget _buildHeader(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFE58A3E), _primaryOrange, PjsrkColors.primaryDark],
-        ),
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: _primaryOrange.withAlpha(60),
-            blurRadius: 18,
-            offset: const Offset(0, 6),
-          ),
-        ],
+    return SentraCurvedHeader(
+      gradient: AppColors.pjsrkHeaderGradient,
+      backgroundAsset: 'assets/image/beranda/pjsrk.png',
+      curveHeight: 28,
+      padding: EdgeInsets.only(
+        top: statusBarHeight + AppSpacing.sm,
+        bottom: 40,
+        left: AppSpacing.pageHorizontal,
+        right: AppSpacing.pageHorizontal,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          Positioned(right: -30, top: -44, child: _headerCircle(132, 0x20)),
-          Positioned(left: -26, bottom: -52, child: _headerCircle(120, 0x16)),
-          Padding(
-            padding: EdgeInsets.only(
-              top: statusBarHeight + 8,
-              bottom: 16,
-              left: 16,
-              right: 16,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 640),
-                child: Stack(
-                  alignment: Alignment.center,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: AppSpacing.maxContentWidth,
+          ),
+          child: Row(
+            children: [
+              Semantics(
+                button: true,
+                label: 'Kembali',
+                child: IconButton(
+                  tooltip: 'Kembali',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  onPressed: _handleBack,
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Material(
-                        color: Colors.white.withAlpha(56),
-                        borderRadius: BorderRadius.circular(12),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          mouseCursor: SystemMouseCursors.click,
-                          onTap: _handleBack,
-                          child: const Tooltip(
-                            message: 'Kembali',
-                            child: SizedBox(
-                              width: 40,
-                              height: 40,
-                              child: Icon(
-                                Icons.arrow_back,
-                                color: Colors.white,
-                                size: 22,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                    Text(
+                      'PJSRK',
+                      style: AppTypography.title.copyWith(color: Colors.white),
                     ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 52),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'PJSRK',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Mulish',
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'Pelayanan Jaminan Sosial & Rehabilitasi',
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: 'Mulish',
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xE6FFFFFF),
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
+                    Text(
+                      'Pelayanan Jaminan Sosial & Rehabilitasi',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.caption.copyWith(
+                        color: Colors.white,
                       ),
-                    ),
-                    const Align(
-                      alignment: Alignment.centerRight,
-                      child: SizedBox(width: 40, height: 40),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _headerCircle(double size, int alpha) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withAlpha(alpha),
+        ),
       ),
     );
   }
@@ -342,38 +269,20 @@ class _PjsrkSectionHeader extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: PjsrkColors.primaryLight,
-            borderRadius: BorderRadius.circular(10),
+            color: ServicePalette.pjsrk.softTint,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusSm + 2),
           ),
           alignment: Alignment.center,
-          child: Icon(icon, color: PjsrkColors.primary, size: 20),
+          child: Icon(icon, color: ServicePalette.pjsrk.primary, size: 20),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF1F2937),
-                  height: 1.25,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontFamily: 'Mulish',
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF6B7280),
-                  height: 1.4,
-                ),
-              ),
+              Text(title, style: AppTypography.subtitle),
+              const SizedBox(height: 2),
+              Text(subtitle, style: AppTypography.caption),
             ],
           ),
         ),

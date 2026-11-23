@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_spacing.dart';
+import 'package:sentra/core/theme/app_typography.dart';
+import 'package:sentra/core/widgets/sentra_card.dart';
 
-/// Kartu layanan PJSRK dengan ikon lembut, bayangan halus, dan
-/// feedback visual saat ditekan.
-class PjsrkFeatureCard extends StatefulWidget {
+/// Kartu fitur layanan PJSRK berbasis `SentraCard` (putih, border 1px #E5E9EF,
+/// radius 16, tanpa bayangan).
+class PjsrkFeatureCard extends StatelessWidget {
   final String title;
   final String description;
   final IconData icon;
@@ -21,108 +25,43 @@ class PjsrkFeatureCard extends StatefulWidget {
   });
 
   @override
-  State<PjsrkFeatureCard> createState() => _PjsrkFeatureCardState();
-}
-
-class _PjsrkFeatureCardState extends State<PjsrkFeatureCard> {
-  bool _pressed = false;
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: _pressed ? 0.975 : 1,
-      duration: const Duration(milliseconds: 120),
-      curve: Curves.easeOut,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFEDF0F3)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(10),
-              blurRadius: 14,
-              offset: const Offset(0, 5),
+    return SentraCard(
+      onTap: onTap,
+      padding: const EdgeInsets.all(AppSpacing.md + 2),
+      semanticLabel: '$title: $description',
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
             ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: widget.onTap,
-            onHighlightChanged: (value) {
-              setState(() => _pressed = value);
-            },
-            mouseCursor: SystemMouseCursors.click,
-            splashColor: widget.iconColor.withAlpha(26),
-            highlightColor: widget.iconColor.withAlpha(12),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: widget.iconBgColor,
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(widget.icon, color: widget.iconColor, size: 25),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.title,
-                          style: const TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF1F2937),
-                            height: 1.3,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.description,
-                          style: const TextStyle(
-                            fontFamily: 'Mulish',
-                            fontSize: 12,
-                            height: 1.45,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: widget.iconColor.withAlpha(_pressed ? 34 : 18),
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      color: widget.iconColor,
-                      size: 20,
-                    ),
-                  ),
-                ],
-              ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(width: AppSpacing.md + 2),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(title, style: AppTypography.subtitle),
+                const SizedBox(height: AppSpacing.xs),
+                Text(description, style: AppTypography.caption),
+              ],
             ),
           ),
-        ),
+          const SizedBox(width: AppSpacing.sm),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.textMuted,
+            size: 22,
+          ),
+        ],
       ),
     );
   }

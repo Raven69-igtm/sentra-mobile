@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_typography.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
@@ -445,49 +448,39 @@ class _LaporanPageState extends State<LaporanPage> {
 
   @override
   Widget build(BuildContext context) {
+    final topInset = MediaQuery.of(context).padding.top;
     return Scaffold(
-      backgroundColor: Colors.grey[50],
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Warna.backgroundIjo, Warna.backgroundBiru],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
+      backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(92),
+        child: SentraCurvedHeader(
+          gradient: AppColors.pppaHeaderGradient,
+          backgroundAsset: 'assets/image/beranda/pppa.png',
+          curveHeight: 24,
+          padding: EdgeInsets.fromLTRB(8, topInset + 6, 16, 30),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Kembali',
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: _handleBackNavigation,
+              ),
+              Image.asset(
+                'assets/logo/Image.png',
+                height: 28,
+                width: 34,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Laporan PPA',
+                style: AppTypography.title.copyWith(
+                  fontSize: 18,
+                  color: Colors.white,
+                ),
+              ),
+            ],
           ),
-        ),
-        leading: IconButton(
-          tooltip: 'Kembali',
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: _handleBackNavigation,
-        ),
-        title: Row(
-          children: [
-            Image.asset('assets/logo/Image.png', height: 30, width: 30),
-            const SizedBox(width: 8),
-            const Text(
-              "SENTRA",
-              style: TextStyle(
-                fontFamily: "Mulish",
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            Spacer(),
-            const Text(
-              "Laporan",
-              style: TextStyle(
-                fontFamily: "Mulish",
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
         ),
       ),
       body: Container(

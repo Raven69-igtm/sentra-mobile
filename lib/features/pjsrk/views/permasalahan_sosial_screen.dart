@@ -10,6 +10,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/pjsrk/views/laporan_sukses_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_fields.dart';
@@ -53,13 +55,13 @@ class PermasalahanSosialScreen extends StatefulWidget {
 }
 
 class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
-  // Palet Warna Sesuai Desain Referensi Sentra
-  static const Color _primaryOrange = Color(0xFFD8782E);
-  static const Color _lightOrangeBg = Color(0xFFFFF2E6);
-  static const Color _neutralDark = Color(0xFF252525);
-  static const Color _neutralGrey = Color(0xFF6B7280);
-  static const Color _borderGrey = Color(0xFFE5E7EB);
-  static const Color _greenActive = Color(0xFF48A868);
+  // Palet Warna PJSRK (Opsi B — WCAG AA)
+  static const Color _primaryOrange = Color(0xFFA84F0F);
+  static const Color _lightOrangeBg = Color(0xFFFCEBDC);
+  static const Color _neutralDark = AppColors.textPrimary;
+  static const Color _neutralGrey = AppColors.textSecondary;
+  static const Color _borderGrey = AppColors.border;
+  static const Color _greenActive = AppColors.primary;
 
   // Daftar opsi jenis permasalahan
   final List<String> _jenisPermasalahanList = [
@@ -779,20 +781,19 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     );
   }
 
-  /// Header bagian atas dengan warna oranye hangat dan tombol back
+  /// Curved Header PJSRK (Opsi B — melengkung ke bawah).
   Widget _buildHeader(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Container(
-      width: double.infinity,
+    return SentraCurvedHeader(
+      gradient: AppColors.pjsrkHeaderGradient,
+      backgroundAsset: 'assets/image/beranda/pjsrk.png',
+      curveHeight: 26,
       padding: EdgeInsets.only(
-        top: statusBarHeight + 8,
-        bottom: 14,
-        left: 16,
-        right: 16,
-      ),
-      decoration: const BoxDecoration(
-        color: _primaryOrange,
+        top: statusBarHeight + 6,
+        bottom: 34,
+        left: 12,
+        right: 12,
       ),
       child: Center(
         child: ConstrainedBox(
@@ -800,36 +801,25 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Tombol Back di sisi kiri
               Align(
                 alignment: Alignment.centerLeft,
-                child: Material(
-                  color: Colors.white.withAlpha(56),
-                  borderRadius: BorderRadius.circular(12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(12),
-                    onTap: () => Navigator.of(context).pop(),
-                    child: const SizedBox(
-                      width: 38,
-                      height: 38,
-                      child: Icon(
-                        Icons.chevron_left_rounded,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
+                child: IconButton(
+                  tooltip: 'Kembali',
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                    size: 22,
                   ),
                 ),
               ),
-
-              // Judul Header tepat di tengah secara horizontal
               const Text(
                 'Permasalahan Sosial',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: 'Mulish',
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
                   color: Colors.white,
                   letterSpacing: 0.2,
                 ),

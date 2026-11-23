@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
@@ -25,11 +27,11 @@ class LaporanSayaScreen extends StatefulWidget {
 }
 
 class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
-  static const Color _primaryOrange = Color(0xFFD6762E);
-  static const Color _bgGrey = Color(0xFFFAFAFA);
-  static const Color _textDark = Color(0xFF2A2A2A);
-  static const Color _textGrey = Color(0xFF7A7F85);
-  static const Color _borderGrey = Color(0xFFE8EBEE);
+  static const Color _primaryOrange = Color(0xFFA84F0F);
+  static const Color _bgGrey = AppColors.background;
+  static const Color _textDark = AppColors.textPrimary;
+  static const Color _textGrey = AppColors.textSecondary;
+  static const Color _borderGrey = AppColors.border;
 
   final LaporanController _laporanController = Get.put(LaporanController());
   final TextEditingController _searchController = TextEditingController();
@@ -232,39 +234,35 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
   // ---------------------------------------------------------------------------
   Widget _buildHeader() {
     final topPadding = MediaQuery.of(context).padding.top;
-    return Container(
-      color: _primaryOrange,
-      child: Column(
+    return SentraCurvedHeader(
+      gradient: AppColors.pjsrkHeaderGradient,
+      backgroundAsset: 'assets/image/beranda/pjsrk.png',
+      curveHeight: 26,
+      padding: EdgeInsets.fromLTRB(8, topPadding + 6, 8, 32),
+      child: Row(
         children: [
-          SizedBox(height: topPadding),
-          SizedBox(
-            height: 56,
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(
-                    Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const Expanded(
-                  child: Text(
-                    'Riwayat Laporan PJSRK',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontFamily: 'Mulish',
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 48),
-              ],
+          IconButton(
+            tooltip: 'Kembali',
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(
+              Icons.arrow_back_rounded,
+              color: Colors.white,
+              size: 22,
             ),
           ),
+          const Expanded(
+            child: Text(
+              'Riwayat Laporan PJSRK',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 17,
+                fontFamily: 'Mulish',
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 48),
         ],
       ),
     );
@@ -638,7 +636,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFD6762E).withOpacity(0.28),
+                color: _primaryOrange.withValues(alpha: 0.28),
                 blurRadius: 14,
                 offset: const Offset(0, 6),
               ),

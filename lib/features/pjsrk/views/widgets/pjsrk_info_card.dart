@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_spacing.dart';
+import 'package:sentra/core/theme/app_typography.dart';
 
-import 'pjsrk_colors.dart';
-
-/// Banner hero utama halaman PJSRK.
-///
-/// Menjadi pengantar visual halaman sekaligus menampilkan identitas
-/// layanan PJSRK dengan aksen oranye yang konsisten.
+/// Banner hero utama halaman PJSRK sesuai `design_system.md`:
+/// warna solid `ServicePalette.pjsrk.primary` (#A84F0F, putih 5,54:1),
+/// radius 24, tanpa bayangan, chip berlatar putih solid dengan teks oranye tua.
 class PjsrkInfoCard extends StatelessWidget {
   final String title;
   final String description;
@@ -14,146 +14,87 @@ class PjsrkInfoCard extends StatelessWidget {
     super.key,
     this.title = 'PJSRK',
     this.description =
-        'Pilih jenis laporan yang ingin Anda sampaikan. Petugas akan menindaklanjuti dalam 2 hari kerja.',
+        'Pilih jenis laporan sosial atau bencana yang ingin Anda sampaikan kepada Dinas Sosial Kabupaten Nganjuk.',
   });
 
   @override
   Widget build(BuildContext context) {
+    final pjsrkColor = ServicePalette.pjsrk.primary;
+
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.xl),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFE78A3F),
-            PjsrkColors.primary,
-            PjsrkColors.primaryDark,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: PjsrkColors.primary.withAlpha(70),
-            blurRadius: 22,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: pjsrkColor,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Positioned(right: -42, top: -52, child: _decorCircle(150, 0x24)),
-          Positioned(right: 36, bottom: -72, child: _decorCircle(164, 0x18)),
-          Positioned(
-            right: -6,
-            bottom: -16,
-            child: Icon(
-              Icons.volunteer_activism_rounded,
-              size: 124,
-              color: Colors.white.withAlpha(22),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(42),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withAlpha(60)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.verified_rounded,
-                        size: 13,
+          Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                child: const Icon(
+                  Icons.favorite_border_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: AppTypography.title.copyWith(color: Colors.white),
+                    ),
+                    Text(
+                      'Pelayanan Jaminan Sosial & Rehabilitasi',
+                      style: AppTypography.caption.copyWith(
                         color: Colors.white,
                       ),
-                      SizedBox(width: 5),
-                      Text(
-                        'LAYANAN TERPADU',
-                        style: TextStyle(
-                          fontFamily: 'Mulish',
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                          letterSpacing: 0.7,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    height: 1.1,
-                    letterSpacing: 0.2,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                const Text(
-                  'Pelayanan Jaminan Sosial & Rehabilitasi Kesejahteraan',
-                  style: TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xF2FFFFFF),
-                    height: 1.35,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    fontFamily: 'Mulish',
-                    fontSize: 12.5,
-                    height: 1.5,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xEEFFFFFF),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                const Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _HeroTag(icon: Icons.home_outlined, label: 'Rehabilitasi'),
-                    _HeroTag(
-                      icon: Icons.warning_amber_rounded,
-                      label: 'Bencana',
                     ),
-                    _HeroTag(icon: Icons.groups_2_outlined, label: 'Sosial'),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            description,
+            style: AppTypography.body.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              _HeroTag(
+                icon: Icons.home_outlined,
+                label: 'Rehabilitasi',
+                color: pjsrkColor,
+              ),
+              _HeroTag(
+                icon: Icons.warning_amber_rounded,
+                label: 'Bencana',
+                color: pjsrkColor,
+              ),
+              _HeroTag(
+                icon: Icons.groups_2_outlined,
+                label: 'Sosial',
+                color: pjsrkColor,
+              ),
+            ],
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _decorCircle(double size, int alpha) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withAlpha(alpha),
       ),
     );
   }
@@ -162,30 +103,32 @@ class PjsrkInfoCard extends StatelessWidget {
 class _HeroTag extends StatelessWidget {
   final IconData icon;
   final String label;
+  final Color color;
 
-  const _HeroTag({required this.icon, required this.label});
+  const _HeroTag({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(36),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withAlpha(56)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusPill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: Colors.white),
+          Icon(icon, size: 14, color: color),
           const SizedBox(width: 5),
           Text(
             label,
-            style: const TextStyle(
-              fontFamily: 'Mulish',
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
+            style: AppTypography.label.copyWith(
+              letterSpacing: 0.1,
+              color: color,
             ),
           ),
         ],
