@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:sentra/core/theme/app_theme.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/report/views/report_screen.dart';
 // Key messenger dipakai CustomSnackbar (sama dengan main.dart produksi).
@@ -30,6 +31,7 @@ Widget _harness(Widget child) {
       ChangeNotifierProvider<UserProvider>(create: (_) => UserProvider()),
     ],
     child: MaterialApp(
+      theme: buildSentraTheme(),
       scaffoldMessengerKey: app.scaffoldMessengerKey,
       home: child,
     ),

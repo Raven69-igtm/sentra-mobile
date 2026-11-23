@@ -7,6 +7,7 @@ import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/core/widgets/sentra_gradient_icon.dart';
 import 'package:sentra/core/widgets/sentra_status_badge.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
+import 'package:sentra/features/notification/controllers/notif_badge_provider.dart';
 import 'package:sentra/features/notification/controllers/notif_controller.dart';
 import 'package:sentra/core/utils/app_colors.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
@@ -29,6 +30,7 @@ class _NotificationPageState extends State<NotificationPage>
   final ScrollController _scrollController = ScrollController();
 
   // Local state untuk optimistic updates
+  List<Map<String, dynamic>> _allNotifications = [];
   List<Map<String, dynamic>> _notifications = [];
   String? _currentUserId;
   String _selectedFilter = 'Semua';
@@ -203,17 +205,25 @@ class _NotificationPageState extends State<NotificationPage>
     }
   }
 
-  // Update badge count dan notify HomeScreen
+  // Update badge count dan sinkronkan ke NotificationBadgeProvider + callback
   void _updateBadgeCount() {
+    final source =
+        _allNotifications.isNotEmpty ? _allNotifications : _notifications;
     final unreadCount =
-        _notifications
+        source
             .where(
               (notif) => notif['status'] == false || notif['dibaca'] == false,
             )
             .length;
 
-    // Notify HomeScreen untuk update badge
     widget.onBadgeCountChanged?.call(unreadCount);
+    if (mounted) {
+      final badgeProvider = Provider.of<NotificationBadgeProvider?>(
+        context,
+        listen: false,
+      );
+      badgeProvider?.syncUnreadCount(unreadCount);
+    }
   }
 
   // Optimistic mark as read
@@ -350,7 +360,8 @@ class _NotificationPageState extends State<NotificationPage>
                       return _buildLoadingState();
                     }
 
-                    _notifications = List.from(snapshot.data!);
+                    _allNotifications = List.from(snapshot.data!);
+                    _notifications = List.from(_allNotifications);
                     if (_selectedFilter != 'Semua') {
                       _notifications =
                           _notifications.where((notif) {
@@ -926,6 +937,7 @@ class _NotificationPageState extends State<NotificationPage>
 
     try {
       await _controller!.deleteNotification(notifId);
+      _allNotifications.removeWhere((item) => item['id']?.toString() == notifId);
       _showSuccessSnackBar(
         'Notifikasi "${removedNotif['title']}" dihapus',
         removedNotif,

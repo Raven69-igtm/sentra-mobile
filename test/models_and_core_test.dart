@@ -1,11 +1,17 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/core/utils/pjsrk_photo_urls.dart';
 import 'package:sentra/core/widgets/sentra_status_badge.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/chat/models/chat_model.dart';
+import 'package:sentra/features/notification/controllers/notif_badge_provider.dart';
+import 'package:sentra/features/pjsrk/models/pjsrk_rehab_model.dart';
+import 'package:sentra/features/pjsrk/repositories/pjsrk_rehab_repository.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/report/models/report_model.dart';
 
@@ -193,6 +199,85 @@ void main() {
       expect(controller.laporanList, isEmpty);
       expect(controller.trackingStatus, isEmpty);
       expect(controller.errorMessage, isEmpty);
+    });
+  });
+
+  group('NotificationBadgeProvider', () {
+    test('loads unread count, formats 99+, decrements, and resets cleanly', () async {
+      var mockUnread = 4;
+      final provider = NotificationBadgeProvider(
+        unreadFetcher: (_) async => mockUnread,
+      );
+      addTearDown(provider.dispose);
+
+      provider.startForUser(10, pollInterval: const Duration(hours: 1));
+      await Future<void>.delayed(Duration.zero);
+
+      expect(provider.unreadCount, 4);
+      expect(provider.hasUnread, isTrue);
+      expect(provider.badgeText, '4');
+
+      provider.decrement();
+      expect(provider.unreadCount, 3);
+
+      provider.syncUnreadCount(125);
+      expect(provider.badgeText, '99+');
+
+      provider.syncUnreadCount(-3);
+      expect(provider.unreadCount, 0);
+      expect(provider.hasUnread, isFalse);
+
+      mockUnread = 7;
+      await provider.refresh();
+      expect(provider.unreadCount, 7);
+
+      provider.reset();
+      expect(provider.unreadCount, 0);
+      expect(provider.activeUserId, isNull);
+    });
+  });
+
+  group('PjsrkRehabRepository', () {
+    test('builds multipart form data from XFile bytes without dart:io', () async {
+      final repo = PjsrkRehabRepository();
+      final model = PjsrkRehabModel(
+        jenisRehabilitasi: 'Tunawisma',
+        jumlahPenerima: 1,
+        jenisKelamin: 'Laki-laki',
+        kelompokUsia: 'Dewasa',
+        kondisiSaatDitemukan: 'Sakit',
+        ciriCiri: 'Baju biru',
+        rahasia: true,
+        alamat: 'Jl. Gatot Subroto, Nganjuk',
+        latitude: -7.59458,
+        longitude: 111.89536,
+        kontak: '081234567890',
+      );
+
+      final fotoPng = XFile.fromData(
+        Uint8List.fromList([137, 80, 78, 71, 13, 10, 26, 10]),
+        name: 'bukti.png',
+        path: 'bukti.png',
+        mimeType: 'image/png',
+      );
+      final fotoNoExt = XFile.fromData(
+        Uint8List.fromList([255, 216, 255, 224]),
+        name: 'blob-upload',
+      );
+
+      final form = await repo.buildFormData(
+        idAkun: 99,
+        data: model,
+        foto: [fotoPng, fotoNoExt],
+      );
+
+      expect(form.files, hasLength(2));
+      expect(form.files[0].key, 'foto[]');
+      expect(form.files[0].value.filename, 'bukti.png');
+      expect(form.files[0].value.contentType?.mimeType, 'image/png');
+      expect(form.files[1].key, 'foto[]');
+      expect(form.files[1].value.filename, endsWith('.jpg'));
+      expect(form.files[1].value.contentType?.mimeType, 'image/jpeg');
     });
   });
 }

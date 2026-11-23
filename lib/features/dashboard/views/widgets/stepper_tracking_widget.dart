@@ -10,14 +10,14 @@ class MiniStepperTracking extends StatefulWidget {
 }
 
 class _MiniStepperState extends State<MiniStepperTracking> {
-  static const List<String> _stepLabels = [
+  static const List<String> _defaultStepLabels = [
     'Dikirim',
     'Diterima',
     'Diproses',
     'Selesai',
   ];
 
-  static const List<Color> _stepColors = <Color>[
+  static const List<Color> _defaultStepColors = <Color>[
     Colors.blue,
     Colors.orange,
     Colors.deepOrange,
@@ -25,6 +25,24 @@ class _MiniStepperState extends State<MiniStepperTracking> {
   ];
 
   int _currentStep = 0;
+
+  bool get _isDirujuk => widget.status.trim().toLowerCase() == 'dirujuk';
+
+  List<String> get _stepLabels =>
+      _isDirujuk
+          ? const ['Dikirim', 'Diterima', 'Diproses', 'Dirujuk', 'Selesai']
+          : _defaultStepLabels;
+
+  List<Color> get _stepColors =>
+      _isDirujuk
+          ? const [
+            Colors.blue,
+            Colors.orange,
+            Colors.deepOrange,
+            Color(0xFF0284C7),
+            Colors.green,
+          ]
+          : _defaultStepColors;
 
   @override
   void initState() {
@@ -44,7 +62,10 @@ class _MiniStepperState extends State<MiniStepperTracking> {
 
   int _mapStatusToStep(String status) {
     final String normalized = status.trim().toLowerCase();
-    final int stepIndex = _stepLabels.indexWhere(
+    if (normalized == 'dirujuk') {
+      return 3;
+    }
+    final int stepIndex = _defaultStepLabels.indexWhere(
       (label) => label.toLowerCase() == normalized,
     );
     return stepIndex < 0 ? 0 : stepIndex;

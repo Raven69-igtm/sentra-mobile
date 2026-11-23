@@ -55,7 +55,9 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
     final userId = Provider.of<UserProvider>(context, listen: false).idAkun;
     if (userId != null && userId > 0) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _laporanController.getUserReports(userId);
+        if (mounted) {
+          _laporanController.getUserReports(userId, scope: 'pjsrk');
+        }
       });
     }
   }
@@ -78,10 +80,14 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
     if (userId == null || userId <= 0) return;
 
     if (filter == 'semua') {
-      _laporanController.getUserReports(userId);
+      _laporanController.getUserReports(userId, scope: 'pjsrk');
     } else {
       final category = _filterMap[filter] ?? filter;
-      _laporanController.getUserReportsByCategory(userId, category);
+      _laporanController.getUserReportsByCategory(
+        userId,
+        category,
+        scope: 'pjsrk',
+      );
     }
   }
 
@@ -94,11 +100,12 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
       if (query.trim().isEmpty) {
         setState(() => _isSearching = false);
         if (_selectedFilter == 'semua') {
-          await _laporanController.getUserReports(userId);
+          await _laporanController.getUserReports(userId, scope: 'pjsrk');
         } else {
           await _laporanController.getUserReportsByCategory(
             userId,
             _filterMap[_selectedFilter] ?? _selectedFilter,
+            scope: 'pjsrk',
           );
         }
         return;
@@ -110,11 +117,18 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
       });
 
       try {
-        final results = await _searchService.fetchSearchResults(query, userId);
+        final results = await _searchService.fetchSearchResults(
+          query,
+          userId,
+          scope: 'pjsrk',
+        );
         if (results.isNotEmpty) {
           _laporanController.updateSearchResults(
             results
-                .map((e) => LaporanModel.fromJson(e as Map<String, dynamic>))
+                .map(
+                  (e) =>
+                      LaporanModel.fromJson(Map<String, dynamic>.from(e as Map)),
+                )
                 .toList(),
           );
         } else {

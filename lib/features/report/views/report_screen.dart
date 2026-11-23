@@ -606,6 +606,9 @@ class _LaporanPageState extends State<LaporanPage> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.transparent,
                                       shadowColor: Colors.transparent,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
@@ -766,7 +769,7 @@ class _LaporanPageState extends State<LaporanPage> {
     final payload = <String, dynamic>{
       'id_akun': idAkun,
       'kategori': 'unset',
-      'status': 'diterima',
+      'status': 'dikirim',
       'detail_pelapor': {
         'nik': pelaporNik,
         'nama': pelaporNama,
@@ -858,20 +861,25 @@ class _LaporanPageState extends State<LaporanPage> {
 
     // Mencegah tombol Kirim ditekan ganda selama request berjalan.
     final sending = ValueNotifier<bool>(false);
+    final submitError = ValueNotifier<String?>(null);
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 24,
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           elevation: 8,
           child: Container(
             constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(context).size.height * 0.85,
-              maxWidth: MediaQuery.of(context).size.width * 0.9,
+              maxHeight: MediaQuery.of(dialogContext).size.height * 0.85,
+              maxWidth: MediaQuery.of(dialogContext).size.width * 0.94,
             ),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
@@ -991,10 +999,10 @@ class _LaporanPageState extends State<LaporanPage> {
                 ),
 
                 Container(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
-                    borderRadius: BorderRadius.only(
+                    borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(16),
                       bottomRight: Radius.circular(16),
                     ),
@@ -1002,138 +1010,179 @@ class _LaporanPageState extends State<LaporanPage> {
                       top: BorderSide(color: Colors.grey.shade200),
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TextButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pop();
+                      ValueListenableBuilder<String?>(
+                        valueListenable: submitError,
+                        builder: (_, err, __) {
+                          if (err == null || err.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.error_outline,
+                                  color: Colors.red.shade700,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    err,
+                                    style: TextStyle(
+                                      fontFamily: "Mulish",
+                                      fontSize: 12.5,
+                                      color: Colors.red.shade800,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
                         },
-                        icon: Icon(Icons.close, size: 18),
-                        label: Text(
-                          "Batal",
-                          style: TextStyle(fontFamily: "Mulish"),
-                        ),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.grey.shade600,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 12,
-                          ),
-                        ),
                       ),
-                      SizedBox(width: 12),
                       ValueListenableBuilder<bool>(
                         valueListenable: sending,
                         builder: (buttonContext, isSending, _) {
-                          return ElevatedButton.icon(
-                            onPressed:
-                                isSending
-                                    ? null
-                                    : () async {
-                                      if (sending.value) return;
-                                      sending.value = true;
-
-                                      BuildContext? loadingContext;
-                                      var loadingDismissed = false;
-
-                                      void dismissLoading() {
-                                        if (loadingDismissed) return;
-                                        loadingDismissed = true;
-                                        final ctx = loadingContext;
-                                        if (ctx != null && ctx.mounted) {
-                                          Navigator.of(ctx).pop();
-                                        }
-                                      }
-
-                                      showDialog(
-                                        context: buttonContext,
-                                        barrierDismissible: false,
-                                        builder: (loadingCtx) {
-                                          loadingContext = loadingCtx;
-                                          return Center(
-                                            child: Container(
-                                              padding: EdgeInsets.all(20),
-                                              decoration: BoxDecoration(
-                                                color: Colors.white,
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: Column(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  CircularProgressIndicator(),
-                                                  SizedBox(height: 16),
-                                                  Text(
-                                                    "Mengirim laporan...",
-                                                    style: TextStyle(
-                                                      fontFamily: "Mulish",
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          );
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                onPressed:
+                                    isSending
+                                        ? null
+                                        : () {
+                                          Navigator.of(dialogContext).pop();
                                         },
-                                      );
-
-                                      try {
-                                        await laporanController
-                                            .createReport(laporanData)
-                                            .timeout(
-                                              const Duration(seconds: 30),
-                                            );
-
-                                        if (!buttonContext.mounted) return;
-
-                                        dismissLoading();
-                                        CustomSnackbar.show(
-                                          "Laporan berhasil dikirim",
-                                        );
-                                        _resetForm();
-                                        Navigator.of(buttonContext).pop();
-                                      } on TimeoutException {
-                                        if (!buttonContext.mounted) return;
-
-                                        dismissLoading();
-                                        CustomSnackbar.show(
-                                          "Server belum merespons. Periksa menu Riwayat sebelum mengirim ulang.",
-                                        );
-                                      } catch (e) {
-                                        if (!buttonContext.mounted) return;
-
-                                        dismissLoading();
-                                        CustomSnackbar.show(
-                                          "Gagal mengirim laporan",
-                                        );
-                                      } finally {
-                                        dismissLoading();
-                                        sending.value = false;
-                                      }
-                                    },
-                            icon: Icon(Icons.send_rounded, size: 18),
-                            label: Text(
-                              "Kirim Laporan",
-                              style: TextStyle(
-                                fontFamily: "Mulish",
-                                fontWeight: FontWeight.w600,
+                                icon: const Icon(Icons.close, size: 18),
+                                label: const Text(
+                                  "Batal",
+                                  style: TextStyle(fontFamily: "Mulish"),
+                                ),
+                                style: TextButton.styleFrom(
+                                  foregroundColor: Colors.grey.shade600,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                ),
                               ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Warna().darken(
-                                Warna.backgroundIjo,
-                                0.1,
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: ElevatedButton.icon(
+                                  onPressed:
+                                      isSending
+                                          ? null
+                                          : () async {
+                                            if (sending.value) return;
+                                            submitError.value = null;
+                                            sending.value = true;
+
+                                            try {
+                                              await laporanController
+                                                  .createReport(laporanData)
+                                                  .timeout(
+                                                    const Duration(seconds: 30),
+                                                  );
+
+                                              if (!dialogContext.mounted) {
+                                                return;
+                                              }
+
+                                              Navigator.of(dialogContext).pop();
+                                              _resetForm();
+                                              CustomSnackbar.show(
+                                                "Laporan berhasil dikirim",
+                                              );
+                                            } on TimeoutException {
+                                              if (!dialogContext.mounted) {
+                                                return;
+                                              }
+                                              const msg =
+                                                  "Server belum merespons. Periksa menu Riwayat sebelum mengirim ulang.";
+                                              submitError.value = msg;
+                                              CustomSnackbar.show(
+                                                msg,
+                                                warna: Colors.orange,
+                                              );
+                                            } catch (e) {
+                                              if (!dialogContext.mounted) {
+                                                return;
+                                              }
+                                              final msg =
+                                                  e is LaporanException
+                                                      ? e.pesan
+                                                      : "Gagal mengirim laporan: $e";
+                                              submitError.value = msg;
+                                              CustomSnackbar.show(
+                                                msg,
+                                                warna: Colors.red,
+                                              );
+                                            } finally {
+                                              if (dialogContext.mounted) {
+                                                sending.value = false;
+                                              }
+                                            }
+                                          },
+                                  icon:
+                                      isSending
+                                          ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                          : const Icon(
+                                            Icons.send_rounded,
+                                            size: 18,
+                                          ),
+                                  label: Text(
+                                    isSending
+                                        ? "Mengirim..."
+                                        : "Kirim Laporan",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontFamily: "Mulish",
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Warna().darken(
+                                      Warna.backgroundIjo,
+                                      0.1,
+                                    ),
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(0, 44),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    elevation: 2,
+                                  ),
+                                ),
                               ),
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              elevation: 2,
-                            ),
+                            ],
                           );
                         },
                       ),
@@ -1145,7 +1194,10 @@ class _LaporanPageState extends State<LaporanPage> {
           ),
         );
       },
-    ).whenComplete(sending.dispose);
+    ).whenComplete(() {
+      sending.dispose();
+      submitError.dispose();
+    });
   }
 
   Widget _buildEnhancedPreviewSection(
@@ -1192,13 +1244,15 @@ class _LaporanPageState extends State<LaporanPage> {
                   child: Icon(icon, color: Colors.white, size: 16),
                 ),
                 SizedBox(width: 10),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontFamily: "Mulish",
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: accentColor.withOpacity(0.8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                      fontFamily: "Mulish",
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: accentColor.withOpacity(0.8),
+                    ),
                   ),
                 ),
               ],
@@ -1614,27 +1668,29 @@ class _LaporanPageState extends State<LaporanPage> {
                       child: Icon(Icons.person, color: Colors.white, size: 24),
                     ),
                     SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Data Diri",
-                          style: TextStyle(
-                            fontFamily: "Mulish",
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: Colors.white,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Data Diri",
+                            style: TextStyle(
+                              fontFamily: "Mulish",
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        Text(
-                          "Formulir 1 dari 3: Data Diri Pelapor",
-                          style: TextStyle(
-                            fontFamily: "Mulish",
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.9),
+                          Text(
+                            "Formulir 1 dari 3: Data Diri Pelapor",
+                            style: TextStyle(
+                              fontFamily: "Mulish",
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -2821,27 +2877,29 @@ class _LaporanPageState extends State<LaporanPage> {
                       ),
                     ),
                     SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Kronologi Kejadian",
-                          style: TextStyle(
-                            fontFamily: "Mulish",
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: Colors.white,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Kronologi Kejadian",
+                            style: TextStyle(
+                              fontFamily: "Mulish",
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        Text(
-                          "Formulir 2 dari 3: Ceritakan kronologi kejadian",
-                          style: TextStyle(
-                            fontFamily: "Mulish",
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.9),
+                          Text(
+                            "Formulir 2 dari 3: Ceritakan kronologi kejadian",
+                            style: TextStyle(
+                              fontFamily: "Mulish",
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -2911,27 +2969,29 @@ class _LaporanPageState extends State<LaporanPage> {
                       ),
                     ),
                     SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Tanggal & Lokasi Kejadian",
-                          style: TextStyle(
-                            fontFamily: "Mulish",
-                            fontWeight: FontWeight.bold,
-                            fontSize: 20,
-                            color: Colors.white,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Tanggal & Lokasi Kejadian",
+                            style: TextStyle(
+                              fontFamily: "Mulish",
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                        Text(
-                          "Formulir 3 dari 3: Waktu dan tempat kejadian",
-                          style: TextStyle(
-                            fontFamily: "Mulish",
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(0.9),
+                          Text(
+                            "Formulir 3 dari 3: Waktu dan tempat kejadian",
+                            style: TextStyle(
+                              fontFamily: "Mulish",
+                              fontSize: 12,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -2994,14 +3054,17 @@ class _LaporanPageState extends State<LaporanPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Tuliskan secara detail dan kronologis',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                    fontStyle: FontStyle.italic,
+                Expanded(
+                  child: Text(
+                    'Tuliskan secara detail dan kronologis',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _kronologiform4,
                   builder: (context, value, child) {

@@ -12,6 +12,7 @@ import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
 import 'package:sentra/features/pjsrk/models/pjsrk_rehab_model.dart';
 import 'package:sentra/features/pjsrk/repositories/pjsrk_rehab_repository.dart';
+import 'package:sentra/features/pjsrk/views/laporan_sukses_screen.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_chips.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_fields.dart';
 import 'package:sentra/features/pjsrk/views/widgets/rehab_form_foto.dart';
@@ -128,56 +129,19 @@ class _RehabilitasiSosialFormScreenState
   }
 
   Future<void> _tampilSukses(String nomor) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text(
-          'Laporan terkirim',
-          style: TextStyle(fontFamily: 'Mulish', fontWeight: FontWeight.w800),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Nomor laporan',
-              style: TextStyle(fontFamily: 'Mulish', fontSize: 12),
+    if (!mounted) return;
+    await Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder:
+            (_) => LaporanSuksesScreen(
+              nomorTiket: nomor,
+              tanggalWaktu: DateTime.now(),
+              judulLayanan: 'Rehabilitasi Sosial',
+              pesanKonfirmasi:
+                  'Terima kasih sudah peduli. Petugas Dinsos akan memverifikasi dan menindaklanjuti laporan Rehabilitasi Sosial Anda.',
             ),
-            const SizedBox(height: 4),
-            Text(
-              nomor,
-              style: const TextStyle(
-                fontFamily: 'Mulish',
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Petugas Dinsos akan menindaklanjuti laporan ini.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Mulish', fontSize: 13),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Selesai',
-              style: TextStyle(
-                fontFamily: 'Mulish',
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
       ),
     );
-
-    if (!mounted) return;
-    Navigator.of(context).pop();
   }
 
   @override

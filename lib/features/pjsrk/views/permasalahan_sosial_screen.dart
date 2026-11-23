@@ -457,14 +457,18 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
       }
 
       // DEFAULT ACTION: halaman sukses memakai nomor tiket dari server
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => LaporanSuksesScreen(
-            reportData: reportData,
-            nomorTiket: idLaporan.isEmpty ? null : idLaporan,
-            tanggalWaktu: now,
-          ),
+          builder:
+              (_) => LaporanSuksesScreen(
+                reportData: reportData,
+                nomorTiket: idLaporan.isEmpty ? null : idLaporan,
+                tanggalWaktu: now,
+                judulLayanan: 'Permasalahan Sosial',
+                pesanKonfirmasi:
+                    'Terima kasih sudah peduli. Petugas Dinsos akan memverifikasi dan menindaklanjuti laporan Permasalahan Sosial Anda.',
+              ),
         ),
       );
     } on ApiException catch (e) {
@@ -478,16 +482,9 @@ class _PermasalahanSosialScreenState extends State<PermasalahanSosialScreen> {
     }
   }
 
-  /// Nomor tiket asli dibuat trigger database (contoh: RKN...).
-  String _bacaIdLaporan(dynamic body) {
-    if (body is Map && body['data'] is Map) {
-      return (body['data'] as Map)['id_laporan']?.toString() ?? '';
-    }
-    return '';
-  }
-
   Future<Uint8List?> _readPhotoBytes(PhotoItem item) async {
     if (item.bytes != null) return item.bytes;
+    if (kIsWeb) return null;
     if (item.file != null) return item.file!.readAsBytes();
     final path = item.path ?? '';
     if (path.isEmpty) return null;

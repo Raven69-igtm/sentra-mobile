@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
+import 'package:sentra/features/auth/preferences/account_prefs.dart';
 import 'api_exception.dart';
 
 class ApiClient {
@@ -63,6 +64,24 @@ class ApiClient {
 
     client.interceptors.add(
       InterceptorsWrapper(
+        onRequest: (RequestOptions options, RequestInterceptorHandler handler) async {
+          if (options.headers['Authorization'] == null) {
+            String? token = _authToken;
+            if (token == null || token.isEmpty) {
+              try {
+                token = await AkunPrefs.getToken();
+              } catch (_) {
+                token = null;
+              }
+            }
+            if (token != null && token.isNotEmpty) {
+              _authToken = token;
+              dio.options.headers['Authorization'] = 'Bearer $token';
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+          }
+          handler.next(options);
+        },
         onError: (DioException error, ErrorInterceptorHandler handler) {
           final status = error.response?.statusCode;
           final hadAuthHeader =
