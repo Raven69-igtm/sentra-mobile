@@ -4,9 +4,11 @@ import 'package:sentra/features/report/models/report_model.dart';
 import 'package:sentra/features/report/models/statistic_model.dart';
 
 class LaporanRepository {
-  Future<List<LaporanModel>> getUserReports(int userId) async {
+  Future<List<LaporanModel>> getUserReports(int userId, {String? scope}) async {
     final response = await ApiClient.getRequest(
       '${Endpoints.userReports}/$userId',
+      params:
+          scope != null && scope.isNotEmpty ? {'scope': scope} : null,
     );
     final List<dynamic> data = (response.data['laporan'] as List?) ?? const [];
     return data
@@ -16,10 +18,13 @@ class LaporanRepository {
 
   Future<List<LaporanModel>> getUserReportsByCategory(
     int userId,
-    String kategori,
-  ) async {
+    String kategori, {
+    String? scope,
+  }) async {
     final response = await ApiClient.getRequest(
       '${Endpoints.userReportsByCategory}/$userId/$kategori',
+      params:
+          scope != null && scope.isNotEmpty ? {'scope': scope} : null,
     );
     final List<dynamic> data = (response.data['laporan'] as List?) ?? const [];
     return data

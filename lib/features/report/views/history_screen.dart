@@ -38,7 +38,7 @@ class _HistoryPageState extends State<HistoryPage> {
     userId = Provider.of<UserProvider>(context, listen: false).idAkun;
     if (userId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) laporanController.getUserReports(userId!);
+        if (mounted) laporanController.getUserReports(userId!, scope: 'ppa');
       });
     }
   }
@@ -47,9 +47,13 @@ class _HistoryPageState extends State<HistoryPage> {
     final int? id = userId;
     if (id == null) return;
     if (selectedFilter == 'all') {
-      laporanController.getUserReports(id);
+      laporanController.getUserReports(id, scope: 'ppa');
     } else {
-      laporanController.getUserReportsByCategory(id, selectedFilter);
+      laporanController.getUserReportsByCategory(
+        id,
+        selectedFilter,
+        scope: 'ppa',
+      );
     }
   }
 
@@ -61,9 +65,11 @@ class _HistoryPageState extends State<HistoryPage> {
       body: Consumer<LaporanController>(
         builder: (context, controller, _) {
           final List<LaporanModel> laporanList =
-              selectedFilter.toLowerCase() == "all"
-                  ? controller.laporanList
-                  : controller.laporanByCategoryList;
+              (selectedFilter.toLowerCase() == "all"
+                      ? controller.laporanList
+                      : controller.laporanByCategoryList)
+                  .where((l) => l.layanan.isEmpty)
+                  .toList();
 
           if (controller.isLoading || isLoading) {
             return _buildShimmerEffect();
@@ -165,6 +171,7 @@ class _HistoryPageState extends State<HistoryPage> {
       {"label": "Terkirim", "value": "dikirim"},
       {"label": "Diterima", "value": "diterima"},
       {"label": "Diproses", "value": "diproses"},
+      {"label": "Dirujuk", "value": "dirujuk"},
       {"label": "Selesai", "value": "selesai"},
     ];
 
@@ -231,6 +238,7 @@ class _HistoryPageState extends State<HistoryPage> {
                         errorMessage = '';
                       });
                       laporanController.clearSearchResults();
+                      _reload();
                     },
                   )
                   : null,
@@ -264,24 +272,38 @@ class _HistoryPageState extends State<HistoryPage> {
               final results = await _searchService.fetchSearchResults(
                 value,
                 userId,
+                scope: 'ppa',
               );
               if (results.isNotEmpty) {
                 final transformedResults =
-                    results.map((json) {
-                      final transformedJson = Map<String, dynamic>.from(json);
-                      if (transformedJson['detail_penerima_manfaat'] is Map) {
-                        transformedJson['detail_penerima_manfaat'] =
-                            transformedJson['detail_penerima_manfaat']['nama']
-                                ?.toString() ??
-                            'N/A';
-                      }
-                      return LaporanModel.fromJson(transformedJson);
-                    }).toList();
-                laporanController.updateSearchResults(transformedResults);
+                    results
+                        .map((json) {
+                          final transformedJson = Map<String, dynamic>.from(
+                            json,
+                          );
+                          if (transformedJson['detail_penerima_manfaat']
+                              is Map) {
+                            transformedJson['detail_penerima_manfaat'] =
+                                transformedJson['detail_penerima_manfaat']['nama']
+                                    ?.toString() ??
+                                'N/A';
+                          }
+                          return LaporanModel.fromJson(transformedJson);
+                        })
+                        .where((l) => l.layanan.isEmpty)
+                        .toList();
+                if (transformedResults.isNotEmpty) {
+                  laporanController.updateSearchResults(transformedResults);
+                } else {
+                  laporanController.clearSearchResults();
+                  setState(() {
+                    errorMessage = 'Tidak ada hasil untuk "$value"';
+                  });
+                }
               } else {
                 laporanController.clearSearchResults();
                 setState(() {
-                  errorMessage = 'No results for "$value"';
+                  errorMessage = 'Tidak ada hasil untuk "$value"';
                 });
               }
             } catch (e) {
@@ -1362,6 +1384,8 @@ class _HistoryPageState extends State<HistoryPage> {
         return Colors.blue;
       case "diterima":
         return Colors.purple;
+      case "dirujuk":
+        return const Color(0xFF0284C7);
       case "selesai":
         return Colors.green;
       default:

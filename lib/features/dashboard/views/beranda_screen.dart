@@ -10,6 +10,7 @@ import 'package:sentra/core/widgets/sentra_gradient_icon.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/dashboard/views/pppa_screen.dart';
 import 'package:sentra/features/dashboard/views/widgets/layanan_card_background.dart';
+import 'package:sentra/features/notification/controllers/notif_badge_provider.dart';
 import 'package:sentra/features/notification/views/notification_screen.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 
@@ -79,6 +80,21 @@ class _BerandaScreenState extends State<BerandaScreen> {
       art: LayananCardArt.psk,
     ),
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final int? userId = Provider.of<UserProvider>(context, listen: false).idAkun;
+    if (userId != null && userId > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Provider.of<NotificationBadgeProvider?>(
+          context,
+          listen: false,
+        )?.startForUser(userId);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -285,34 +301,103 @@ class _BerandaScreenState extends State<BerandaScreen> {
             ],
           ),
         ),
-        Semantics(
-          button: true,
-          label: 'Buka notifikasi',
-          child: Material(
-            color: Colors.white.withValues(alpha: 0.18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: IconButton(
-              tooltip: 'Notifikasi',
-              constraints: const BoxConstraints(
-                minWidth: AppSpacing.minTouchTarget,
-                minHeight: AppSpacing.minTouchTarget,
+        Builder(
+          builder: (context) {
+            final NotificationBadgeProvider? badge =
+                Provider.of<NotificationBadgeProvider?>(context);
+            final bool hasUnread = badge?.hasUnread ?? false;
+            final int unreadCount = badge?.unreadCount ?? 0;
+            final String badgeText = badge?.badgeText ?? '';
+
+            return Semantics(
+              button: true,
+              label:
+                  hasUnread
+                      ? 'Buka notifikasi, $unreadCount belum dibaca'
+                      : 'Buka notifikasi',
+              child: Material(
+                color: Colors.white.withValues(alpha: 0.18),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: IconButton(
+                  tooltip: 'Notifikasi',
+                  constraints: const BoxConstraints(
+                    minWidth: AppSpacing.minTouchTarget,
+                    minHeight: AppSpacing.minTouchTarget,
+                  ),
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationPage(),
+                      ),
+                    );
+                    if (context.mounted) {
+                      Provider.of<NotificationBadgeProvider?>(
+                        context,
+                        listen: false,
+                      )?.refresh();
+                    }
+                  },
+                  icon: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(
+                        Icons.notifications_none_rounded,
+                        color: Colors.white,
+                        size: 23,
+                      ),
+                      if (hasUnread)
+                        Positioned(
+                          top: -6,
+                          right: -8,
+                          child: Container(
+                            key: const Key('beranda_notif_badge'),
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [Color(0xFFFB4B6A), Color(0xFFE11D48)],
+                              ),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: Colors.white,
+                                width: 1.5,
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x52E11D48),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              badgeText,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                height: 1.0,
+                                fontFamily: 'Mulish',
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const NotificationPage()),
-                );
-              },
-              icon: const Icon(
-                Icons.notifications_none_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
-          ),
+            );
+          },
         ),
       ],
     );

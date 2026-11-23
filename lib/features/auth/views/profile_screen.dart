@@ -19,6 +19,7 @@ import 'package:sentra/features/auth/repositories/profile_repository.dart';
 import 'package:sentra/features/auth/services/auth_session.dart';
 import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/features/chat/controllers/chat_controller.dart';
+import 'package:sentra/features/notification/controllers/notif_badge_provider.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -99,9 +100,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context,
       listen: false,
     );
+    final badgeProvider = Provider.of<NotificationBadgeProvider?>(
+      context,
+      listen: false,
+    );
     userProvider.clearUser();
     chatController.reset();
     laporanController.reset();
+    badgeProvider?.reset();
     await AuthSession.clear();
     if (!mounted) return;
     if (showMessage != null) {

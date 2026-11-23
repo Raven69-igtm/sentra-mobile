@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/pjsrk/repositories/pjsrk_quick_report_repository.dart';
+import 'package:sentra/features/pjsrk/views/laporan_sukses_screen.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/lokasi_autocomplete_field.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_form_header.dart';
 import 'package:sentra/features/report/views/pjsrk/widgets/pjsrk_submit_button.dart';
@@ -134,117 +135,18 @@ class _FormBencanaAlamScreenState extends State<FormBencanaAlamScreen> {
     }
   }
 
-  /// Dialog konfirmasi bahwa laporan bencana alam berhasil terkirim
+  /// Arahkan ke halaman sukses PJSRK yang seragam beserta nomor laporan.
   void _showSuccessDialog(String nomor) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE8F8F0),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle_rounded,
-                  color: Color(0xFF2E7D5B),
-                  size: 38,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                "Laporan Terkirim!",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Mulish',
-                  color: Color(0xFF1E293B),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Laporan Bencana Alam Anda telah diterima dan diteruskan kepada tim tanggap darurat Sentra.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                  fontFamily: 'Mulish',
-                  height: 1.4,
-                ),
-              ),
-              if (nomor.trim().isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        "Nomor Laporan",
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontFamily: 'Mulish',
-                          color: Color(0xFF64748B),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        nomor.trim(),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Mulish',
-                          color: Color(0xFF1E293B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(ctx); // Tutup dialog
-                    Navigator.pop(context); // Kembali ke halaman menu
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2E7D5B),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    "Selesai",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Mulish',
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder:
+            (_) => LaporanSuksesScreen(
+              nomorTiket: nomor.trim().isEmpty ? null : nomor.trim(),
+              tanggalWaktu: DateTime.now(),
+              judulLayanan: 'Pengaduan Bencana',
+              pesanKonfirmasi:
+                  'Terima kasih sudah peduli. Laporan Bencana Alam Anda telah diterima dan diteruskan kepada tim tanggap darurat Dinsos dan BPBD.',
+            ),
       ),
     );
   }

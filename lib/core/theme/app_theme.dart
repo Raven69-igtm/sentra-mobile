@@ -74,7 +74,7 @@ ThemeData buildSentraTheme() {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-        minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
+        minimumSize: const Size(64, AppSpacing.buttonHeight),
         elevation: 0,
         textStyle: AppTypography.bodyStrong,
         shape: RoundedRectangleBorder(
@@ -85,7 +85,7 @@ ThemeData buildSentraTheme() {
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
-        minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
+        minimumSize: const Size(64, AppSpacing.buttonHeight),
         side: const BorderSide(color: AppColors.border, width: 1.2),
         textStyle: AppTypography.bodyStrong,
         shape: RoundedRectangleBorder(

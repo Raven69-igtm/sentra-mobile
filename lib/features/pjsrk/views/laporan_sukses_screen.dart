@@ -1,11 +1,15 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sentra/core/theme/app_colors.dart';
+import 'package:sentra/core/theme/app_typography.dart';
+import 'package:sentra/core/widgets/sentra_curved_header.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_riwayat.dart';
 import 'package:sentra/features/pjsrk/views/pjsrk_screen.dart';
 
-/// Halaman Konfirmasi Sukses Pengiriman Laporan (PJSRK / Sentra)
-/// Dibuat sesuai referensi desain Figma "9 Sukses" (pixel-accurate & responsif)
+/// Halaman Konfirmasi Sukses Pengiriman Laporan (PJSRK / Sentra).
+/// Dipakai seragam oleh seluruh layanan PJSRK (Pengaduan Bencana,
+/// Rehabilitasi Sosial, Permasalahan Sosial, maupun Laporan Cepat PJSRK).
 class LaporanSuksesScreen extends StatelessWidget {
   /// Data laporan yang baru saja disubmit
   final Map<String, dynamic>? reportData;
@@ -15,6 +19,15 @@ class LaporanSuksesScreen extends StatelessWidget {
 
   /// Waktu laporan (opsional, jika kosong akan menggunakan waktu saat ini)
   final DateTime? tanggalWaktu;
+
+  /// Nama layanan PJSRK untuk badge penanda (mis. "Rehabilitasi Sosial")
+  final String? judulLayanan;
+
+  /// Pesan konfirmasi kontekstual sesuai jenis layanan
+  final String? pesanKonfirmasi;
+
+  /// Apakah tombol "Lacak Laporan" ditampilkan
+  final bool showLacakButton;
 
   /// Callback kustom saat tombol "Lacak Laporan" ditekan
   final VoidCallback? onLacakLaporan;
@@ -27,15 +40,18 @@ class LaporanSuksesScreen extends StatelessWidget {
     this.reportData,
     this.nomorTiket,
     this.tanggalWaktu,
+    this.judulLayanan,
+    this.pesanKonfirmasi,
+    this.showLacakButton = true,
     this.onLacakLaporan,
     this.onKembaliKeBeranda,
   });
 
-  // Palet Warna Oranye SENTRA untuk konfirmasi sukses PJSRK.
-  static const Color _primaryOrange = Color(0xFFD6762C);
-  static const Color _lightOrangeBadge = Color(0xFFFCEBDC);
-  static const Color _dashedOrangeBorder = Color(0xFFE6A469);
-  static const Color _darkOrangeText = Color(0xFFB85A14);
+  // Palet Warna Sesuai Desain Referensi Sentra
+  static const Color _primaryGreen = Color(0xFF429468);
+  static const Color _lightGreenBadge = Color(0xFFE2F2E9);
+  static const Color _dashedGreenBorder = Color(0xFF6EBE92);
+  static const Color _darkGreenText = Color(0xFF287D56);
   static const Color _neutralDark = Color(0xFF252525);
   static const Color _neutralGrey = Color(0xFF8D9299);
 
@@ -103,7 +119,7 @@ class LaporanSuksesScreen extends StatelessWidget {
     }
 
     // Default: buka riwayat laporan PJSRK (LaporanSayaScreen), bukan riwayat PPA
-    Navigator.push(
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const LaporanSayaScreen()),
     );
@@ -156,9 +172,32 @@ class LaporanSuksesScreen extends StatelessWidget {
                       children: [
                         const SizedBox(height: 12),
 
-                        // Icon Checklist Bulat Oranye Besar
+                        // Icon Checklist Bulat Hijau Besar
                         _buildCheckmarkBadge(),
-                        const SizedBox(height: 24),
+                        if (judulLayanan != null &&
+                            judulLayanan!.trim().isNotEmpty) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFBEFE3),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              judulLayanan!.trim(),
+                              style: const TextStyle(
+                                fontFamily: 'Mulish',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFFA84F0F),
+                              ),
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 18),
 
                         // Judul: Laporan berhasil dikirim
                         const Text(
@@ -175,12 +214,15 @@ class LaporanSuksesScreen extends StatelessWidget {
                         const SizedBox(height: 8),
 
                         // Subtitle: Terima kasih sudah peduli...
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
-                            'Terima kasih sudah peduli. Petugas akan memverifikasi laporan Anda.',
+                            pesanKonfirmasi != null &&
+                                    pesanKonfirmasi!.trim().isNotEmpty
+                                ? pesanKonfirmasi!.trim()
+                                : 'Terima kasih sudah peduli. Petugas akan memverifikasi laporan Anda.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontFamily: 'Mulish',
                               fontSize: 12.5,
                               fontWeight: FontWeight.w500,
@@ -191,7 +233,7 @@ class LaporanSuksesScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 28),
 
-                        // Card Nomor Tiket dengan Dashed Border Oranye
+                        // Card Nomor Tiket dengan Dashed Border Hijau
                         _buildTicketCard(context),
                         const SizedBox(height: 36),
 
@@ -212,60 +254,51 @@ class LaporanSuksesScreen extends StatelessWidget {
     );
   }
 
-  /// Header Oranye Hangat bertuliskan "Laporan Terkirim"
+  /// Curved Header PJSRK (konsisten dengan seluruh layar PJSRK)
   Widget _buildHeader(BuildContext context) {
     final statusBarHeight = MediaQuery.of(context).padding.top;
 
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(
-        top: statusBarHeight + 10,
-        bottom: 16,
-        left: 16,
-        right: 16,
-      ),
-      decoration: const BoxDecoration(
-        color: _primaryOrange,
-      ),
-      child: const Center(
+    return SentraCurvedHeader(
+      gradient: AppColors.pjsrkHeaderGradient,
+      backgroundAsset: 'assets/image/beranda/pjsrk.png',
+      curveHeight: 26,
+      padding: EdgeInsets.fromLTRB(16, statusBarHeight + 14, 16, 36),
+      child: Center(
         child: Text(
           'Laporan Terkirim',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: 'Mulish',
-            fontSize: 18.5,
-            fontWeight: FontWeight.bold,
+          style: AppTypography.title.copyWith(
+            fontSize: 18,
             color: Colors.white,
-            letterSpacing: 0.2,
           ),
         ),
       ),
     );
   }
 
-  /// Badge Checklist Oranye Bulat Besar
+  /// Badge Checklist Hijau Bulat Besar
   Widget _buildCheckmarkBadge() {
     return Container(
       width: 104,
       height: 104,
       decoration: const BoxDecoration(
-        color: _lightOrangeBadge,
+        color: _lightGreenBadge,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
       child: const Icon(
         Icons.check_rounded,
         size: 58,
-        color: _primaryOrange,
+        color: _primaryGreen,
       ),
     );
   }
 
-  /// Card Nomor Tiket dengan Garis Putus-putus Oranye
+  /// Card Nomor Tiket dengan Garis Putus-putus Hijau
   Widget _buildTicketCard(BuildContext context) {
     return CustomPaint(
       painter: _DashedBorderPainter(
-        color: _dashedOrangeBorder,
+        color: _dashedGreenBorder,
         strokeWidth: 1.3,
         gap: 4.0,
         radius: 16.0,
@@ -305,7 +338,7 @@ class LaporanSuksesScreen extends StatelessWidget {
                         fontFamily: 'Mulish',
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: _darkOrangeText,
+                        color: _darkGreenText,
                         letterSpacing: 0.8,
                       ),
                     ),
@@ -313,7 +346,7 @@ class LaporanSuksesScreen extends StatelessWidget {
                     Icon(
                       Icons.copy_rounded,
                       size: 16,
-                      color: _darkOrangeText.withOpacity(0.6),
+                      color: _darkGreenText.withOpacity(0.6),
                     ),
                   ],
                 ),
@@ -341,32 +374,34 @@ class LaporanSuksesScreen extends StatelessWidget {
   Widget _buildActionButtons(BuildContext context) {
     return Column(
       children: [
-        // Tombol 1: Lacak Laporan (Oranye Solid)
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primaryOrange,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+        if (showLacakButton) ...[
+          // Tombol 1: Lacak Laporan (Hijau Solid)
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primaryGreen,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                elevation: 0,
               ),
-              elevation: 0,
-            ),
-            onPressed: () => _handleLacakLaporan(context),
-            child: const Text(
-              'Lacak Laporan',
-              style: TextStyle(
-                fontFamily: 'Mulish',
-                fontSize: 15.5,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.2,
+              onPressed: () => _handleLacakLaporan(context),
+              child: const Text(
+                'Lacak Laporan',
+                style: TextStyle(
+                  fontFamily: 'Mulish',
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.2,
+                ),
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
+        ],
 
         // Tombol 2: Kembali ke Beranda (Outline Hijau)
         SizedBox(
@@ -374,8 +409,8 @@ class LaporanSuksesScreen extends StatelessWidget {
           height: 48,
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
-              foregroundColor: _primaryOrange,
-              side: const BorderSide(color: _primaryOrange, width: 1.4),
+              foregroundColor: _primaryGreen,
+              side: const BorderSide(color: _primaryGreen, width: 1.4),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -446,5 +481,4 @@ class _DashedBorderPainter extends CustomPainter {
         oldDelegate.radius != radius;
   }
 }
-
 

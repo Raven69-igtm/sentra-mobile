@@ -10,6 +10,7 @@ import 'package:sentra/features/auth/controllers/user_provider.dart';
 import 'package:sentra/features/auth/views/login_screen.dart';
 import 'package:sentra/features/chat/controllers/chat_controller.dart';
 import 'package:sentra/features/dashboard/views/home_screen.dart';
+import 'package:sentra/features/notification/controllers/notif_badge_provider.dart';
 import 'package:sentra/features/notification/services/notif_service.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 import 'package:sentra/features/splash/splash_screen.dart';
@@ -86,6 +87,7 @@ void main() async {
       Provider.of<UserProvider>(navContext, listen: false).clearUser();
       Provider.of<ChatController>(navContext, listen: false).reset();
       Provider.of<LaporanController>(navContext, listen: false).reset();
+      Provider.of<NotificationBadgeProvider>(navContext, listen: false).reset();
     }
     navigatorKey.currentState?.pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -111,6 +113,9 @@ void main() async {
               ChangeNotifierProvider(create: (_) => UserProvider()),
               ChangeNotifierProvider(create: (_) => ChatController()),
               ChangeNotifierProvider(create: (_) => LaporanController()),
+              ChangeNotifierProvider(
+                create: (_) => NotificationBadgeProvider(),
+              ),
             ],
             child: const MyApp(),
           ),

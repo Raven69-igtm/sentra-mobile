@@ -62,12 +62,12 @@ class LaporanController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> getUserReports(int userId) async {
+  Future<void> getUserReports(int userId, {String? scope}) async {
     try {
       _isLoading = true;
       _errorMessage = '';
       notifyListeners();
-      _laporanList = await _laporanRepo.getUserReports(userId);
+      _laporanList = await _laporanRepo.getUserReports(userId, scope: scope);
     } on ApiException catch (e) {
       _errorMessage = e.message;
       _laporanList = <LaporanModel>[];
@@ -81,7 +81,11 @@ class LaporanController extends ChangeNotifier {
     }
   }
 
-  Future<void> getUserReportsByCategory(int userId, String category) async {
+  Future<void> getUserReportsByCategory(
+    int userId,
+    String category, {
+    String? scope,
+  }) async {
     try {
       _isLoading = true;
       _errorMessage = '';
@@ -89,6 +93,7 @@ class LaporanController extends ChangeNotifier {
       _laporanByCategoryList = await _laporanRepo.getUserReportsByCategory(
         userId,
         category,
+        scope: scope,
       );
     } on ApiException catch (e) {
       _errorMessage = e.message;
