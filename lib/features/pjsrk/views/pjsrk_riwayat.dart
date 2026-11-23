@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/theme/app_colors.dart';
@@ -33,7 +32,7 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
   static const Color _textGrey = AppColors.textSecondary;
   static const Color _borderGrey = AppColors.border;
 
-  final LaporanController _laporanController = Get.put(LaporanController());
+  late final LaporanController _laporanController;
   final TextEditingController _searchController = TextEditingController();
   final SearchService _searchService = SearchService();
 
@@ -52,9 +51,12 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
   @override
   void initState() {
     super.initState();
+    _laporanController = Provider.of<LaporanController>(context, listen: false);
     final userId = Provider.of<UserProvider>(context, listen: false).idAkun;
     if (userId != null && userId > 0) {
-      _laporanController.getUserReports(userId);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _laporanController.getUserReports(userId);
+      });
     }
   }
 
@@ -109,13 +111,14 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
 
       try {
         final results = await _searchService.fetchSearchResults(query, userId);
-        if (results != null && results.isNotEmpty) {
-          _laporanController.laporanList.value =
-              results
-                  .map((e) => LaporanModel.fromJson(e as Map<String, dynamic>))
-                  .toList();
+        if (results.isNotEmpty) {
+          _laporanController.updateSearchResults(
+            results
+                .map((e) => LaporanModel.fromJson(e as Map<String, dynamic>))
+                .toList(),
+          );
         } else {
-          _laporanController.laporanList.clear();
+          _laporanController.clearSearchResults();
         }
       } catch (e) {
         setState(() => _errorMessage = 'Gagal mencari laporan');
@@ -144,83 +147,95 @@ class _LaporanSayaScreenState extends State<LaporanSayaScreen> {
 
               // ===== Body =====
               Expanded(
-                child: Obx(() {
-                  final isLoading =
-                      _laporanController.isLoading.value || _isSearching;
+                child: Consumer<LaporanController>(
+                  builder: (context, controller, _) {
+                    final isLoading = controller.isLoading || _isSearching;
 
-                  final List<LaporanModel> list =
-                      (_selectedFilter == 'semua'
-                              ? _laporanController.laporanList
-                              : _laporanController.laporanByCategoryList)
-                          .where((l) => l.layanan.isNotEmpty)
-                          .toList();
+                    final List<LaporanModel> list =
+                        (_selectedFilter == 'semua'
+                                ? controller.laporanList
+                                : controller.laporanByCategoryList)
+                            .where((l) => l.layanan.isNotEmpty)
+                            .toList();
 
-                  return Stack(
-                    children: [
-                      Column(
-                        children: [
-                          // Search + Filter
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
-                            child: Column(
-                              children: [
-                                _buildSearchField(),
-                                const SizedBox(height: 12),
-                                _buildFilterChips(),
-                              ],
-                            ),
-                          ),
+                    final String displayError =
+                        _errorMessage.isNotEmpty
+                            ? _errorMessage
+                            : controller.errorMessage;
 
-                          if (_errorMessage.isNotEmpty)
+                    return Stack(
+                      children: [
+                        Column(
+                          children: [
+                            // Search + Filter
                             Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 18,
-                                vertical: 4,
+                              padding: const EdgeInsets.fromLTRB(
+                                18,
+                                18,
+                                18,
+                                12,
                               ),
-                              child: Text(
-                                _errorMessage,
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontFamily: 'Mulish',
-                                  fontSize: 13,
+                              child: Column(
+                                children: [
+                                  _buildSearchField(),
+                                  const SizedBox(height: 12),
+                                  _buildFilterChips(),
+                                ],
+                              ),
+                            ),
+
+                            if (displayError.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 18,
+                                  vertical: 4,
+                                ),
+                                child: Text(
+                                  displayError,
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontFamily: 'Mulish',
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
-                            ),
 
-                          // List Laporan
-                          Expanded(
-                            child:
-                                isLoading
-                                    ? _buildShimmer()
-                                    : list.isEmpty
-                                    ? _buildEmptyState()
-                                    : ListView.separated(
-                                      padding: const EdgeInsets.fromLTRB(
-                                        18,
-                                        0,
-                                        18,
-                                        100,
+                            // List Laporan
+                            Expanded(
+                              child:
+                                  isLoading
+                                      ? _buildShimmer()
+                                      : list.isEmpty
+                                      ? _buildEmptyState()
+                                      : ListView.separated(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          18,
+                                          0,
+                                          18,
+                                          100,
+                                        ),
+                                        itemCount: list.length,
+                                        separatorBuilder:
+                                            (_, __) =>
+                                                const SizedBox(height: 12),
+                                        itemBuilder: (context, index) {
+                                          return _buildReportCard(list[index]);
+                                        },
                                       ),
-                                      itemCount: list.length,
-                                      separatorBuilder:
-                                          (_, __) => const SizedBox(height: 12),
-                                      itemBuilder: (context, index) {
-                                        return _buildReportCard(list[index]);
-                                      },
-                                    ),
-                          ),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
 
-                      // FAB "Lapor"
-                      Positioned(
-                        right: 18,
-                        bottom: 24,
-                        child: _buildLaporButton(),
-                      ),
-                    ],
-                  );
-                }),
+                        // FAB "Lapor"
+                        Positioned(
+                          right: 18,
+                          bottom: 24,
+                          child: _buildLaporButton(),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ],
           ),

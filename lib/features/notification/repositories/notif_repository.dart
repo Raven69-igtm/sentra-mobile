@@ -1,18 +1,17 @@
-import 'package:dio/dio.dart';
+import 'dart:async';
+
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sentra/core/network/api_client.dart';
+import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/core/network/endpoints.dart';
 
 class NotificationRepository {
-  final Dio _dio = Dio(
-    BaseOptions(
-      baseUrl: '${ApiClient.protocol}://${ApiClient.baseUrl}/api',
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {'Content-Type': 'application/json'},
-    ),
-  );
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final List<Map<String, dynamic>> _localNotifications = [];
+  StreamSubscription<RemoteMessage>? _onMessageSub;
+  StreamSubscription<RemoteMessage>? _onMessageOpenedSub;
+  bool _disposed = false;
 
   NotificationRepository() {
     _initializeFCM();
@@ -22,27 +21,37 @@ class NotificationRepository {
     try {
       await _fcm.requestPermission();
 
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _onMessageSub = FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         _handleNotification(message);
       });
 
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      _onMessageOpenedSub = FirebaseMessaging.onMessageOpenedApp.listen((
+        RemoteMessage message,
+      ) {
         _handleNotification(message);
       });
     } catch (e) {
-      // FCM init gagal — tidak fatal, abaikan saja
-      print('FCM init error (non-fatal): $e');
+      debugPrint('FCM init error (non-fatal): $e');
     }
   }
 
+  void dispose() {
+    _disposed = true;
+    _onMessageSub?.cancel();
+    _onMessageOpenedSub?.cancel();
+    _onMessageSub = null;
+    _onMessageOpenedSub = null;
+  }
+
   Future<void> updateFCMToken(int? userId, String? fcmToken) async {
+    if (fcmToken == null || fcmToken.isEmpty) return;
     try {
-      await _dio.post(
-        '/update-fcm-token',
-        data: {'user_id': userId, 'fcm_token': fcmToken ?? ''},
-      );
+      await ApiClient.postRequest(Endpoints.updateFcmToken, {
+        if (userId != null) 'user_id': userId,
+        'fcm_token': fcmToken,
+      });
     } catch (e) {
-      print('Error updating FCM token (non-fatal): $e');
+      debugPrint('Error updating FCM token (non-fatal): $e');
     }
   }
 
@@ -66,17 +75,16 @@ class NotificationRepository {
     }
   }
 
-  /// Mengambil notifikasi secara berkala.
-  /// Error koneksi akan di-handle secara graceful — mengembalikan list kosong
-  /// agar UI tidak crash, bukan melempar Exception ke stream.
+  /// Mengambil notifikasi secara berkala melalui [ApiClient] (dengan token Sanctum).
+  /// Loop berhenti otomatis saat repository di-dispose atau stream dibatalkan.
   Stream<List<Map<String, dynamic>>> getNotifications(String userId) async* {
-    while (true) {
+    while (!_disposed) {
       bool failed = false;
 
       try {
-        final response = await _dio.get(
-          '/notifications',
-          queryParameters: {'user_id': userId},
+        final response = await ApiClient.getRequest(
+          Endpoints.notifications,
+          params: {'user_id': userId},
         );
 
         if (response.statusCode == 200) {
@@ -93,6 +101,7 @@ class NotificationRepository {
                       'title': item['judul'] ?? '',
                       'message': item['pesan'] ?? '',
                       'type': item['tipe'] ?? '',
+                      'id_laporan': item['id_laporan']?.toString() ?? '',
                       'source':
                           item['source'] ??
                           item['sumber'] ??
@@ -111,31 +120,29 @@ class NotificationRepository {
                   )
                   .toList();
 
-          // Gabungkan dengan local notifications
           final merged = [..._localNotifications, ...apiNotifications];
           yield merged;
         } else {
-          // Respons tidak valid: tampilkan daftar kosong, jangan menggantung.
           yield const <Map<String, dynamic>>[];
         }
-      } on DioException catch (e) {
-        // Connection error — ini wajar jika server tidak tersedia
-        // Log saja, jangan throw ke stream agar UI tidak crash
-        print('Notification fetch error (non-fatal): ${e.message}');
+      } on ApiException catch (e) {
+        debugPrint('Notification fetch error (non-fatal): ${e.message}');
         failed = true;
-        // Tetap emit local notifications jika ada; jika tidak, daftar kosong.
         yield _localNotifications.isNotEmpty
             ? List.from(_localNotifications)
             : const <Map<String, dynamic>>[];
+        if (e.statusCode == 401 || e.statusCode == 403) {
+          break;
+        }
       } catch (e) {
-        print('Unexpected notification error (non-fatal): $e');
+        debugPrint('Unexpected notification error (non-fatal): $e');
         failed = true;
         yield _localNotifications.isNotEmpty
             ? List.from(_localNotifications)
             : const <Map<String, dynamic>>[];
       }
 
-      // Tunggu lebih lama sebelum retry jika ada error.
+      if (_disposed) break;
       await Future.delayed(Duration(seconds: failed ? 20 : 10));
     }
   }
@@ -146,16 +153,13 @@ class NotificationRepository {
     String message,
   ) async {
     try {
-      await _dio.post(
-        '/new-message',
-        data: {
-          'sender_id': senderId,
-          'receiver_id': receiverId,
-          'message': message,
-        },
-      );
+      await ApiClient.postRequest(Endpoints.newMessageNotif, {
+        'sender_id': senderId,
+        'receiver_id': receiverId,
+        'message': message,
+      });
     } catch (e) {
-      print('Error sending message: $e');
+      debugPrint('Error sending message: $e');
       throw Exception('Gagal mengirim pesan');
     }
   }
@@ -166,21 +170,22 @@ class NotificationRepository {
     String status,
   ) async {
     try {
-      await _dio.post(
-        '/report-update',
-        data: {'id_laporan': idLaporan, 'user_id': userId, 'status': status},
-      );
+      await ApiClient.postRequest(Endpoints.reportUpdateNotif, {
+        'id_laporan': idLaporan,
+        'user_id': userId,
+        'status': status,
+      });
     } catch (e) {
-      print('Error sending report update: $e');
+      debugPrint('Error sending report update: $e');
       throw Exception('Gagal mengupdate status laporan');
     }
   }
 
   Future<void> restoreNotification(Map<String, dynamic> notification) async {
     try {
-      final response = await _dio.post(
-        '/notifications/restore',
-        data: {
+      final response = await ApiClient.postRequest(
+        Endpoints.notificationsRestore,
+        {
           'id_notif': notification['id'],
           'id_akun': notification['id_akun'],
           'judul': notification['title'],
@@ -199,8 +204,8 @@ class NotificationRepository {
 
   Future<void> markAsRead(String id) async {
     try {
-      final response = await _dio.patch(
-        '/notifications/$id/read',
+      final response = await ApiClient.patchRequest(
+        '${Endpoints.notifications}/$id/read',
         data: {'status': 'dibaca'},
       );
       if (response.statusCode != 200) {
@@ -215,7 +220,9 @@ class NotificationRepository {
 
   Future<void> deleteNotification(String id) async {
     try {
-      final response = await _dio.delete('/notifications/$id');
+      final response = await ApiClient.deleteRequest(
+        '${Endpoints.notifications}/$id',
+      );
       if (response.statusCode != 200) {
         throw Exception('Gagal menghapus notifikasi: ${response.statusCode}');
       }

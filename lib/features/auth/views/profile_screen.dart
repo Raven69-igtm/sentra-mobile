@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/core/theme/app_colors.dart';
@@ -96,9 +95,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _logout({String? showMessage}) async {
     final userProvider = Provider.of<UserProvider>(context, listen: false);
     final chatController = Provider.of<ChatController>(context, listen: false);
+    final laporanController = Provider.of<LaporanController>(
+      context,
+      listen: false,
+    );
     userProvider.clearUser();
     chatController.reset();
-    Get.delete<LaporanController>(force: true);
+    laporanController.reset();
     await AuthSession.clear();
     if (!mounted) return;
     if (showMessage != null) {

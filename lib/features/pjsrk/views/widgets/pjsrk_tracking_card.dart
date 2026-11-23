@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:sentra/features/report/controllers/report_controller.dart';
 
 import 'pjsrk_colors.dart';
@@ -17,7 +16,7 @@ class PjsrkTrackingCard extends StatefulWidget {
 }
 
 class _PjsrkTrackingCardState extends State<PjsrkTrackingCard> {
-  final LaporanController _controller = Get.put(LaporanController());
+  final LaporanController _controller = LaporanController();
   final TextEditingController _idController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
@@ -27,6 +26,7 @@ class _PjsrkTrackingCardState extends State<PjsrkTrackingCard> {
 
   @override
   void dispose() {
+    _controller.dispose();
     _idController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -45,14 +45,13 @@ class _PjsrkTrackingCardState extends State<PjsrkTrackingCard> {
       _error = '';
     });
 
-    _controller.errorMessage.value = '';
-    _controller.trackingStatus.value = '';
+    _controller.clearTrackingState();
 
     try {
       await _controller.trackingReport(kode);
       if (!mounted) return;
 
-      final String status = _controller.trackingStatus.value.trim();
+      final String status = _controller.trackingStatus.trim();
       if (status.isNotEmpty) {
         setState(() {
           _status = status;
@@ -61,7 +60,7 @@ class _PjsrkTrackingCardState extends State<PjsrkTrackingCard> {
         return;
       }
 
-      final String message = _controller.errorMessage.value.trim();
+      final String message = _controller.errorMessage.trim();
       final String error =
           message.isNotEmpty
               ? message

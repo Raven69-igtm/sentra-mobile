@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:dio/dio.dart';
+import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/theme/app_colors.dart';
 import 'package:sentra/core/theme/app_typography.dart';
 import 'package:sentra/core/widgets/sentra_curved_header.dart';
@@ -16,7 +18,6 @@ import 'package:sentra/core/utils/custom_spinner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 
 class LaporanPage extends StatefulWidget {
@@ -203,20 +204,21 @@ class _LaporanPageState extends State<LaporanPage> {
           'addressdetails': '1',
           'zoom': '18',
         });
-        final response = await http
-            .get(
-              uri,
-              headers: const {
-                'User-Agent': 'SENTRA-DPPPA-Nganjuk/1.0',
-                'Accept-Language': 'id',
-              },
-            )
-            .timeout(const Duration(seconds: 10));
-        if (response.statusCode != 200) {
+        final response = await ApiClient.externalDio.getUri<dynamic>(
+          uri,
+          options: Options(
+            headers: const {
+              'User-Agent': 'SENTRA-DPPPA-Nganjuk/1.0',
+              'Accept-Language': 'id',
+            },
+            receiveTimeout: const Duration(seconds: 10),
+          ),
+        );
+        if (response.statusCode != 200 || response.data is! Map) {
           throw Exception('Reverse geocoding gagal: ${response.statusCode}');
         }
 
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final data = Map<String, dynamic>.from(response.data as Map);
         final address =
             (data['address'] as Map?)?.cast<String, dynamic>() ?? {};
         final addressParts = [

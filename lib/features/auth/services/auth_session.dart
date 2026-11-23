@@ -1,15 +1,15 @@
 import 'package:dio/dio.dart';
 import 'package:sentra/core/network/api_client.dart';
 import 'package:sentra/core/network/api_exception.dart';
+import 'package:sentra/core/network/endpoints.dart';
 import 'package:sentra/features/auth/models/user_model.dart';
 import 'package:sentra/features/auth/preferences/account_prefs.dart';
 
 /// Pengelola sesi aplikasi.
 ///
-/// Login mobile menerbitkan token Sanctum. Token disimpan di preferensi dan
-/// dipasang ke [ApiClient] agar endpoint terproteksi (mis. chat) mengenali
-/// identitas pengguna dari backend, bukan dari payload frontend.
-/// Validasi sesi memakai endpoint yang sudah ada: POST /auth/biometric.
+/// Login mobile menerbitkan token Sanctum yang disimpan terenkripsi di
+/// `FlutterSecureStorage` melalui [AkunPrefs] dan dipasang ke [ApiClient].
+/// Validasi sesi menggunakan endpoint terautentikasi `GET /user`.
 class AuthSession {
   static const Duration _validateTimeout = Duration(seconds: 5);
 
@@ -17,9 +17,13 @@ class AuthSession {
     final data = await AkunPrefs.getAkun();
     final id = int.tryParse(data['id_akun'] ?? '') ?? 0;
     final notelp = data['notelp'] ?? '';
-    if (id <= 0 || notelp.isEmpty) return null;
+    final token = await AkunPrefs.getToken();
 
-    ApiClient.setAuthToken(await AkunPrefs.getToken());
+    if (id <= 0 || notelp.isEmpty || token == null || token.isEmpty) {
+      return null;
+    }
+
+    ApiClient.setAuthToken(token);
 
     return UserModel(
       id: id,
@@ -34,25 +38,28 @@ class AuthSession {
 
   /// Mengembalikan user yang sudah divalidasi/diperbarui dari server.
   ///
-  /// - Server mengenali nomor telepon: data terbaru dikembalikan dan disimpan.
-  /// - Server menjawab 404: sesi tidak valid, data lokal dihapus.
+  /// - Token Sanctum valid (`200`): data profil terbaru dikembalikan dan disimpan.
+  /// - Server menjawab `401` / `403` / `404`: sesi tidak valid, data lokal dihapus.
   /// - Gagal jaringan: sesi lokal tetap dipakai agar aplikasi bisa dibuka
   ///   offline; error data akan ditampilkan oleh masing-masing fitur.
   static Future<UserModel?> restore() async {
     final cached = await restoreCached();
-    if (cached == null) return null;
+    if (cached == null) {
+      await clear();
+      return null;
+    }
 
     try {
-      final fresh = await refreshProfile(cached.notelp!);
+      final fresh = await refreshProfile();
       if (fresh == null) {
-        await AkunPrefs.hapusAkun();
+        await clear();
         return null;
       }
       await persist(fresh);
       return fresh;
     } on ApiException catch (e) {
-      if (e.statusCode == 404) {
-        await AkunPrefs.hapusAkun();
+      if (e.statusCode == 401 || e.statusCode == 403 || e.statusCode == 404) {
+        await clear();
         return null;
       }
       return cached;
@@ -61,13 +68,18 @@ class AuthSession {
     }
   }
 
-  /// Mengambil data akun terbaru berdasarkan nomor telepon.
-  /// Mengembalikan null bila akun tidak ditemukan di server.
-  static Future<UserModel?> refreshProfile(String notelp) async {
+  /// Mengambil data akun terbaru dari `GET /user` menggunakan token Sanctum aktif.
+  /// Mengembalikan `null` bila sesi tidak valid (401/403/404).
+  static Future<UserModel?> refreshProfile([String? _legacyNotelp]) async {
+    final token = ApiClient.authToken ?? await AkunPrefs.getToken();
+    if (token == null || token.isEmpty) {
+      return null;
+    }
+    ApiClient.setAuthToken(token);
+
     try {
-      final response = await ApiClient.postRequest(
-        '/auth/biometric',
-        {'notelp': notelp},
+      final response = await ApiClient.getRequest(
+        Endpoints.currentUser,
         options: Options(
           sendTimeout: _validateTimeout,
           receiveTimeout: _validateTimeout,
@@ -75,22 +87,20 @@ class AuthSession {
       );
 
       final data = response.data;
-      if (data is Map && data['user'] is Map) {
-        final token = data['token'];
-        if (token is String && token.isNotEmpty) {
-          await AkunPrefs.simpanToken(token);
-          ApiClient.setAuthToken(token);
+      if (data is Map) {
+        final rawUser = data['user'] is Map ? data['user'] as Map : data;
+        if (rawUser['id_akun'] != null) {
+          return UserModel.fromJson(Map<String, dynamic>.from(rawUser));
         }
-        return UserModel.fromJson(
-          Map<String, dynamic>.from(data['user'] as Map),
-        );
       }
       throw ApiException(
         message: 'Respons data akun dari server tidak valid.',
         statusCode: response.statusCode,
       );
     } on ApiException catch (e) {
-      if (e.statusCode == 404) return null;
+      if (e.statusCode == 401 || e.statusCode == 403 || e.statusCode == 404) {
+        return null;
+      }
       rethrow;
     }
   }

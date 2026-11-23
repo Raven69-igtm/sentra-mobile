@@ -34,12 +34,12 @@ class GantiNomorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Fungsi untuk verifikasi OTP
-  Future<void> verifikasiOtp(String notelpBaru, String otp) async {
+  // Fungsi untuk permintaan OTP reset password (server-side)
+  Future<void> mintaOtpResetPassword(String notelp) async {
     _isLoading = true;
     notifyListeners();
 
-    final result = await _repository.verifikasiOtp(notelpBaru, otp);
+    final result = await _repository.mintaOtpResetPassword(notelp);
 
     _isLoading = false;
     notifyListeners();
@@ -49,8 +49,7 @@ class GantiNomorController extends ChangeNotifier {
       _successMessage = '';
     } else {
       _errorMessage = '';
-      _successMessage =
-          'OTP berhasil diverifikasi! Silakan buat password baru.';
+      _successMessage = 'Kode OTP telah dikirim ke nomor Anda.';
     }
 
     notifyListeners();

@@ -14,15 +14,18 @@ import 'package:sentra/features/pjsrk/views/widgets/pjsrk_stepper.dart';
 
 void main() {
   group('PjsrkReportEvent Model & Controller Tests', () {
-    test('Controller initializes with default values from Figma design', () {
-      final controller = PjsrkReportEventController();
+    test('Controller initializes with default values and injected clock', () {
+      final controller = PjsrkReportEventController(
+        initialNow: DateTime(2026, 10, 15, 9, 30),
+      );
+      addTearDown(controller.dispose);
 
       expect(controller.jenisBencana, 'Banjir');
       expect(controller.tingkatDampak, 'Sedang');
       expect(controller.kebutuhan, containsAll(['Evakuasi', 'Makanan']));
       expect(controller.jiwaCtrl.text, '40');
       expect(controller.rumahCtrl.text, '12');
-      expect(controller.tanggalText, contains('2026'));
+      expect(controller.tanggalText, '15 Okt 2026');
       expect(controller.jamText, '09.30 WIB');
     });
 
@@ -82,7 +85,7 @@ void main() {
 
       // 1. Header
       expect(find.text('Pengaduan Bencana'), findsOneWidget);
-      expect(find.byIcon(Icons.chevron_left_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.arrow_back_rounded), findsOneWidget);
 
       // 2. Stepper
       expect(find.byType(PjsrkStepper), findsOneWidget);
@@ -177,7 +180,18 @@ void main() {
         expect(find.text('Titik lokasi bencana'), findsOneWidget);
         expect(find.text('Tinjau & Kirim'), findsOneWidget);
 
+        // Step 2: Fill required location fields (alamat, kelurahan, kecamatan)
+        final locationFields = find.descendant(
+          of: find.byType(PjsrkReportLocationScreen),
+          matching: find.byType(TextField),
+        );
+        await tester.enterText(locationFields.at(0), 'Jl. Merdeka No. 10');
+        await tester.enterText(locationFields.at(1), 'Payaman');
+        await tester.enterText(locationFields.at(2), 'Nganjuk');
+        await tester.pumpAndSettle();
+
         // Step 2: Tap Tinjau & Kirim -> navigates to Step 3 (Review & Kirim)
+        await tester.ensureVisible(find.text('Tinjau & Kirim'));
         await tester.tap(find.text('Tinjau & Kirim'));
         await tester.pumpAndSettle();
 
@@ -186,8 +200,8 @@ void main() {
         expect(find.text('Periksa kembali laporan'), findsOneWidget);
         expect(find.text('Kirim laporan'), findsOneWidget);
 
-        // Tap back button returns to Step 2
-        final backBtn = find.byIcon(Icons.chevron_left_rounded).first;
+        // Tap back button on Step 3 returns to Step 2
+        final backBtn = find.byIcon(Icons.arrow_back_rounded).last;
         await tester.tap(backBtn);
         await tester.pumpAndSettle();
 

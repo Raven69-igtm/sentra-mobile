@@ -1,9 +1,9 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sentra/core/network/api_exception.dart';
 import 'package:sentra/features/report/models/report_model.dart';
 import 'package:sentra/features/report/models/statistic_model.dart';
 import 'package:sentra/features/report/repositories/report_repository.dart';
-import 'package:get/get.dart';
 import 'package:sentra/features/report/services/detail_service.dart';
 
 /// Kegagalan pengiriman laporan yang membawa pesan siap-tampil
@@ -16,63 +16,110 @@ class LaporanException implements Exception {
   String toString() => pesan;
 }
 
-class LaporanController extends GetxController {
+class LaporanController extends ChangeNotifier {
   final LaporanRepository _laporanRepo = LaporanRepository();
+  final ReportDetailService _detailService = ReportDetailService();
 
-  var laporanList = <LaporanModel>[].obs;
-  var laporanByCategoryList = <LaporanModel>[].obs;
-  var statistik = StatistikModel().obs;
-  var trackingStatus = ''.obs;
-  var isLoading = false.obs;
-  var errorMessage = ''.obs;
+  List<LaporanModel> _laporanList = <LaporanModel>[];
+  List<LaporanModel> _laporanByCategoryList = <LaporanModel>[];
+  StatistikModel _statistik = StatistikModel();
+  String _trackingStatus = '';
+  bool _isLoading = false;
+  String _errorMessage = '';
+
+  bool _detailLoading = false;
+  String _detailError = '';
+  Map<String, dynamic>? _selectedReportDetail;
+
+  List<LaporanModel> get laporanList => _laporanList;
+  List<LaporanModel> get laporanByCategoryList => _laporanByCategoryList;
+  StatistikModel get statistik => _statistik;
+  String get trackingStatus => _trackingStatus;
+  bool get isLoading => _isLoading;
+  String get errorMessage => _errorMessage;
+
+  bool get detailLoading => _detailLoading;
+  String get detailError => _detailError;
+  Map<String, dynamic>? get selectedReportDetail => _selectedReportDetail;
+
+  void clearTrackingState() {
+    _trackingStatus = '';
+    _errorMessage = '';
+    notifyListeners();
+  }
+
+  /// Membersihkan seluruh cache laporan saat logout / ganti akun.
+  void reset() {
+    _laporanList = <LaporanModel>[];
+    _laporanByCategoryList = <LaporanModel>[];
+    _statistik = StatistikModel();
+    _trackingStatus = '';
+    _isLoading = false;
+    _errorMessage = '';
+    _detailLoading = false;
+    _detailError = '';
+    _selectedReportDetail = null;
+    notifyListeners();
+  }
 
   Future<void> getUserReports(int userId) async {
     try {
-      isLoading.value = true;
-      laporanList.value = await _laporanRepo.getUserReports(userId);
-    } catch (e) {
-      laporanList.clear();
+      _isLoading = true;
+      _errorMessage = '';
+      notifyListeners();
+      _laporanList = await _laporanRepo.getUserReports(userId);
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      _laporanList = <LaporanModel>[];
+    } catch (_) {
+      _errorMessage =
+          'Gagal memuat riwayat laporan. Periksa koneksi Anda dan coba lagi.';
+      _laporanList = <LaporanModel>[];
     } finally {
-      isLoading.value = false;
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> getUserReportsByCategory(int userId, String category) async {
     try {
-      isLoading.value = true;
-      laporanByCategoryList.value = await _laporanRepo.getUserReportsByCategory(
+      _isLoading = true;
+      _errorMessage = '';
+      notifyListeners();
+      _laporanByCategoryList = await _laporanRepo.getUserReportsByCategory(
         userId,
         category,
       );
-    } catch (e) {
-      laporanByCategoryList.clear();
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      _laporanByCategoryList = <LaporanModel>[];
+    } catch (_) {
+      _errorMessage =
+          'Gagal memuat laporan berdasarkan status. Silakan coba lagi.';
+      _laporanByCategoryList = <LaporanModel>[];
     } finally {
-      isLoading.value = false;
+      _isLoading = false;
+      notifyListeners();
     }
   }
-
-  final RxBool detailLoading = false.obs;
-  final RxString detailError = ''.obs;
-  final Rxn<Map<String, dynamic>> selectedReportDetail =
-      Rxn<Map<String, dynamic>>();
-
-  final ReportDetailService _detailService = ReportDetailService();
 
   Future<Map<String, dynamic>?> getReportDetailById(
     String idLaporan, {
     String? bearerToken,
   }) async {
     try {
-      detailLoading.value = true;
-      detailError.value = '';
+      _detailLoading = true;
+      _detailError = '';
+      notifyListeners();
       final result = await _detailService.fetchReportDetailById(idLaporan);
-      selectedReportDetail.value = result;
+      _selectedReportDetail = result;
       return result;
     } catch (e) {
-      detailError.value = e.toString();
+      _detailError = e.toString();
       rethrow;
     } finally {
-      detailLoading.value = false;
+      _detailLoading = false;
+      notifyListeners();
     }
   }
 
@@ -83,12 +130,12 @@ class LaporanController extends GetxController {
   /// aman untuk ditampilkan ke pengguna (tanpa detail internal server).
   Future<dynamic> createReport(Map<String, dynamic> laporanData) async {
     try {
-      isLoading.value = true;
-      errorMessage.value = '';
+      _isLoading = true;
+      _errorMessage = '';
+      notifyListeners();
       final hasil = await _laporanRepo.postReport(laporanData);
       final bool terkonfirmasi = hasil is Map && hasil['success'] == true;
       if (!terkonfirmasi) {
-        // Respons 2xx tetapi isi ambigu — jangan menyatakan laporan tersimpan.
         throw LaporanException(
           'Server tidak mengonfirmasi laporan tersimpan. Silakan coba lagi.',
         );
@@ -98,17 +145,18 @@ class LaporanController extends GetxController {
       rethrow;
     } on ApiException catch (e) {
       final pesan = _pesanErrorDariApi(e);
-      errorMessage.value = pesan;
+      _errorMessage = pesan;
       throw LaporanException(pesan);
     } on DioException catch (e) {
       final pesan = _pesanErrorDariDio(e);
-      errorMessage.value = pesan;
+      _errorMessage = pesan;
       throw LaporanException(pesan);
-    } catch (e) {
-      errorMessage.value = 'Terjadi kesalahan. Silakan coba lagi.';
+    } catch (_) {
+      _errorMessage = 'Terjadi kesalahan. Silakan coba lagi.';
       throw LaporanException('Terjadi kesalahan. Silakan coba lagi.');
     } finally {
-      isLoading.value = false;
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -139,8 +187,6 @@ class LaporanController extends GetxController {
     }
   }
 
-  /// Memetakan kesalahan jaringan/status HTTP menjadi pesan yang informatif
-  /// dan aman untuk pengguna (tidak membocorkan struktur internal server).
   String _pesanErrorDariDio(DioException e) {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
@@ -189,39 +235,52 @@ class LaporanController extends GetxController {
   }
 
   void updateSearchResults(List<LaporanModel> results) {
-    laporanList.assignAll(results);
+    _laporanList = List<LaporanModel>.from(results);
+    notifyListeners();
   }
 
   void clearSearchResults() {
-    laporanList.clear();
+    _laporanList = <LaporanModel>[];
+    notifyListeners();
   }
 
   Future<void> trackingReport(String trackingCode) async {
     try {
-      isLoading.value = true;
+      _isLoading = true;
+      _errorMessage = '';
+      _trackingStatus = '';
+      notifyListeners();
 
       final result = await _laporanRepo.trackingReport(trackingCode);
 
       if (result.isNotEmpty) {
-        trackingStatus.value = result;
+        _trackingStatus = result;
       } else {
-        errorMessage.value = 'Tracking report kosong atau tidak ditemukan.';
+        _errorMessage = 'Tracking report kosong atau tidak ditemukan.';
       }
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
     } catch (e) {
-      errorMessage.value = e.toString();
+      _errorMessage = e.toString().replaceFirst('Exception: ', '');
     } finally {
-      isLoading.value = false;
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
   Future<void> getStatistic() async {
     try {
-      isLoading.value = true;
-      statistik.value = await _laporanRepo.getReportStatistic();
+      _isLoading = true;
+      _errorMessage = '';
+      notifyListeners();
+      _statistik = await _laporanRepo.getReportStatistic();
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
     } catch (e) {
-      errorMessage.value = e.toString();
+      _errorMessage = e.toString();
     } finally {
-      isLoading.value = false;
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }
